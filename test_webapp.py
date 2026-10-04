@@ -38,9 +38,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
-server = http.server.HTTPServer(('127.0.0.1', PORT), Handler)
+server = http.server.ThreadingHTTPServer(('127.0.0.1', PORT), Handler)
 server_thread = threading.Thread(target=server.serve_forever, daemon=True)
 server_thread.start()
+time.sleep(0.5)
 print(f"Local test server running at http://127.0.0.1:{PORT}/")
 
 console_errors = []
@@ -168,7 +169,16 @@ with sync_playwright() as p:
     pdf_size = os.path.getsize(pdf_file)
     print(f"Downloaded PDF size: {pdf_size} bytes")
     assert pdf_size > 5000, "Downloaded PDF is too small!"
-    os.remove(pdf_file)
+
+    import fitz
+    pdf_doc = fitz.open(pdf_file)
+    print(f"Generated PDF total pages: {len(pdf_doc)}")
+    for p_idx, p in enumerate(pdf_doc):
+        pix = p.get_pixmap(dpi=150)
+        p_path = os.path.join(BASE_DIR, f"pdf_page_{p_idx+1}.png")
+        pix.save(p_path)
+        print(f"Saved {p_path}")
+    pdf_doc.close()
     print("VERIFIED: Standard student receives professional PDF report!")
 
     # Verify VIP Notice Modal appears informing about protected Excel formulas
