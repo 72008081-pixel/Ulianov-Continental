@@ -790,6 +790,10 @@
                     📊 Ver 13 Tablas
                 </a>
 
+                <button id="btnRelock" class="btn btn-secondary" style="font-size: 11px; padding: 6px 10px; display: none;" title="Bloquear aplicación para solicitar contraseña">
+                    🔒 Bloquear
+                </button>
+
                 <button id="btnDownloadExcel" class="btn btn-excel" title="Descargar archivo Excel con fórmulas matemáticas nativas">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
@@ -991,7 +995,8 @@
         • <a href="https://github.com/72008081-pixel/Ulianov-Continental" target="_blank">Repositorio en GitHub</a>
     </footer>
 
-    <!-- Dependencias de cálculo y exportación -->
+    <!-- Dependencias de autenticación y cálculo -->
+    <script src="auth.js"></script>
     <script src="assets/exceljs.min.js"></script>
     <script src="truss-solver.js"></script>
     <script src="truss-canvas.js"></script>

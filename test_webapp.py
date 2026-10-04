@@ -54,6 +54,27 @@ with sync_playwright() as p:
     print("Title:", page.title())
     assert "CEREBRO ESTRUCTURAL" in page.title(), "Title does not match!"
 
+    # 1. Test Yape Lock Modal & Password Authentication
+    print("Testing Yape Lock Modal...")
+    lock_modal = page.locator("#accessLockModal")
+    assert lock_modal.is_visible(), "Yape Access Lock Modal should be visible on fresh load!"
+
+    # Test invalid password rejection
+    page.fill("#accessPassInput", "clave_invalida_123")
+    page.click("#btnUnlockAccess")
+    time.sleep(0.3)
+    error_msg = page.locator("#passErrorMsg")
+    assert error_msg.is_visible(), "Error message should be visible on incorrect password!"
+    print("Invalid password correctly rejected!")
+
+    # Test master password unlock with Vayolett1404
+    print("Unlocking with Master Password: Vayolett1404...")
+    page.fill("#accessPassInput", "Vayolett1404")
+    page.click("#btnUnlockAccess")
+    time.sleep(0.5)
+    assert not lock_modal.is_visible(), "Yape Access Lock Modal should be hidden after correct password!"
+    print("Master Password 'Vayolett1404' accepted and platform successfully unlocked!")
+
     # Check structural status badge
     status_text = page.locator("#structuralStatusBadge").inner_text()
     print("Status Badge:", status_text)
