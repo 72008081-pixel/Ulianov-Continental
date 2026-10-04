@@ -1,208 +1,891 @@
 <!DOCTYPE html>
-<html lang="es" class="dark">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CEREBRO ESTRUCTURAL v2.0 | Armaduras Planas & Generador de Excel Automatizado</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#F0FDF4',
-                            100: '#DCFCE7',
-                            500: '#10B981',
-                            600: '#059669',
-                            700: '#047857',
-                            900: '#064E3B',
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['"Segoe UI"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'sans-serif'],
-                        mono: ['"Consolas"', '"Courier New"', 'monospace']
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        /* Estilos finos para scrollbars y números */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-        input[type=number]::-webkit-inner-spin-button,
-        input[type=number]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
+        /* ── VARIABLES & DESIGN SYSTEM ───────────────────────────── */
+        :root {
+            --bg-body:       #090d16;
+            --bg-card:       #111827;
+            --bg-panel:      #1a2333;
+            --bg-input:      #0d1424;
+            --border-subtle: #1e293b;
+            --border-muted:  #334155;
+            --border-focus:  #38bdf8;
+            --text-main:     #f8fafc;
+            --text-muted:    #94a3b8;
+            --text-dim:      #64748b;
+            --accent-sky:    #38bdf8;
+            --accent-emerald:#10b981;
+            --accent-rose:   #f43f5e;
+            --accent-amber:  #fbbf24;
+            --accent-indigo: #818cf8;
+            --radius-sm:     6px;
+            --radius-md:     10px;
+            --radius-lg:     14px;
+            --font-sans:     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono:     "Consolas", "Courier New", monospace;
         }
-        input[type=number] { -moz-appearance: textfield; }
-        .canvas-container {
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            min-height: 100vh;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            font-size: 13px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── SCROLLBARS ─────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-body); }
+        ::-webkit-scrollbar-thumb { background: var(--border-muted); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* ── HEADER SUPERIOR ────────────────────────────────────── */
+        .header-nav {
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-subtle);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding: 10px 20px;
+        }
+
+        .header-inner {
+            max-width: 1440px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            width: 38px;
+            height: 38px;
+            border-radius: var(--radius-md);
+            background: linear-gradient(135deg, #0284c7 0%, #10b981 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+            flex-shrink: 0;
+        }
+
+        .brand-title-wrap h1 {
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .brand-badge {
+            font-size: 10px;
+            font-weight: 700;
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.12);
+            padding: 2px 7px;
+            border-radius: 99px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .brand-subtitle {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* ── PRESET SELECTOR ────────────────────────────────────── */
+        .select-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-muted);
+            border-radius: var(--radius-sm);
+            padding: 4px 10px;
+        }
+
+        .select-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .preset-select {
+            background: transparent;
+            color: var(--accent-sky);
+            font-size: 12px;
+            font-weight: 700;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 2px 4px;
+        }
+
+        .preset-select option {
+            background: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        /* ── BUTTONS ────────────────────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 7px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+
+        .btn-excel {
+            background: #107c41;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(16, 124, 65, 0.35);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-excel:hover {
+            background: #15934f;
+            transform: translateY(-1px);
+        }
+
+        .btn-excel:active {
+            transform: translateY(0);
+        }
+
+        .btn-excel:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .btn-secondary {
+            background: var(--bg-panel);
+            color: var(--text-main);
+            border-color: var(--border-muted);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--border-focus);
+            color: var(--accent-sky);
+        }
+
+        /* ── STATUS STRIP ───────────────────────────────────────── */
+        .status-strip {
+            background: var(--bg-body);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 6px 20px;
+        }
+
+        .status-strip-inner {
+            max-width: 1440px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .status-badges-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 700;
+            border: 1px solid;
+            transition: all 0.2s ease;
+        }
+
+        .badge-green {
+            background: rgba(16, 185, 129, 0.12);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+
+        .badge-blue {
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+            border-color: rgba(56, 189, 248, 0.4);
+        }
+
+        .badge-amber {
+            background: rgba(251, 191, 36, 0.12);
+            color: #fbbf24;
+            border-color: rgba(251, 191, 36, 0.4);
+        }
+
+        .badge-red {
+            background: rgba(244, 63, 94, 0.12);
+            color: #f43f5e;
+            border-color: rgba(244, 63, 94, 0.4);
+        }
+
+        .status-hint {
+            font-size: 11px;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-hint-highlight {
+            color: var(--accent-sky);
+            font-family: var(--font-mono);
+            font-weight: 600;
+        }
+
+        /* ── WORKSPACE GRID ─────────────────────────────────────── */
+        .workspace {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 16px 20px;
+            display: grid;
+            grid-template-columns: 1fr 440px;
+            gap: 16px;
+            align-items: start;
+        }
+
+        /* ── CANVAS CARD ────────────────────────────────────────── */
+        .canvas-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .canvas-toolbar {
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tool-btn {
+            background: var(--bg-card);
+            color: var(--text-muted);
+            border: 1px solid var(--border-muted);
+            border-radius: var(--radius-sm);
+            padding: 4px 9px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .tool-btn:hover {
+            color: var(--text-main);
+            border-color: var(--border-focus);
+        }
+
+        .toolbar-divider {
+            width: 1px;
+            height: 14px;
+            background: var(--border-muted);
+            margin: 0 4px;
+        }
+
+        .canvas-options {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chk-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            color: var(--text-muted);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .chk-label:hover {
+            color: var(--text-main);
+        }
+
+        .chk-label input[type="checkbox"] {
+            accent-color: var(--accent-sky);
+            cursor: pointer;
+        }
+
+        .deform-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .deform-control input[type="range"] {
+            width: 65px;
+            accent-color: var(--accent-sky);
+            cursor: pointer;
+        }
+
+        .deform-value {
+            font-size: 10px;
+            font-family: var(--font-mono);
+            color: var(--text-dim);
+            min-width: 30px;
+        }
+
+        .canvas-stage {
             position: relative;
-            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+            width: 100%;
+            height: 520px;
+            background: radial-gradient(ellipse at 50% 50%, #162032 0%, #090d16 100%);
+        }
+
+        #trussCanvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        .canvas-footer-legend {
+            background: var(--bg-panel);
+            border-top: 1px solid var(--border-subtle);
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .legend-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .dot-tension { background: #38bdf8; }
+        .dot-compress { background: #f43f5e; }
+        .dot-zero { background: #94a3b8; }
+
+        /* ── SIDEBAR TABLES ─────────────────────────────────────── */
+        .sidebar-container {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .card-table {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        .card-table-header {
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 9px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-table-title {
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-table-units {
+            font-size: 10px;
+            font-family: var(--font-mono);
+            color: var(--text-dim);
+        }
+
+        .table-scroll {
+            max-height: 240px;
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+
+        .interactive-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .interactive-table thead th {
+            background: rgba(13, 20, 36, 0.9);
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            padding: 6px 4px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-subtle);
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .interactive-table tbody tr {
+            border-bottom: 1px solid rgba(30, 41, 59, 0.6);
+            transition: background-color 0.1s ease;
+        }
+
+        .interactive-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .interactive-table td {
+            padding: 3px 4px;
+            vertical-align: middle;
+        }
+
+        .tbl-idx {
+            font-family: var(--font-mono);
+            font-weight: 800;
+            font-size: 11px;
+            text-align: center;
+            padding: 3px 6px;
+        }
+
+        /* ── INPUTS DENTRO DE TABLAS ────────────────────────────── */
+        .cell-input {
+            width: 100%;
+            background: var(--bg-input);
+            color: var(--text-main);
+            border: 1px solid var(--border-subtle);
+            border-radius: 4px;
+            padding: 4px 6px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            text-align: right;
+            outline: none;
+            transition: border-color 0.12s ease;
+        }
+
+        .cell-input:focus {
+            border-color: var(--border-focus);
+            background: #111a2e;
+        }
+
+        .cell-input-force {
+            color: #f59e0b;
+        }
+
+        .cell-input-force:focus {
+            border-color: #f59e0b;
+        }
+
+        .cell-select {
+            width: 100%;
+            background: var(--bg-input);
+            color: var(--text-main);
+            border: 1px solid var(--border-subtle);
+            border-radius: 4px;
+            padding: 4px 4px;
+            font-size: 10px;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.12s ease;
+        }
+
+        .cell-select:focus {
+            border-color: var(--border-focus);
+        }
+
+        .cell-calc {
+            text-align: right;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-muted);
+            padding: 3px 6px;
+            white-space: nowrap;
+        }
+
+        /* ── DETAILED RESULTS TABS SECTION ──────────────────────── */
+        .bottom-section {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0 20px 30px;
+        }
+
+        .tabs-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .tabs-header-bar {
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px 0;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            border-bottom: 2px solid transparent;
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+        }
+
+        .tab-btn.active {
+            color: var(--accent-sky);
+            border-bottom-color: var(--accent-sky);
+        }
+
+        .tab-content {
+            padding: 16px;
+        }
+
+        /* ── MINI TABLES DENTRO DE RESULTADOS ───────────────────── */
+        .results-grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .mini-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+
+        .mini-card-head {
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .mini-card-formula {
+            font-size: 10px;
+            font-family: var(--font-mono);
+            color: var(--text-dim);
+            font-weight: 400;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .results-table th {
+            padding: 5px 8px;
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border-subtle);
+            font-weight: 700;
+        }
+
+        .results-table td {
+            padding: 5px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-family: var(--font-mono);
+        }
+
+        .force-badge {
+            display: inline-block;
+            padding: 1px 7px;
+            border-radius: 99px;
+            font-size: 10px;
+            font-weight: 700;
+            border: 1px solid;
+        }
+
+        .force-tension  { background: rgba(56, 189, 248, 0.1); color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); }
+        .force-compress { background: rgba(244, 63, 94, 0.1); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); }
+        .force-zero     { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border-color: rgba(148, 163, 184, 0.3); }
+
+        /* ── MATRIX VIEW (12x12) ────────────────────────────────── */
+        .matrix-scroll-wrap {
+            overflow-x: auto;
+            max-height: 400px;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono);
+            font-size: 10px;
+        }
+
+        .matrix-table th, .matrix-table td {
+            padding: 4px 6px;
+            text-align: right;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .matrix-table th {
+            background: var(--bg-panel);
+            color: var(--text-dim);
+            text-align: center;
+        }
+
+        .matrix-diag {
+            background: rgba(16, 185, 129, 0.12);
+            color: #34d399;
+            font-weight: 700;
+        }
+
+        /* ── FOOTER ─────────────────────────────────────────────── */
+        .footer {
+            border-top: 1px solid var(--border-subtle);
+            padding: 16px 20px;
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .footer a {
+            color: var(--accent-sky);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ── RESPONSIVE ADAPTATIONS ─────────────────────────────── */
+        @media (max-width: 1100px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+            .canvas-stage {
+                height: 440px;
+            }
+            .results-grid-2col {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white">
+<body>
 
-    <!-- BARRA SUPERIOR / HERO HEADER -->
-    <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 sticky top-0 z-50 px-4 py-3">
-        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-            
-            <!-- Título y Logotipo -->
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-500/20 text-slate-950 font-black text-xl">
-                    ⚡
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <h1 class="text-lg font-black tracking-tight text-white">CEREBRO ESTRUCTURAL <span class="text-sky-400 font-mono text-sm">v2.0</span></h1>
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">CÁTEDRA ULIANOV</span>
-                    </div>
-                    <p class="text-xs text-slate-400">Análisis Estructural II | Rigidez Directa en Armaduras Planas 2D (Hasta 6 Nodos y 8 Barras)</p>
+    <!-- ══ HEADER SUPERIOR ══════════════════════════════════════════ -->
+    <header class="header-nav">
+        <div class="header-inner">
+            <div class="brand-box">
+                <div class="brand-logo">⚡</div>
+                <div class="brand-title-wrap">
+                    <h1>
+                        CEREBRO ESTRUCTURAL <span class="brand-badge">v2.0</span>
+                    </h1>
+                    <div class="brand-subtitle">Análisis Estructural II — Cátedra Ing. Ulianov Cuba Valencia</div>
                 </div>
             </div>
 
-            <!-- Selector de Presets y Botón Maestro -->
-            <div class="flex flex-wrap items-center gap-3">
-                <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
-                    <label for="presetSelect" class="text-xs text-slate-300 font-medium">📌 Caso:</label>
-                    <select id="presetSelect" class="bg-slate-900 text-xs font-semibold text-sky-300 border border-slate-600 rounded px-2 py-1 focus:outline-none focus:border-sky-400">
-                        <option value="isostatic_3n">Caso 1: Isostático (3 Nodos, 3 Barras - Benchmark Ulianov)</option>
-                        <option value="hyperstatic_4n">Caso 2: Hiperestático San Andrés (4 Nodos, 6 Barras)</option>
-                        <option value="warren_5n">Caso 3: Warren Simétrica (5 Nodos, 7 Barras)</option>
-                        <option value="roof_5n">Caso 4: Armadura Tipo Techo Howe (5 Nodos, 7 Barras)</option>
+            <div class="header-controls">
+                <div class="select-wrapper">
+                    <span class="select-label">Caso:</span>
+                    <select id="presetSelect" class="preset-select">
+                        <option value="isostatic_3n">Caso 1: Isostático 3N — Benchmark Ulianov</option>
+                        <option value="hyperstatic_4n">Caso 2: Hiperestático San Andrés 4N (GH = 2)</option>
+                        <option value="warren_5n">Caso 3: Warren Simétrica 5N</option>
+                        <option value="roof_5n">Caso 4: Techo Howe 5N</option>
                         <option value="blank">Limpiar / Armadura en Blanco</option>
                     </select>
                 </div>
 
-                <!-- BOTÓN MAESTRO DE DESCARGA EXCEL CON FÓRMULAS VIVAS -->
-                <button id="btnDownloadExcel" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-lg shadow-emerald-900/40 border border-emerald-400/40 transition-all transform active:scale-95">
-                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                <a href="WEB_ARMADURAS_ULIANOV/index.html" class="btn btn-secondary" title="Ver desglose pedagógico en 13 tablas matriciales">
+                    📊 Ver 13 Tablas
+                </a>
+
+                <button id="btnDownloadExcel" class="btn btn-excel" title="Descargar archivo Excel con fórmulas matemáticas nativas">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
                     </svg>
-                    <span>📥 Descargar Excel Paso a Paso (.xlsx)</span>
+                    Descargar Excel con Fórmulas
                 </button>
-
-                <!-- BOTÓN NAVEGACIÓN A DESGLOSE MATRICIAL COMPLETO -->
-                <a href="WEB_ARMADURAS_ULIANOV/index.html" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-lg shadow-indigo-900/40 border border-indigo-400/40 transition-all transform active:scale-95">
-                    <span>📊 Ver 13 Tablas de Cátedra</span>
-                </a>
             </div>
         </div>
     </header>
 
-    <!-- ESTADO ESTRUCTURAL Y EQUILIBRIO HUD -->
-    <div class="bg-slate-900 border-b border-slate-800 px-4 py-1.5 text-xs">
-        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-3">
-                <span id="structuralStatusBadge" class="px-3 py-0.5 rounded-full text-xs font-bold border bg-emerald-950/80 border-emerald-500 text-emerald-400">
+    <!-- ══ STATUS STRIP (ESTADO & EQUILIBRIO) ═══════════════════════ -->
+    <section class="status-strip">
+        <div class="status-strip-inner">
+            <div class="status-badges-group">
+                <span id="structuralStatusBadge" class="badge badge-green">
                     Cargando estructura...
                 </span>
-                <span id="equilibriumBadge" class="px-3 py-0.5 rounded-full text-xs font-bold border bg-teal-950/80 border-teal-500 text-teal-300">
-                    Calculando equilibrio...
+                <span id="equilibriumBadge" class="badge badge-blue">
+                    Verificando equilibrio...
                 </span>
             </div>
-            <div class="text-[11px] text-slate-400 flex items-center gap-4">
-                <span>🖱️ Arrastrar para mover | Rueda del mouse para zoom</span>
-                <span class="text-sky-400 font-mono">100% Fórmulas en Excel Nativas</span>
+            <div class="status-hint">
+                <span>🖱️ Arrastrar para mover · Rueda para zoom</span>
+                <span>•</span>
+                <span class="status-hint-highlight">Fórmulas 100% nativas en Excel (=MINVERSE, =MMULT)</span>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- CUERPO PRINCIPAL: CANVAS 2D + TABLAS DE ENTRADA -->
-    <main class="max-w-7xl mx-auto p-4 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-5">
+    <!-- ══ ESPACIO DE TRABAJO PRINCIPAL: CANVAS + TABLAS ═══════════ -->
+    <main class="workspace">
 
-        <!-- COLUMNA IZQUIERDA: VISUALIZADOR 2D EN VIVO (7 columnas en desktop) -->
-        <div class="lg:col-span-7 flex flex-col space-y-3">
-            
-            <div class="canvas-container rounded-xl border border-slate-800 shadow-2xl overflow-hidden flex-1 min-h-[460px] flex flex-col">
-                
-                <!-- Barra de herramientas superior del Canvas -->
-                <div class="bg-slate-900/90 border-b border-slate-800 px-3 py-2 flex flex-wrap items-center justify-between gap-2 z-10 text-xs">
-                    <div class="flex items-center gap-2">
-                        <span class="font-bold text-slate-200">📐 Gráfica en Vivo</span>
-                        <div class="h-3 w-px bg-slate-700"></div>
-                        <button id="btnFitView" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 transition" title="Ajustar y centrar vista">
-                            ⟲ Centrar
-                        </button>
-                        <button id="btnZoomIn" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 transition" title="Acercar">
-                            +
-                        </button>
-                        <button id="btnZoomOut" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 transition" title="Alejar">
-                            −
-                        </button>
-                    </div>
-
-                    <!-- Filtros y Opciones de Visualización -->
-                    <div class="flex flex-wrap items-center gap-3 text-[11px]">
-                        <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
-                            <input type="checkbox" id="toggleGrid" checked class="rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-0">
-                            <span>Cuadrícula</span>
-                        </label>
-                        <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
-                            <input type="checkbox" id="toggleForces" checked class="rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-0">
-                            <span>Esfuerzos</span>
-                        </label>
-                        <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
-                            <input type="checkbox" id="toggleDeformed" class="rounded border-slate-600 bg-slate-800 text-sky-500 focus:ring-0">
-                            <span class="text-sky-400 font-semibold">Deformada</span>
-                        </label>
-                        <div class="flex items-center gap-1">
-                            <input type="range" id="deformScaleSlider" min="10" max="500" value="100" class="w-16 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer">
-                            <span id="deformScaleVal" class="text-[10px] font-mono text-slate-400 w-8">100x</span>
-                        </div>
-                        <button id="btnExportImg" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition" title="Descargar Imagen PNG">
-                            📷 PNG
-                        </button>
-                    </div>
+        <!-- ── COLUMNA IZQUIERDA: CANVAS 2D EN VIVO ──────────────── -->
+        <div class="canvas-card">
+            <div class="canvas-toolbar">
+                <div class="toolbar-group">
+                    <span style="font-size: 11.5px; font-weight: 700; color: #ffffff;">📐 Gráfica en Vivo</span>
+                    <div class="toolbar-divider"></div>
+                    <button id="btnFitView" class="tool-btn" title="Centrar armadura en el área de dibujo">⟲ Centrar</button>
+                    <button id="btnZoomIn" class="tool-btn" title="Acercar vista">+</button>
+                    <button id="btnZoomOut" class="tool-btn" title="Alejar vista">−</button>
+                    <button id="btnExportImg" class="tool-btn" title="Exportar dibujo en imagen PNG">📷 PNG</button>
                 </div>
 
-                <!-- Canvas HTML5 -->
-                <div class="relative flex-1 w-full h-full min-h-[400px]">
-                    <canvas id="trussCanvas" class="w-full h-full absolute inset-0 cursor-crosshair"></canvas>
+                <div class="canvas-options">
+                    <label class="chk-label">
+                        <input type="checkbox" id="toggleGrid" checked> Cuadrícula
+                    </label>
+                    <label class="chk-label">
+                        <input type="checkbox" id="toggleForces" checked> Esfuerzos
+                    </label>
+                    <label class="chk-label" style="color: var(--accent-sky); font-weight: 600;">
+                        <input type="checkbox" id="toggleDeformed"> Deformada
+                    </label>
+                    <div class="deform-control">
+                        <input type="range" id="deformScaleSlider" min="10" max="500" value="100">
+                        <span id="deformScaleVal" class="deform-value">100x</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Leyenda Pedagógica de Cátedra -->
-            <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-400 flex flex-wrap items-center justify-between gap-2">
-                <div class="flex items-center gap-2">
-                    <span class="font-bold text-slate-200">Convención de Nudos y Barras:</span>
-                    <span>La flecha en cada barra indica la orientación local (Inicio &rarr; Fin), definiendo &Delta;X, &Delta;Y, Cx, Cy.</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="w-3 h-3 rounded-full bg-cyan-500 inline-block"></span> <span>Tracción (+)</span>
-                    <span class="w-3 h-3 rounded-full bg-rose-500 inline-block ml-2"></span> <span>Compresión (-)</span>
-                    <span class="w-3 h-3 rounded-full bg-slate-400 inline-block ml-2"></span> <span>Fuerza Nula</span>
+            <div class="canvas-stage">
+                <canvas id="trussCanvas"></canvas>
+            </div>
+
+            <div class="canvas-footer-legend">
+                <span>Orientación local: La flecha indica el vector Inicio &rarr; Fin de la barra</span>
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <span class="legend-indicator"><span class="dot dot-tension"></span> Tracción (+)</span>
+                    <span class="legend-indicator"><span class="dot dot-compress"></span> Compresión (−)</span>
+                    <span class="legend-indicator"><span class="dot dot-zero"></span> Nula</span>
                 </div>
             </div>
         </div>
 
-        <!-- COLUMNA DERECHA: TABLAS DE DATOS REACTIVAS (5 columnas en desktop) -->
-        <div class="lg:col-span-5 flex flex-col space-y-4" id="inputTablesContainer">
+        <!-- ── COLUMNA DERECHA: TABLAS DE ENTRADA REACTIVAS ───────── -->
+        <aside class="sidebar-container" id="inputTablesContainer">
 
-            <!-- TABLA 1: NODOS Y CONDICIONES DE APOYO (Hasta 6 Nodos) -->
-            <div class="bg-slate-900/80 rounded-xl border border-slate-800 overflow-hidden shadow-lg">
-                <div class="bg-slate-800/90 px-3 py-2 border-b border-slate-700 flex items-center justify-between">
-                    <h2 class="text-xs font-bold text-sky-400 flex items-center gap-1.5 uppercase tracking-wider">
+            <!-- TABLA 1: NODOS Y CONDICIONES DE APOYO -->
+            <div class="card-table">
+                <div class="card-table-header">
+                    <div class="card-table-title" style="color: var(--accent-sky);">
                         <span>1. Coordenadas y Apoyos (Hasta 6 Nodos)</span>
-                    </h2>
-                    <span class="text-[10px] text-slate-400 font-mono">X, Y en cm | Px, Py en Kgf</span>
+                    </div>
+                    <span class="card-table-units">cm | Kgf</span>
                 </div>
-                <div class="overflow-x-auto max-h-56">
-                    <table class="w-full text-left border-collapse">
+                <div class="table-scroll">
+                    <table class="interactive-table">
                         <thead>
-                            <tr class="text-[10px] uppercase font-bold text-slate-400 bg-slate-900/90 border-b border-slate-800">
-                                <th class="p-2 text-center w-8">#</th>
-                                <th class="p-1 text-center">X (cm)</th>
-                                <th class="p-1 text-center">Y (cm)</th>
-                                <th class="p-1 text-center">Apoyo</th>
-                                <th class="p-1 text-center">Px (Kgf)</th>
-                                <th class="p-1 text-center">Py (Kgf)</th>
+                            <tr>
+                                <th style="width: 26px;">#</th>
+                                <th>X (cm)</th>
+                                <th>Y (cm)</th>
+                                <th>Apoyo</th>
+                                <th>Px (Kgf)</th>
+                                <th>Py (Kgf)</th>
                             </tr>
                         </thead>
                         <tbody id="nodesTableBody">
@@ -212,25 +895,25 @@
                 </div>
             </div>
 
-            <!-- TABLA 2: CONECTIVIDAD DE BARRAS (Hasta 8 Barras) -->
-            <div class="bg-slate-900/80 rounded-xl border border-slate-800 overflow-hidden shadow-lg">
-                <div class="bg-slate-800/90 px-3 py-2 border-b border-slate-700 flex items-center justify-between">
-                    <h2 class="text-xs font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider">
-                        <span>2. Conectividad y Barras (Hasta 8 Barras)</span>
-                    </h2>
-                    <span class="text-[10px] text-slate-400 font-mono">A en cm² | E en Kgf/cm²</span>
+            <!-- TABLA 2: CONECTIVIDAD DE BARRAS -->
+            <div class="card-table">
+                <div class="card-table-header">
+                    <div class="card-table-title" style="color: var(--accent-emerald);">
+                        <span>2. Barras y Conectividad (Hasta 8 Barras)</span>
+                    </div>
+                    <span class="card-table-units">cm² | Kgf/cm²</span>
                 </div>
-                <div class="overflow-x-auto max-h-64">
-                    <table class="w-full text-left border-collapse">
+                <div class="table-scroll">
+                    <table class="interactive-table">
                         <thead>
-                            <tr class="text-[10px] uppercase font-bold text-slate-400 bg-slate-900/90 border-b border-slate-800">
-                                <th class="p-2 text-center w-10">Barra</th>
-                                <th class="p-1 text-center w-16">Inicio</th>
-                                <th class="p-1 text-center w-16">Fin</th>
-                                <th class="p-1 text-center">Área A</th>
-                                <th class="p-1 text-center">Mód. E</th>
-                                <th class="p-1 text-right">L (cm)</th>
-                                <th class="p-1 text-right">AE/L</th>
+                            <tr>
+                                <th style="width: 26px;">#</th>
+                                <th>Ini</th>
+                                <th>Fin</th>
+                                <th>Área</th>
+                                <th>Mód. E</th>
+                                <th>L (cm)</th>
+                                <th>AE/L</th>
                             </tr>
                         </thead>
                         <tbody id="barsTableBody">
@@ -239,96 +922,76 @@
                     </table>
                 </div>
             </div>
-        </div>
+
+        </aside>
     </main>
 
-    <!-- SECCIÓN INFERIOR: RESULTADOS DETALLADOS Y PASO A PASO PEDAGÓGICO -->
-    <section class="max-w-7xl mx-auto p-4 w-full">
-        <div class="bg-slate-900/80 rounded-xl border border-slate-800 overflow-hidden shadow-xl">
-            
+    <!-- ══ SECCIÓN INFERIOR: PESTAÑAS DE RESULTADOS & MATRICES ══════ -->
+    <section class="bottom-section">
+        <div class="tabs-card">
             <!-- Barra de Pestañas -->
-            <div class="border-b border-slate-800 bg-slate-900 flex flex-wrap gap-2 px-4 pt-2">
-                <button class="tab-btn active px-4 py-2 border-b-2 border-sky-400 text-sky-400 font-bold text-xs transition" data-tab="tab-results">
-                    📊 Resumen Ejecutivo y Fuerzas
-                </button>
-                <button class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-bold text-xs transition" data-tab="tab-pedagogical">
-                    🧠 Paso a Paso Matricial (K₁₁, K₂₁)
-                </button>
-                <button class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-bold text-xs transition" data-tab="tab-global-matrix">
-                    📐 Matriz Karmadura Ensamblada (12 × 12)
-                </button>
-                <button class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-bold text-xs transition" data-tab="tab-theory">
-                    📖 Teoría y Fórmulas de Cátedra
-                </button>
+            <div class="tabs-header-bar">
+                <button class="tab-btn active" data-tab="tab-results">📊 Resumen Ejecutivo y Fuerzas</button>
+                <button class="tab-btn" data-tab="tab-pedagogical">🧠 Paso a Paso Matricial (K₁₁, K₂₁)</button>
+                <button class="tab-btn" data-tab="tab-global-matrix">📐 Matriz Karmadura (12 × 12)</button>
+                <button class="tab-btn" data-tab="tab-theory">📖 Teoría y Fórmulas</button>
             </div>
 
-            <!-- Contenido de Pestañas -->
-            <div class="p-4">
-                
-                <!-- Pestaña 1: Resumen de Resultados -->
-                <div id="tab-results" class="tab-content">
-                    <div id="resultsContainer"></div>
-                </div>
+            <!-- Contenidos -->
+            <div class="tab-content" id="tab-results">
+                <div id="resultsContainer"></div>
+            </div>
 
-                <!-- Pestaña 2: Paso a Paso Pedagógico -->
-                <div id="tab-pedagogical" class="tab-content hidden">
-                    <div id="pedagogicalContainer"></div>
-                </div>
+            <div class="tab-content" id="tab-pedagogical" style="display: none;">
+                <div id="pedagogicalContainer"></div>
+            </div>
 
-                <!-- Pestaña 3: Matriz Global Ensamblada -->
-                <div id="tab-global-matrix" class="tab-content hidden">
-                    <div id="globalMatrixContainer"></div>
-                </div>
+            <div class="tab-content" id="tab-global-matrix" style="display: none;">
+                <div id="globalMatrixContainer"></div>
+            </div>
 
-                <!-- Pestaña 4: Teoría y Manual de Usuario -->
-                <div id="tab-theory" class="tab-content hidden">
-                    <div class="prose prose-invert max-w-none text-xs text-slate-300 space-y-4">
-                        <div class="p-4 bg-slate-950/60 rounded-lg border border-slate-800">
-                            <h3 class="text-sm font-bold text-sky-400 mb-2">Fundamento Matemático del Método de la Rigidez Directa</h3>
-                            <p class="leading-relaxed mb-3">
-                                En el análisis de armaduras planas bajo pequeñas deformaciones, cada nudo posee dos grados de libertad de traslación: 
-                                \(U_{iX}\) y \(U_{iY}\). Para una armadura de hasta 6 nudos, el sistema global posee un total de 12 grados de libertad:
-                                \(\{D\} = [U_{1X}, U_{1Y}, U_{2X}, U_{2Y}, \dots, U_{6X}, U_{6Y}]^T\).
-                            </p>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 my-3">
-                                <div class="bg-slate-900 p-3 rounded border border-slate-800">
-                                    <strong class="text-emerald-400 block mb-1">1. Transformación de Coordenadas</strong>
-                                    Para cada barra orientada desde el nudo inicial \((X_i, Y_i)\) al nudo final \((X_j, Y_j)\):
-                                    <br>\(\Delta X = X_j - X_i, \quad \Delta Y = Y_j - Y_i\)
-                                    <br>\(L = \sqrt{\Delta X^2 + \Delta Y^2}\)
-                                    <br>\(C_x = \Delta X / L, \quad C_y = \Delta Y / L\)
-                                </div>
-                                <div class="bg-slate-900 p-3 rounded border border-slate-800">
-                                    <strong class="text-sky-400 block mb-1">2. Matriz de Rigidez Local \(k_m\) (4×4)</strong>
-                                    \(k_m = \frac{AE}{L} \begin{bmatrix} C_x^2 & C_x C_y & -C_x^2 & -C_x C_y \\ C_x C_y & C_y^2 & -C_x C_y & -C_y^2 \\ -C_x^2 & -C_x C_y & C_x^2 & C_x C_y \\ -C_x C_y & -C_y^2 & C_x C_y & C_y^2 \end{bmatrix}\)
-                                </div>
-                                <div class="bg-slate-900 p-3 rounded border border-slate-800">
-                                    <strong class="text-amber-400 block mb-1">3. Fuerza Axial Interna \(N_m\)</strong>
-                                    \(N_m = \frac{AE}{L} [-C_x, -C_y, C_x, C_y] \begin{Bmatrix} D_{iX} \\ D_{iY} \\ D_{jX} \\ D_{jY} \end{Bmatrix}\)
-                                    <br>• Si \(N_m > 0\): Tracción (+)
-                                    <br>• Si \(N_m < 0\): Compresión (-)
-                                </div>
-                            </div>
-                            <p class="leading-relaxed">
-                                El archivo Excel descargable contiene la implementación matemática exacta con fórmulas nativas de hoja de cálculo:
-                                <code class="text-sky-300">=MINVERSE(...)</code> para la inversión matricial y <code class="text-emerald-300">=MMULT(...)</code> para la multiplicación matricial,
-                                permitiendo modificar cualquier valor directamente en Microsoft Excel y recalculando automáticamente sin errores ni macros.
-                            </p>
+            <div class="tab-content" id="tab-theory" style="display: none;">
+                <div style="line-height: 1.7; color: var(--text-muted); font-size: 12px;">
+                    <h3 style="color: var(--accent-sky); font-size: 14px; margin-bottom: 8px;">Fundamento Matemático del Método de la Rigidez Directa</h3>
+                    <p style="margin-bottom: 12px;">
+                        En el análisis matricial de armaduras planas 2D, cada nudo posee 2 grados de libertad traslacionales: \(U_{iX}\) y \(U_{iY}\).
+                        Para una armadura de hasta 6 nudos, el vector completo de desplazamientos tiene dimensión 12:
+                        \(\{D\} = [U_{1X}, U_{1Y}, U_{2X}, \dots, U_{6Y}]^T\).
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 14px;">
+                        <div style="background: var(--bg-panel); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                            <strong style="color: var(--accent-emerald); display: block; margin-bottom: 4px;">1. Geometría y Cosenos Directores</strong>
+                            \(\Delta X = X_j - X_i, \quad \Delta Y = Y_j - Y_i\)<br>
+                            \(L = \sqrt{\Delta X^2 + \Delta Y^2}\)<br>
+                            \(C_x = \Delta X / L, \quad C_y = \Delta Y / L\)
+                        </div>
+                        <div style="background: var(--bg-panel); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                            <strong style="color: var(--accent-sky); display: block; margin-bottom: 4px;">2. Matriz de Rigidez Local \(k_m\)</strong>
+                            \(k_m = \frac{AE}{L}\begin{bmatrix} C_x^2 & C_x C_y & -C_x^2 & -C_x C_y \\ C_x C_y & C_y^2 & -C_x C_y & -C_y^2 \\ -C_x^2 & -C_x C_y & C_x^2 & C_x C_y \\ -C_x C_y & -C_y^2 & C_x C_y & C_y^2 \end{bmatrix}\)
+                        </div>
+                        <div style="background: var(--bg-panel); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                            <strong style="color: #f59e0b; display: block; margin-bottom: 4px;">3. Fuerza Axial Interna \(N_m\)</strong>
+                            \(N_m = \frac{AE}{L} [-C_x, -C_y, C_x, C_y] \{D\}\)<br>
+                            • Si \(N_m > 0\): Tracción (+)<br>
+                            • Si \(N_m < 0\): Compresión (−)
                         </div>
                     </div>
+                    <p>
+                        El archivo Excel generado contiene la implementación exacta con fórmulas nativas:
+                        <code style="color: #38bdf8;">=MINVERSE(...)</code> para la inversión de rigidez y <code style="color: #34d399;">=MMULT(...)</code> para productos matriciales.
+                    </p>
                 </div>
-
             </div>
         </div>
     </section>
 
-    <!-- PIE DE PÁGINA -->
-    <footer class="bg-slate-950 border-t border-slate-850 px-4 py-4 mt-auto text-center text-xs text-slate-500">
-        <p>CEREBRO ESTRUCTURAL v2.0 • Código Abierto bajo Licencia MIT • Cátedra Ing. Ulianov Cuba Valencia</p>
-        <p class="text-[11px] text-slate-600 mt-1">Desarrollado para Ingeniería Civil y Análisis Estructural Computacional</p>
+    <!-- ══ PIE DE PÁGINA ════════════════════════════════════════════ -->
+    <footer class="footer">
+        CEREBRO ESTRUCTURAL v2.0 • Código Abierto bajo Licencia MIT • Cátedra Ing. Ulianov Cuba Valencia
+        • <a href="https://github.com/72008081-pixel/Ulianov-Continental" target="_blank">Repositorio en GitHub</a>
     </footer>
 
-    <!-- Dependencias JavaScript -->
+    <!-- Dependencias de cálculo y exportación -->
     <script src="assets/exceljs.min.js"></script>
     <script src="truss-solver.js"></script>
     <script src="truss-canvas.js"></script>
