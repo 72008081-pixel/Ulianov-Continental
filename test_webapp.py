@@ -61,8 +61,8 @@ with sync_playwright() as p:
     print("Title:", page.title())
     assert "CEREBRO ESTRUCTURAL" in page.title(), "Title does not match!"
 
-    # 1. Test Google SSO Dropdown Chooser & Terms Acceptance
-    print("Testing Google Account Dropdown Chooser & Terms Acceptance...")
+    # 1. Test Google Sign-In & Terms Acceptance (No fake default accounts)
+    print("Testing Google Sign-In & Terms Acceptance...")
     lock_modal = page.locator("#accessLockModal")
     assert lock_modal.is_visible(), "Access Lock Modal should be visible on fresh load!"
 
@@ -70,21 +70,14 @@ with sync_playwright() as p:
     terms_chk = page.locator("#chkTermsAndConditions")
     assert terms_chk.is_checked(), "Terms and Conditions checkbox should be present and checked!"
 
-    # Verify Dropdown exists and has Google accounts
-    google_dropdown = page.locator("#googleAccountDropdown")
-    assert google_dropdown.is_visible(), "Google Account Dropdown should be visible!"
-    dropdown_options = google_dropdown.locator("option").all_inner_texts()
-    print("Dropdown Google accounts:", dropdown_options)
-    assert any("alumno@continental.edu.pe" in opt for opt in dropdown_options), "Default student account missing from dropdown!"
+    # Verify input exists for user's Google account (No fake accounts displayed)
+    email_input = page.locator("#userGoogleEmailInput")
+    assert email_input.is_visible(), "Google email input should be visible for user's account!"
 
-    # Select student account from dropdown
-    print("Selecting 'alumno@continental.edu.pe' from Google dropdown...")
-    google_dropdown.select_option("alumno@continental.edu.pe")
+    # Fill student's real Google email
+    print("Entering user's Google email: alumno@continental.edu.pe...")
+    page.fill("#userGoogleEmailInput", "alumno@continental.edu.pe")
     time.sleep(0.3)
-
-    # Verify live preview card updated
-    selected_email_text = page.locator("#selectedAccountEmail").inner_text()
-    assert "alumno@continental.edu.pe" in selected_email_text, f"Unexpected email in preview: {selected_email_text}"
 
     # Click 'Continuar con cuenta de Google'
     print("Clicking 'Continuar con cuenta de Google'...")

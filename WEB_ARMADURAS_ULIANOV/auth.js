@@ -1,8 +1,8 @@
 /**
  * auth.js - CEREBRO ESTRUCTURAL v2.1
- * Sistema de Control de Acceso Estudiantil, Google SSO con Menú Desplegable de Cuentas,
- * Pasarela Yape S/ 5.00 con Generador de Códigos Aleatorios, Control de Sesión Única por Dispositivo,
- * Guardado de Armaduras Multi-Usuario y Panel de Desarrollador Maestro.
+ * Sistema de Control de Acceso Estudiantil con Google Sign-In Real,
+ * Detección Automática de Cuentas en el Navegador, Pasarela Yape S/ 5.00,
+ * Control de Sesión Única por Dispositivo y Panel de Desarrollador Maestro.
  *
  * Desarrollado por Ingeniero Ulianov Cuba Valencia
  * Contraseña Maestra de Desarrollador: Vayolett1404
@@ -16,13 +16,13 @@
     const CRYPTO_SALT = 'CYBORG_ULIANOV_V21_MASTER_SALT_2026';
     const NOTIFICATION_EMAIL = 'ulianov.continental@gmail.com';
 
-    // Claves de almacenamiento local (compartidas entre páginas del mismo origen)
+    // Claves de almacenamiento local
     const KEY_SESSION = 'cerebro_auth_session_v21';
     const KEY_WHITELIST = 'cerebro_authorized_users_v21';
     const KEY_PENDING = 'cerebro_pending_requests_v21';
     const KEY_BANNED = 'cerebro_banned_users_v21';
     const KEY_PROJECTS = 'cerebro_global_projects_v21';
-    const KEY_GOOGLE_ACCOUNTS = 'cerebro_google_accounts_list_v21';
+    const KEY_GOOGLE_ACCOUNTS = 'cerebro_real_google_accounts_v21';
     const KEY_DEVICE_ID = 'cerebro_device_id_v21';
 
     // Identificador único persistente de este dispositivo/navegador
@@ -34,13 +34,6 @@
 
     // Canal de sincronización entre ventanas/dispositivos
     const sessionChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('cerebro_session_sync') : null;
-
-    // Cuentas de Google preconfiguradas para el menú desplegable
-    const DEFAULT_GOOGLE_ACCOUNTS = [
-        { email: 'alumno@continental.edu.pe', name: 'Estudiante Universidad Continental', avatar: 'U' },
-        { email: 'estudiante.ingenieria@gmail.com', name: 'Alumno Ingeniería Civil', avatar: 'E' },
-        { email: 'ulianov.cuba@gmail.com', name: 'Ing. Ulianov Cuba Valencia', avatar: 'U' }
-    ];
 
     // ── MOTOR CRIPTOGRÁFICO SHA-256 ──────────────────────────────
     function sha256(ascii) {
@@ -141,13 +134,9 @@
         }
     }
 
-    // ── GESTIÓN DE CUENTAS DE GOOGLE EN EL DESPLEGABLE ────────────
-    function getGoogleAccounts() {
-        const stored = getStoredJSON(KEY_GOOGLE_ACCOUNTS, []);
-        const map = new Map();
-        DEFAULT_GOOGLE_ACCOUNTS.forEach(a => map.set(a.email.toLowerCase(), a));
-        stored.forEach(a => map.set(a.email.toLowerCase(), a));
-        return Array.from(map.values());
+    // ── CUENTAS REALES DETECTADAS EN ESTE DISPOSITIVO ────────────
+    function getStoredGoogleAccounts() {
+        return getStoredJSON(KEY_GOOGLE_ACCOUNTS, []);
     }
 
     function saveGoogleAccount(email, name, photo) {
@@ -156,9 +145,15 @@
         const cleanName = name || cleanEmail.split('@')[0];
         const avatar = cleanName.charAt(0).toUpperCase();
 
-        const current = getGoogleAccounts();
+        const current = getStoredGoogleAccounts();
         const filtered = current.filter(a => a.email.toLowerCase() !== cleanEmail);
-        filtered.unshift({ email: cleanEmail, name: cleanName, avatar: avatar, photo: photo || '' });
+        filtered.unshift({
+            email: cleanEmail,
+            name: cleanName,
+            avatar: avatar,
+            photo: photo || '',
+            lastUsed: new Date().toLocaleString()
+        });
         setStoredJSON(KEY_GOOGLE_ACCOUNTS, filtered);
     }
 
@@ -376,7 +371,7 @@
 
         /* Tarjeta Liquid Glass */
         .liquid-glass-card {
-            background: rgba(17, 24, 39, 0.72);
+            background: rgba(17, 24, 39, 0.75);
             background-image: radial-gradient(at 100% 0%, rgba(116, 34, 132, 0.25) 0px, transparent 50%),
                               radial-gradient(at 0% 100%, rgba(0, 210, 181, 0.18) 0px, transparent 50%);
             border: 1px solid rgba(255, 255, 255, 0.14);
@@ -401,76 +396,39 @@
             100% { transform: scale(1) translateY(0); opacity: 1; }
         }
 
-        /* Desplegable de Cuentas de Google */
-        .google-dropdown-container {
-            margin: 14px 0 12px;
+        /* Cuentas Detectadas en este Dispositivo */
+        .detected-accounts-container {
+            margin: 12px 0 8px;
             text-align: left;
         }
 
-        .google-dropdown-label {
+        .detected-accounts-label {
             font-size: 11.5px;
             font-weight: 700;
             color: #cbd5e1;
             margin-bottom: 6px;
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .google-dropdown-select-wrap {
-            position: relative;
-            width: 100%;
-        }
-
-        .google-dropdown-select {
-            width: 100%;
-            background: #0d1424;
-            color: #f8fafc;
-            border: 1.5px solid rgba(255, 255, 255, 0.16);
-            border-radius: 12px;
-            padding: 11px 36px 11px 14px;
-            font-size: 13px;
-            font-weight: 600;
-            outline: none;
-            cursor: pointer;
-            transition: all 0.18s ease;
-            appearance: none;
-            -webkit-appearance: none;
-        }
-
-        .google-dropdown-select:focus, .google-dropdown-select:hover {
-            border-color: #38bdf8;
-            box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
-            background: #111a2e;
-        }
-
-        .google-dropdown-select option {
-            background: #0d1424;
-            color: #f8fafc;
-            padding: 8px 10px;
-        }
-
-        .google-dropdown-arrow {
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-            color: #38bdf8;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        /* Tarjeta de Cuenta Google Seleccionada */
-        .selected-account-preview {
+        .detected-account-card {
             display: flex;
             align-items: center;
             gap: 12px;
             padding: 10px 14px;
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 14px;
-            margin-top: 10px;
-            text-align: left;
+            cursor: pointer;
             transition: all 0.18s ease;
+            margin-bottom: 6px;
+        }
+
+        .detected-account-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #38bdf8;
+            transform: translateY(-1px);
         }
 
         .google-avatar-circle {
@@ -488,20 +446,20 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
-        .selected-account-details {
+        .detected-account-details {
             display: flex;
             flex-direction: column;
             overflow: hidden;
             flex: 1;
         }
 
-        .selected-account-name {
+        .detected-account-name {
             font-size: 13px;
             font-weight: 700;
             color: #ffffff;
         }
 
-        .selected-account-email {
+        .detected-account-email {
             font-size: 11.5px;
             color: #38bdf8;
             font-family: monospace;
@@ -510,15 +468,31 @@
             text-overflow: ellipsis;
         }
 
-        .account-badge-verified {
-            font-size: 10px;
-            font-weight: 700;
-            color: #10b981;
-            background: rgba(16, 185, 129, 0.15);
-            border: 1px solid rgba(16, 185, 129, 0.35);
-            padding: 2px 6px;
+        /* Chips de Dominio Rápido */
+        .domain-chips-row {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            margin-bottom: 10px;
+            justify-content: center;
+        }
+
+        .domain-chip {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 99px;
-            align-self: center;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .domain-chip:hover {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: #38bdf8;
+            color: #38bdf8;
         }
 
         /* Checkbox Términos */
@@ -552,7 +526,7 @@
             color: #1f2937;
             font-size: 13.5px;
             font-weight: 700;
-            padding: 11px 16px;
+            padding: 12px 16px;
             border: none;
             border-radius: 12px;
             cursor: pointer;
@@ -591,22 +565,21 @@
         .liquid-input {
             width: 100%;
             background: rgba(13, 20, 36, 0.85);
-            border: 1.5px solid rgba(255, 255, 255, 0.12);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
             border-radius: 12px;
-            padding: 11px 14px;
+            padding: 12px 14px;
             font-size: 13.5px;
             color: #ffffff;
-            font-family: monospace;
-            text-align: center;
+            font-family: inherit;
             outline: none;
             transition: all 0.2s ease;
             box-sizing: border-box;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .liquid-input:focus {
-            border-color: #00D2B5;
-            box-shadow: 0 0 16px rgba(0, 210, 181, 0.35);
+            border-color: #38bdf8;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
             background: rgba(17, 26, 46, 0.95);
         }
 
@@ -656,7 +629,7 @@
     function buildModals() {
         if (document.getElementById('accessLockModal')) return;
 
-        // 1. MODAL PRINCIPAL DE ACCESO
+        // 1. MODAL PRINCIPAL DE ACCESO CON GOOGLE SIGN-IN REAL
         const mainModal = document.createElement('div');
         mainModal.id = 'accessLockModal';
         mainModal.className = 'modal-hidden';
@@ -664,7 +637,7 @@
         mainModal.innerHTML = `
             <div class="liquid-glass-card">
                 
-                <!-- ══ VISTA 1: SELECTOR DESPLEGABLE DE CUENTAS GOOGLE ══ -->
+                <!-- ══ VISTA 1: INICIO DE SESIÓN CON GOOGLE (DETECCIÓN REAL) ══ -->
                 <div id="viewGoogleChooser" style="display: block;">
                     <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                         <svg width="24" height="24" viewBox="0 0 48 48">
@@ -679,40 +652,35 @@
                     <h2 style="font-size: 16.5px; font-weight: 800; color: #ffffff; margin-bottom: 2px;">
                         CEREBRO ESTRUCTURAL <span style="color:#38bdf8; font-size:12px;">v2.1</span>
                     </h2>
-                    <p style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;">
+                    <p style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">
                         Desarrollado por Ingeniero Ulianov Cuba Valencia — Cálculo Matricial y Exportador de Excel Nativo
                     </p>
 
-                    <!-- DESPLEGABLE INTERACTIVO DE CUENTAS DE GOOGLE -->
-                    <div class="google-dropdown-container">
-                        <label class="google-dropdown-label">
-                            <span style="color: #38bdf8;">▼</span> Elige tu cuenta de Google en la lista desplegable:
+                    <!-- Lista de Cuentas Reales Detectadas en este Dispositivo (si existen) -->
+                    <div id="detectedAccountsWrap" class="detected-accounts-container" style="display: none;">
+                        <span class="detected-accounts-label">
+                            <span style="color: #38bdf8;">👤</span> Cuentas vinculadas a este navegador:
+                        </span>
+                        <div id="detectedAccountsList"></div>
+                    </div>
+
+                    <!-- Input para Ingreso Directo de la Cuenta Google del Usuario -->
+                    <div style="text-align: left; margin: 8px 0 4px;">
+                        <label style="font-size: 11.5px; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 4px;">
+                            Ingresa tu cuenta de Google del usuario:
                         </label>
-                        <div class="google-dropdown-select-wrap">
-                            <select id="googleAccountDropdown" class="google-dropdown-select">
-                                <!-- Opciones inyectadas dinámicamente -->
-                            </select>
-                            <span class="google-dropdown-arrow">▼</span>
-                        </div>
-
-                        <!-- Tarjeta de Cuenta Seleccionada en Vivo -->
-                        <div class="selected-account-preview" id="selectedAccountCard">
-                            <div class="google-avatar-circle" id="selectedAvatarCircle">U</div>
-                            <div class="selected-account-details">
-                                <span class="selected-account-name" id="selectedAccountName">Estudiante Continental</span>
-                                <span class="selected-account-email" id="selectedAccountEmail">alumno@continental.edu.pe</span>
-                            </div>
-                            <span class="account-badge-verified">✓ Google</span>
-                        </div>
-
-                        <!-- Input para nueva cuenta personalizada si el usuario elige 'Usar otra' -->
-                        <div id="customEmailInputBox" style="display: none; margin-top: 10px;">
-                            <input type="email" id="customUserEmailInput" class="liquid-input" placeholder="correo@gmail.com o @continental.edu.pe" style="text-align: left;">
+                        <input type="email" id="userGoogleEmailInput" class="liquid-input" placeholder="tu.correo@gmail.com o @continental.edu.pe" autocomplete="email">
+                        
+                        <!-- Chips de autocompletado rápido -->
+                        <div class="domain-chips-row">
+                            <span style="font-size: 10.5px; color: #64748b; align-self: center;">Completar:</span>
+                            <button type="button" class="domain-chip" data-domain="@gmail.com">@gmail.com</button>
+                            <button type="button" class="domain-chip" data-domain="@continental.edu.pe">@continental.edu.pe</button>
                         </div>
                     </div>
 
-                    <!-- Contenedor Oficial Google GIS One Tap si está disponible -->
-                    <div id="googleOfficialBtnWrap" style="margin: 8px 0; display: flex; justify-content: center;"></div>
+                    <!-- Contenedor Oficial Google GIS One Tap si está activo -->
+                    <div id="googleOfficialBtnWrap" style="margin: 6px 0; display: flex; justify-content: center;"></div>
 
                     <!-- Términos y Condiciones Obligatorios -->
                     <label class="terms-checkbox-wrap">
@@ -771,9 +739,7 @@
                                 ⏳ Pendiente de Verificación
                             </span>
                         </div>
-                        <div id="lblActiveStudentEmail" style="font-size: 13px; font-family: monospace; font-weight: 700; color: #38bdf8; margin-top: 3px; word-break: break-all;">
-                            alumno@continental.edu.pe
-                        </div>
+                        <div id="lblActiveStudentEmail" style="font-size: 13px; font-family: monospace; font-weight: 700; color: #38bdf8; margin-top: 3px; word-break: break-all;"></div>
                     </div>
 
                     <div style="background: rgba(116, 34, 132, 0.15); border: 1px dashed rgba(116, 34, 132, 0.6); border-radius: 12px; padding: 10px 12px; font-size: 11.5px; text-align: left; color: #cbd5e1; line-height: 1.5; margin-bottom: 14px;">
@@ -922,41 +888,28 @@
         document.getElementById('linkBackFromDev').onclick = () => switchView('google');
         document.getElementById('linkBackToChooser').onclick = () => switchView('google');
 
-        // Inicializar y renderizar las opciones del menú desplegable de Google
-        renderGoogleDropdown();
+        // Renderizar cuentas previamente usadas en este navegador (si existen)
+        renderDetectedAccounts();
 
-        // Controlador de cambio en el menú desplegable
-        const dropdown = document.getElementById('googleAccountDropdown');
-        dropdown.onchange = () => {
-            const selectedVal = dropdown.value;
-            const customBox = document.getElementById('customEmailInputBox');
-            if (selectedVal === '__NEW_ACCOUNT__') {
-                customBox.style.display = 'block';
-                document.getElementById('customUserEmailInput').focus();
-                updateAccountPreview('Nueva Cuenta', 'Escribe tu correo abajo...', '+');
-            } else {
-                customBox.style.display = 'none';
-                const accounts = getGoogleAccounts();
-                const found = accounts.find(a => a.email.toLowerCase() === selectedVal.toLowerCase());
-                if (found) {
-                    currentSelectedAccount = found;
-                    updateAccountPreview(found.name, found.email, found.avatar);
+        // Controladores para los chips de autocompletado (@gmail.com, @continental.edu.pe)
+        document.querySelectorAll('.domain-chip').forEach(chip => {
+            chip.onclick = () => {
+                const input = document.getElementById('userGoogleEmailInput');
+                const domain = chip.dataset.domain;
+                let val = (input.value || '').trim();
+                if (!val) {
+                    input.value = domain;
+                } else if (val.includes('@')) {
+                    val = val.split('@')[0] + domain;
+                    input.value = val;
+                } else {
+                    input.value = val + domain;
                 }
-            }
-        };
+                input.focus();
+            };
+        });
 
-        // Escuchar input personalizado
-        const customInput = document.getElementById('customUserEmailInput');
-        customInput.oninput = () => {
-            const val = customInput.value.trim();
-            if (val) {
-                updateAccountPreview(val.split('@')[0], val, val.charAt(0).toUpperCase());
-            } else {
-                updateAccountPreview('Nueva Cuenta', 'Escribe tu correo...', '+');
-            }
-        };
-
-        // Botón "Continuar con cuenta de Google"
+        // Botón Principal: "Continuar con cuenta de Google"
         document.getElementById('btnConfirmGoogleAccount').onclick = () => {
             const chkTerms = document.getElementById('chkTermsAndConditions');
             const errTerms = document.getElementById('termsErrorMsg');
@@ -966,34 +919,26 @@
             }
             errTerms.style.display = 'none';
 
-            let chosenEmail = '';
-            let chosenName = '';
+            const input = document.getElementById('userGoogleEmailInput');
+            const entered = (input.value || '').trim();
 
-            if (dropdown.value === '__NEW_ACCOUNT__') {
-                chosenEmail = (customInput.value || '').trim();
-                chosenName = chosenEmail.split('@')[0];
-            } else {
-                const accounts = getGoogleAccounts();
-                const found = accounts.find(a => a.email.toLowerCase() === dropdown.value.toLowerCase());
-                if (found) {
-                    chosenEmail = found.email;
-                    chosenName = found.name;
-                }
-            }
-
-            // Permitir contraseña de desarrollador directa si se ingresa en el campo
-            if (MASTER_PASSWORDS.includes(chosenEmail)) {
+            // Si es la contraseña de desarrollador directa, desbloquear inmediatamente
+            if (MASTER_PASSWORDS.includes(entered)) {
                 grantDeveloperAccess();
                 return;
             }
 
-            if (!chosenEmail || !chosenEmail.includes('@')) {
-                alert("Por favor selecciona o ingresa un correo de Google válido (@gmail.com o @continental.edu.pe).");
+            if (!entered || !entered.includes('@')) {
+                alert("Por favor ingresa tu correo de Google (@gmail.com o @continental.edu.pe).");
+                input.focus();
                 return;
             }
 
-            saveGoogleAccount(chosenEmail, chosenName);
-            processStudentLogin(chosenEmail, chosenName);
+            const cleanEmail = entered.toLowerCase().trim();
+            const cleanName = cleanEmail.split('@')[0];
+
+            saveGoogleAccount(cleanEmail, cleanName);
+            processStudentLogin(cleanEmail, cleanName);
         };
 
         // Procesar login del estudiante
@@ -1001,7 +946,7 @@
             const cleanEmail = email.toLowerCase().trim();
             currentSelectedAccount = { email: cleanEmail, name: name };
 
-            // 1. Si ya está autorizado, entra directo a la aplicación
+            // 1. Si ya está autorizado en la lista blanca, entra directo a la aplicación
             if (isUserAuthorized(cleanEmail)) {
                 saveSession({ role: 'student', email: cleanEmail, name: name });
                 hideModal();
@@ -1009,15 +954,16 @@
                 return;
             }
 
-            // 2. Si es nuevo, generar código aleatorio e intransferible
+            // 2. Si es una nueva solicitud, generar código aleatorio e intransferible
             const accessCode = generateRandomAccessCode(cleanEmail);
             addPendingRequest(cleanEmail, accessCode, name);
 
             // Notificar al correo del creador
             sendNotificationEmail(cleanEmail, name, accessCode);
 
-            // Mostrar pantalla de pago Yape
-            document.getElementById('lblActiveStudentEmail').textContent = cleanEmail;
+            // Mostrar pantalla de pago Yape vinculada al correo
+            const lblEmail = document.getElementById('lblActiveStudentEmail');
+            if (lblEmail) lblEmail.textContent = cleanEmail;
             switchView('yape');
             document.getElementById('accessPassInput').focus();
         }
@@ -1119,38 +1065,46 @@
 
         document.getElementById('btnNewProjectSavePrompt').onclick = promptSaveProject;
 
-        // Intentar inicializar Google Identity Services si está disponible en la página
+        // Intentar inicializar Google Identity Services si está configurado
         initGoogleGIS();
     }
 
-    // Actualizar la vista previa de la cuenta seleccionada
-    function updateAccountPreview(name, email, avatar) {
-        const nameEl = document.getElementById('selectedAccountName');
-        const emailEl = document.getElementById('selectedAccountEmail');
-        const avatarEl = document.getElementById('selectedAvatarCircle');
-        if (nameEl) nameEl.textContent = name;
-        if (emailEl) emailEl.textContent = email;
-        if (avatarEl) avatarEl.textContent = avatar || name.charAt(0).toUpperCase();
-    }
+    // Renderizar cuentas previamente usadas en este navegador
+    function renderDetectedAccounts() {
+        const wrap = document.getElementById('detectedAccountsWrap');
+        const listEl = document.getElementById('detectedAccountsList');
+        if (!wrap || !listEl) return;
 
-    // Renderizar opciones del menú desplegable de Google
-    function renderGoogleDropdown() {
-        const dropdown = document.getElementById('googleAccountDropdown');
-        if (!dropdown) return;
-
-        const accounts = getGoogleAccounts();
-        let html = '';
-        accounts.forEach((acc, idx) => {
-            html += `<option value="${acc.email}">${acc.email} (${acc.name})</option>`;
-        });
-        html += `<option value="__NEW_ACCOUNT__">➕ Usar otra cuenta de Google...</option>`;
-        dropdown.innerHTML = html;
-
-        if (accounts.length > 0) {
-            currentSelectedAccount = accounts[0];
-            dropdown.value = accounts[0].email;
-            updateAccountPreview(accounts[0].name, accounts[0].email, accounts[0].avatar);
+        const accounts = getStoredGoogleAccounts();
+        if (accounts.length === 0) {
+            wrap.style.display = 'none';
+            return;
         }
+
+        wrap.style.display = 'block';
+        let html = '';
+        accounts.forEach(acc => {
+            html += `
+                <div class="detected-account-card" data-email="${acc.email}" data-name="${acc.name}">
+                    <div class="google-avatar-circle">${acc.avatar || acc.email.charAt(0).toUpperCase()}</div>
+                    <div class="detected-account-details">
+                        <span class="detected-account-name">${acc.name}</span>
+                        <span class="detected-account-email">${acc.email}</span>
+                    </div>
+                    <span style="font-size: 11px; color: #10b981; font-weight: 700;">Continuar ➔</span>
+                </div>
+            `;
+        });
+        listEl.innerHTML = html;
+
+        listEl.querySelectorAll('.detected-account-card').forEach(card => {
+            card.onclick = () => {
+                const em = card.dataset.email;
+                const input = document.getElementById('userGoogleEmailInput');
+                if (input) input.value = em;
+                document.getElementById('btnConfirmGoogleAccount').click();
+            };
+        });
     }
 
     // Inicializar Google Identity Services (GIS) oficial si está configurado
@@ -1169,10 +1123,9 @@
                             const data = JSON.parse(jsonPayload);
                             if (data.email) {
                                 saveGoogleAccount(data.email, data.name, data.picture);
-                                renderGoogleDropdown();
-                                const dropdown = document.getElementById('googleAccountDropdown');
-                                if (dropdown) dropdown.value = data.email;
-                                updateAccountPreview(data.name || data.email, data.email, (data.name || data.email).charAt(0).toUpperCase());
+                                const input = document.getElementById('userGoogleEmailInput');
+                                if (input) input.value = data.email;
+                                document.getElementById('btnConfirmGoogleAccount').click();
                             }
                         } catch (e) {
                             console.warn("GIS decode note:", e);
