@@ -54,45 +54,50 @@ with sync_playwright() as p:
     print("Title:", page.title())
     assert "CEREBRO ESTRUCTURAL" in page.title(), "Title does not match!"
 
-    # 1. Test Single Sign-On / Email & Yape Protection & Owner Master Login
-    print("Testing Student Login & Yape Protection...")
+    # 1. Test Google SSO Chooser, Terms & Conditions, and Developer Access
+    print("Testing Google Account Chooser & Terms Acceptance...")
     lock_modal = page.locator("#accessLockModal")
     assert lock_modal.is_visible(), "Access Lock Modal should be visible on fresh load!"
 
-    # A. Test Student entering email: alumno@continental.edu.pe
-    page.fill("#userEmailInput", "alumno@continental.edu.pe")
-    page.click("#btnEmailLogin")
-    time.sleep(0.3)
+    # Verify Google Account Chooser view is visible
+    assert page.locator("#viewGoogleChooser").is_visible(), "Google Chooser should be visible!"
+    terms_chk = page.locator("#chkTermsAndConditions")
+    assert terms_chk.is_checked(), "Terms and Conditions checkbox should be present and checked!"
+
+    # A. Test Student choosing Google Account: alumno@continental.edu.pe
+    print("Student selecting Google account: alumno@continental.edu.pe...")
+    page.click(".google-account-item[data-email='alumno@continental.edu.pe']")
+    time.sleep(0.4)
 
     # Verify Yape paywall view appears with student email bound
-    assert page.locator("#authViewYape").is_visible(), "Yape view should be visible for unapproved student!"
-    assert "alumno@continental.edu.pe" in page.locator("#lblActiveUserEmail").inner_text()
-    print("Student email successfully bound to Yape view!")
+    assert page.locator("#viewYapePaywall").is_visible(), "Yape view should be visible for unapproved student!"
+    assert "alumno@continental.edu.pe" in page.locator("#lblActiveStudentEmail").inner_text()
+    print("Student Google email successfully bound and pending activation!")
 
     # Test invalid activation key rejection
-    page.fill("#accessPassInput", "ULI-INVALIDA")
+    page.fill("#accessPassInput", "CYB-INVALIDO")
     page.click("#btnUnlockAccess")
     time.sleep(0.3)
     error_msg = page.locator("#passErrorMsg")
     assert error_msg.is_visible(), "Error message should be visible on invalid key!"
     print("Anti-tamper: Invalid key correctly rejected!")
 
-    # B. Test Owner Master Login (no Google account, no email needed)
-    print("Testing Owner Master Login with 'Vayolett1404'...")
-    page.click("#linkGoToOwner2")
+    # B. Test Discreet Developer Master Login (no Google account, no email needed)
+    print("Testing Developer Master Login with 'Vayolett1404'...")
+    page.click("#linkDevAccess2")
     time.sleep(0.3)
-    assert page.locator("#authViewOwner").is_visible(), "Owner view should be visible!"
+    assert page.locator("#viewDeveloperAccess").is_visible(), "Developer view should be visible!"
 
     page.fill("#ownerMasterPassInput", "Vayolett1404")
     page.click("#btnOwnerLogin")
     time.sleep(0.5)
 
-    assert not lock_modal.is_visible(), "Access Lock Modal should be hidden after Owner Master Password!"
-    print("Owner Master Password 'Vayolett1404' accepted and full platform unlocked worldwide!")
+    assert not lock_modal.is_visible(), "Access Lock Modal should be hidden after Developer Master Password!"
+    print("Developer Master Password 'Vayolett1404' accepted and full platform unlocked worldwide!")
 
-    # Verify Owner Panel button exists
-    assert page.locator("#btnOwnerPanel").is_visible(), "Owner Panel button should be visible for Owner!"
-    print("Owner Panel button verified!")
+    # Verify Developer Panel button exists
+    assert page.locator("#btnOwnerPanel").is_visible(), "Developer Panel button should be visible for Developer!"
+    print("Developer Panel button verified!")
 
     # Check structural status badge
     status_text = page.locator("#structuralStatusBadge").inner_text()

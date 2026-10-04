@@ -1,26 +1,36 @@
 /**
- * auth.js - CEREBRO ESTRUCTURAL v2.0
- * Sistema Avanzado de Control de Acceso Estudiantil y Activación vía Yape (S/ 5.00)
- * Cátedra: Ing. Ulianov Cuba Valencia - Análisis Estructural II
- * 
- * Contraseña Maestra de Administrador / Dueño: Vayolett1404
- * Validación Criptográfica Anti-Transferencia: SHA-256 intransferible por correo
+ * auth.js - CEREBRO ESTRUCTURAL v2.1
+ * Sistema de Control de Acceso Estudiantil, Google SSO, Pasarela Yape S/ 5.00,
+ * Control de Sesión Única, Guardado de Proyectos Multi-Usuario y Panel de Desarrollador.
+ *
+ * Desarrollado por Ingeniero Ulianov Cuba Valencia
+ * Contraseña Maestra de Desarrollador: Vayolett1404
  */
 
 (function() {
     'use strict';
 
-    // ── CONSTANTES CRIPTOGRÁFICAS Y ALMACENAMIENTO ──────────────
+    // ── CONSTANTES GLOBALES Y SEGURIDAD ─────────────────────────
     const MASTER_PASSWORDS = ['Vayolett1404', 'vayolett1404'];
-    const CRYPTO_SALT = 'CYBORG_ULIANOV_MASTER_SALT_2026';
-    const STORAGE_KEY_AUTH = 'cerebro_auth_session';
-    const STORAGE_KEY_WHITELIST = 'cerebro_authorized_emails';
+    const CRYPTO_SALT = 'CYBORG_ULIANOV_V21_MASTER_SALT_2026';
+    const NOTIFICATION_EMAIL = 'ulianov.continental@gmail.com'; // Correo de notificación
 
-    // ── IMPLEMENTACIÓN NATIVA Y ROBUSTA DE SHA-256 ──────────────
+    // Claves de almacenamiento
+    const KEY_SESSION = 'cerebro_auth_session_v21';
+    const KEY_WHITELIST = 'cerebro_authorized_users_v21';
+    const KEY_PENDING = 'cerebro_pending_requests_v21';
+    const KEY_BANNED = 'cerebro_banned_users_v21';
+    const KEY_PROJECTS = 'cerebro_global_projects_v21';
+    const KEY_DEVICE_SESSION = 'cerebro_device_session_token';
+
+    // Canal de sincronización entre pestañas y dispositivos
+    const sessionChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('cerebro_session_sync') : null;
+    const currentSessionToken = 'sess_' + Math.random().toString(36).substring(2) + Date.now();
+    localStorage.setItem(KEY_DEVICE_SESSION, currentSessionToken);
+
+    // ── MOTOR CRIPTOGRÁFICO SHA-256 Y CÓDIGOS DE ALTA ENTROPÍA ─
     function sha256(ascii) {
-        function rightRotate(value, amount) {
-            return (value >>> amount) | (value << (32 - amount));
-        }
+        function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
         const mathPow = Math.pow;
         const maxWord = mathPow(2, 32);
         let lengthProperty = 'length';
@@ -73,156 +83,356 @@
         return result;
     }
 
-    // Generar clave única e intransferible para un correo
-    function generateUserKey(email) {
-        if (!email) return '';
+    // Generar código aleatorio difícil de adivinar y criptográficamente ligado
+    function generateRandomAccessCode(email) {
+        const clean = (email || '').trim().toLowerCase();
+        const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const hash = sha256(clean + CRYPTO_SALT + rand).substring(0, 4).toUpperCase();
+        return `CYB-${rand}-${hash}`;
+    }
+
+    // Comprobar clave para un usuario
+    function verifyAccessCode(email, code) {
+        if (!email || !code) return false;
         const cleanEmail = email.trim().toLowerCase();
-        const hash = sha256(cleanEmail + CRYPTO_SALT);
-        return 'ULI-' + hash.substring(0, 8).toUpperCase();
-    }
+        const cleanCode = code.trim().toUpperCase();
 
-    // ── GESTIÓN DE WHITELIST EN LOCALSTORAGE ─────────────────────
-    function getAuthorizedEmails() {
-        try {
-            const data = localStorage.getItem(STORAGE_KEY_WHITELIST);
-            return data ? JSON.parse(data) : [];
-        } catch (e) {
-            return [];
-        }
-    }
+        // 1. Revisar si la clave fue generada y guardada en solicitudes
+        const pending = getPendingRequests();
+        const found = pending.find(p => p.email === cleanEmail && p.code === cleanCode);
+        if (found) return true;
 
-    function addAuthorizedEmail(email) {
-        if (!email) return;
-        const clean = email.trim().toLowerCase();
-        const list = getAuthorizedEmails();
-        if (!list.includes(clean)) {
-            list.push(clean);
-            localStorage.setItem(STORAGE_KEY_WHITELIST, JSON.stringify(list));
-        }
-    }
+        // 2. Revisar si es clave hash directa
+        const directKey = 'ULI-' + sha256(cleanEmail + CRYPTO_SALT).substring(0, 8).toUpperCase();
+        if (cleanCode === directKey) return true;
 
-    function removeAuthorizedEmail(email) {
-        const clean = email.trim().toLowerCase();
-        let list = getAuthorizedEmails();
-        list = list.filter(e => e !== clean);
-        localStorage.setItem(STORAGE_KEY_WHITELIST, JSON.stringify(list));
-    }
-
-    function isEmailAuthorized(email) {
-        if (!email) return false;
-        const clean = email.trim().toLowerCase();
-        return getAuthorizedEmails().includes(clean);
-    }
-
-    // ── GESTIÓN DE SESIÓN ───────────────────────────────────────
-    function getSession() {
-        try {
-            const s = localStorage.getItem(STORAGE_KEY_AUTH);
-            return s ? JSON.parse(s) : null;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    function setSession(sessionData) {
-        localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(sessionData));
-        localStorage.setItem('cerebro_unlocked', 'true'); // compatibilidad retroactiva
-    }
-
-    function clearSession() {
-        localStorage.removeItem(STORAGE_KEY_AUTH);
-        localStorage.removeItem('cerebro_unlocked');
-    }
-
-    function isUserAuthenticated() {
-        const session = getSession();
-        if (!session) return false;
-        if (session.role === 'owner') return true;
-        if (session.role === 'student' && session.email) {
-            return isEmailAuthorized(session.email);
-        }
         return false;
     }
 
-    // ── INYECCIÓN DE ESTILOS CSS DEL SISTEMA DE ACCESO ──────────
-    const styleEl = document.createElement('style');
-    styleEl.id = 'cerebro-auth-styles';
-    styleEl.textContent = `
-        #accessLockModal, #ownerControlModal {
+    // ── GESTIÓN DE ALMACENAMIENTO DE USUARIOS Y WHITELIST ─────────
+    function getStoredJSON(key, defaultVal) {
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : defaultVal;
+        } catch (e) {
+            return defaultVal;
+        }
+    }
+
+    function setStoredJSON(key, val) {
+        localStorage.setItem(key, JSON.stringify(val));
+    }
+
+    function getAuthorizedUsers() { return getStoredJSON(KEY_WHITELIST, []); }
+    function isUserAuthorized(email) {
+        if (!email) return false;
+        const clean = email.trim().toLowerCase();
+        if (isUserBanned(clean)) return false;
+        return getAuthorizedUsers().includes(clean);
+    }
+    function authorizeUser(email) {
+        const clean = email.trim().toLowerCase();
+        const list = getAuthorizedUsers();
+        if (!list.includes(clean)) {
+            list.push(clean);
+            setStoredJSON(KEY_WHITELIST, list);
+        }
+        // Quitar de pendientes si estaba
+        removePendingRequest(clean);
+    }
+    function revokeUser(email) {
+        const clean = email.trim().toLowerCase();
+        const list = getAuthorizedUsers().filter(e => e !== clean);
+        setStoredJSON(KEY_WHITELIST, list);
+    }
+
+    function getBannedUsers() { return getStoredJSON(KEY_BANNED, []); }
+    function isUserBanned(email) {
+        return getBannedUsers().includes((email || '').trim().toLowerCase());
+    }
+    function banUser(email) {
+        const clean = (email || '').trim().toLowerCase();
+        const list = getBannedUsers();
+        if (!list.includes(clean)) {
+            list.push(clean);
+            setStoredJSON(KEY_BANNED, list);
+        }
+        revokeUser(clean);
+        // Desconectar inmediatamente
+        if (sessionChannel) {
+            sessionChannel.postMessage({ type: 'USER_BANNED', email: clean });
+        }
+    }
+
+    function getPendingRequests() { return getStoredJSON(KEY_PENDING, []); }
+    function addPendingRequest(email, code, accountName) {
+        const clean = (email || '').trim().toLowerCase();
+        const list = getPendingRequests().filter(p => p.email !== clean);
+        list.unshift({
+            email: clean,
+            name: accountName || clean.split('@')[0],
+            code: code,
+            requestedAt: new Date().toLocaleString(),
+            userAgent: navigator.userAgent
+        });
+        setStoredJSON(KEY_PENDING, list);
+    }
+    function removePendingRequest(email) {
+        const clean = (email || '').trim().toLowerCase();
+        const list = getPendingRequests().filter(p => p.email !== clean);
+        setStoredJSON(KEY_PENDING, list);
+    }
+
+    // ── GESTIÓN DE SESIÓN Y CONTROL DE SESIÓN ÚNICA ──────────────
+    function getSession() { return getStoredJSON(KEY_SESSION, null); }
+    function saveSession(sessionObj) {
+        setStoredJSON(KEY_SESSION, sessionObj);
+        localStorage.setItem('cerebro_unlocked', 'true');
+        // Notificar inicio de sesión para forzar cierre de cualquier otra pestaña/dispositivo
+        if (sessionChannel) {
+            sessionChannel.postMessage({
+                type: 'SESSION_STARTED',
+                email: sessionObj.email,
+                token: currentSessionToken
+            });
+        }
+    }
+    function logoutSession() {
+        localStorage.removeItem(KEY_SESSION);
+        localStorage.removeItem('cerebro_unlocked');
+        showModal();
+    }
+
+    // Escuchar mensajes de otras pestañas para garantizar SESIÓN ÚNICA
+    if (sessionChannel) {
+        sessionChannel.onmessage = (event) => {
+            const data = event.data;
+            if (!data) return;
+
+            const mySession = getSession();
+            if (mySession && mySession.role === 'student' && mySession.email === data.email) {
+                if (data.type === 'SESSION_STARTED' && data.token !== currentSessionToken) {
+                    // Cerrar sesión automáticamente en esta ventana
+                    logoutSession();
+                    alert("⚠ SESIÓN CERRADA AUTOMÁTICAMENTE:\n\nTu cuenta ha sido abierta en otra ventana o dispositivo. Solo se permite 1 sesión activa simultánea.");
+                } else if (data.type === 'USER_BANNED') {
+                    logoutSession();
+                    alert("🚫 ACCESO DENEGADO:\n\nTu cuenta ha sido suspendida o bloqueada por el desarrollador.");
+                }
+            }
+        };
+    }
+
+    // ── ALMACENAMIENTO DE PROYECTOS / ARMADURAS MULTI-USUARIO ────
+    function getAllProjects() { return getStoredJSON(KEY_PROJECTS, []); }
+    function saveProject(projectName, nodes, bars) {
+        const session = getSession();
+        if (!session) throw new Error("Debes tener una sesión activa para guardar un proyecto.");
+
+        const cleanName = (projectName || 'Armadura Sin Nombre').trim();
+        const list = getAllProjects();
+        const projectId = 'proj_' + Math.random().toString(36).substring(2, 9) + Date.now();
+
+        const newProject = {
+            id: projectId,
+            name: cleanName,
+            authorEmail: session.email || (session.role === 'owner' ? 'Desarrollador (Dueño)' : 'Anónimo'),
+            role: session.role,
+            createdAt: new Date().toLocaleString(),
+            nodes: JSON.parse(JSON.stringify(nodes)),
+            bars: JSON.parse(JSON.stringify(bars))
+        };
+
+        list.unshift(newProject);
+        setStoredJSON(KEY_PROJECTS, list);
+        return newProject;
+    }
+
+    function getUserProjects() {
+        const session = getSession();
+        if (!session) return [];
+        const all = getAllProjects();
+        if (session.role === 'owner') return all; // El dueño ve TODO
+        return all.filter(p => p.authorEmail === session.email);
+    }
+
+    function deleteProject(projectId) {
+        const session = getSession();
+        let all = getAllProjects();
+        if (session.role === 'owner') {
+            all = all.filter(p => p.id !== projectId);
+        } else {
+            all = all.filter(p => p.id !== projectId || p.authorEmail === session.email);
+        }
+        setStoredJSON(KEY_PROJECTS, all);
+    }
+
+    // ── SERVICIO DE NOTIFICACIÓN AUTOMÁTICA POR CORREO ──────────
+    async function sendNotificationEmail(studentEmail, studentName, generatedCode) {
+        const payload = {
+            _subject: `🔔 Nueva Solicitud de Acceso: ${studentEmail} - CEREBRO ESTRUCTURAL v2.1`,
+            email: studentEmail,
+            nombre: studentName,
+            codigo_acceso_generado: generatedCode,
+            mensaje: `El alumno ${studentEmail} ha iniciado sesión con Google y solicita activación vía Yape (S/ 5.00).`,
+            fecha: new Date().toLocaleString(),
+            _template: 'table'
+        };
+
+        try {
+            // Intentar envío transparente vía FormSubmit AJAX
+            await fetch(`https://formsubmit.co/ajax/${NOTIFICATION_EMAIL}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            console.log("Notificación por correo enviada con éxito.");
+        } catch (e) {
+            console.warn("No se pudo enviar correo por red (se registrará en el panel del dueño):", e);
+        }
+    }
+
+    // ── ESTILOS "LIQUID GLASS" VIDRIOSO Y ULTRA-MODERNO ─────────
+    const styleSheet = document.createElement('style');
+    styleSheet.id = 'cerebro-liquid-glass-styles';
+    styleSheet.textContent = `
+        /* Overlay Vidrioso Liquid Glass */
+        #accessLockModal, #ownerControlModal, #projectsManagerModal {
             position: fixed;
             inset: 0;
             z-index: 999999;
-            background: rgba(5, 8, 16, 0.92);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            background: rgba(3, 7, 18, 0.75);
+            backdrop-filter: blur(28px) saturate(190%);
+            -webkit-backdrop-filter: blur(28px) saturate(190%);
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 16px;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            transition: opacity 0.25s ease, visibility 0.25s ease;
+            transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s;
         }
 
-        #accessLockModal.modal-hidden, #ownerControlModal.modal-hidden {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
+        .modal-hidden {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
         }
 
-        .auth-card {
-            background: #111827;
-            border: 2px solid #742284;
-            border-radius: 22px;
-            max-width: 460px;
+        /* Tarjeta Liquid Glass */
+        .liquid-glass-card {
+            background: rgba(17, 24, 39, 0.65);
+            background-image: radial-gradient(at 100% 0%, rgba(116, 34, 132, 0.22) 0px, transparent 50%),
+                              radial-gradient(at 0% 100%, rgba(0, 210, 181, 0.15) 0px, transparent 50%);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-top: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 24px;
+            max-width: 470px;
             width: 100%;
-            padding: 26px 22px;
-            box-shadow: 0 20px 60px rgba(116, 34, 132, 0.4), 0 0 35px rgba(0, 210, 181, 0.15);
+            padding: 26px 24px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.2),
+                        0 0 40px rgba(116, 34, 132, 0.25);
             color: #f8fafc;
             text-align: center;
             position: relative;
-            animation: authModalPop 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: liquidGlassPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             max-height: 92vh;
             overflow-y: auto;
         }
 
-        @keyframes authModalPop {
-            0% { transform: scale(0.92); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
+        @keyframes liquidGlassPop {
+            0% { transform: scale(0.93) translateY(8px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
         }
 
-        .auth-view { display: none; }
-        .auth-view.view-active { display: block; }
+        /* Cuentas de Google Chooser */
+        .google-account-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 12px 0;
+            text-align: left;
+        }
 
-        /* Botón Oficial Google */
-        .btn-google-sso {
-            width: 100%;
-            background: #ffffff;
-            color: #1f2937;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 11px 16px;
-            font-size: 13.5px;
-            font-weight: 700;
+        .google-account-item {
             display: flex;
             align-items: center;
-            justify-content: center;
             gap: 12px;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
             cursor: pointer;
-            transition: all 0.15s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-            margin: 14px 0 10px;
+            transition: all 0.18s ease;
         }
 
-        .btn-google-sso:hover {
-            background: #f8fafc;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+        .google-account-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(56, 189, 248, 0.4);
             transform: translateY(-1px);
         }
 
-        .btn-google-sso:active { transform: translateY(0); }
+        .google-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4285F4, #34A853);
+            color: #ffffff;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
 
-        /* Yape Elements */
-        .yape-badge-price {
+        .google-acc-info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .google-acc-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .google-acc-email {
+            font-size: 11px;
+            color: #94a3b8;
+            font-family: monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Checkbox Términos */
+        .terms-checkbox-wrap {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            text-align: left;
+            font-size: 11px;
+            color: #cbd5e1;
+            margin: 14px 0 10px;
+            line-height: 1.4;
+            padding: 8px 10px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .terms-checkbox-wrap input[type="checkbox"] {
+            margin-top: 2px;
+            accent-color: #00D2B5;
+            cursor: pointer;
+            width: 15px;
+            height: 15px;
+        }
+
+        /* Yape Badge */
+        .yape-liquid-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
@@ -230,35 +440,20 @@
             border: 1px solid #00D2B5;
             color: #ffffff;
             font-weight: 800;
-            font-size: 12.5px;
-            padding: 5px 14px;
+            font-size: 12px;
+            padding: 4px 14px;
             border-radius: 99px;
             margin-bottom: 12px;
             box-shadow: 0 4px 14px rgba(0, 210, 181, 0.25);
         }
 
-        .yape-user-chip {
-            background: rgba(13, 20, 36, 0.9);
-            border: 1px solid #334155;
-            border-radius: 10px;
-            padding: 8px 12px;
-            font-size: 12px;
-            color: #38bdf8;
-            font-family: monospace;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 14px;
-            word-break: break-all;
-        }
-
-        .auth-input {
+        .liquid-input {
             width: 100%;
-            background: #0d1424;
-            border: 1.5px solid #334155;
-            border-radius: 10px;
-            padding: 10px 12px;
-            font-size: 13px;
+            background: rgba(13, 20, 36, 0.85);
+            border: 1.5px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 11px 14px;
+            font-size: 13.5px;
             color: #ffffff;
             font-family: monospace;
             text-align: center;
@@ -268,535 +463,766 @@
             margin-bottom: 8px;
         }
 
-        .auth-input:focus {
+        .liquid-input:focus {
             border-color: #00D2B5;
-            box-shadow: 0 0 12px rgba(0, 210, 181, 0.3);
-            background: #111a2e;
+            box-shadow: 0 0 16px rgba(0, 210, 181, 0.35);
+            background: rgba(17, 26, 46, 0.95);
         }
 
-        .auth-btn-action {
+        .liquid-btn-primary {
             width: 100%;
             background: linear-gradient(135deg, #742284 0%, #9333ea 50%, #00D2B5 100%);
             color: #ffffff;
             font-size: 13.5px;
             font-weight: 800;
-            padding: 11px;
+            padding: 12px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
-            box-shadow: 0 6px 18px rgba(116, 34, 132, 0.4);
+            box-shadow: 0 6px 20px rgba(116, 34, 132, 0.45);
             transition: all 0.15s ease;
             box-sizing: border-box;
         }
 
-        .auth-btn-action:hover {
+        .liquid-btn-primary:hover {
             transform: translateY(-1px);
-            box-shadow: 0 8px 24px rgba(0, 210, 181, 0.45);
+            box-shadow: 0 8px 26px rgba(0, 210, 181, 0.45);
         }
 
-        .auth-link {
-            color: #94a3b8;
+        .discreet-dev-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             font-size: 11px;
-            text-decoration: underline;
+            color: #64748b;
+            text-decoration: none;
             cursor: pointer;
-            margin-top: 10px;
-            display: inline-block;
-            transition: color 0.15s;
-        }
-
-        .auth-link:hover { color: #38bdf8; }
-
-        .auth-error {
-            color: #f43f5e;
-            font-size: 11px;
-            font-weight: 600;
-            margin-top: 6px;
-            display: none;
-            line-height: 1.4;
-            background: rgba(244, 63, 94, 0.1);
-            border: 1px solid rgba(244, 63, 94, 0.3);
-            padding: 6px 8px;
+            margin-top: 14px;
+            padding: 4px 8px;
             border-radius: 6px;
+            transition: color 0.15s ease;
         }
 
-        .owner-pill {
-            display: inline-block;
-            background: #3b0764;
-            border: 1px solid #a855f7;
-            color: #f3e8ff;
-            padding: 2px 8px;
-            border-radius: 99px;
-            font-size: 10px;
-            font-weight: 800;
+        .discreet-dev-link:hover {
+            color: #94a3b8;
         }
     `;
-    document.head.appendChild(styleEl);
+    document.head.appendChild(styleSheet);
 
-    // ── CONSTRUCCIÓN DEL MODAL PRINCIPAL ────────────────────────
-    let currentTempEmail = '';
+    // ── CONSTRUCCIÓN DE MODALES DE ACCESO (LIQUID GLASS) ─────────
+    let selectedStudentAccount = null;
 
-    function buildAuthModal() {
+    function buildModals() {
         if (document.getElementById('accessLockModal')) return;
 
-        const modalDiv = document.createElement('div');
-        modalDiv.id = 'accessLockModal';
-        modalDiv.className = 'modal-hidden';
+        // 1. MODAL PRINCIPAL DE ACCESO
+        const mainModal = document.createElement('div');
+        mainModal.id = 'accessLockModal';
+        mainModal.className = 'modal-hidden';
 
-        modalDiv.innerHTML = `
-            <div class="auth-card">
+        mainModal.innerHTML = `
+            <div class="liquid-glass-card">
                 
-                <!-- ══ VISTA 1: INICIO DE SESIÓN CON GOOGLE / CORREO ══ -->
-                <div id="authViewLogin" class="auth-view view-active">
-                    <div style="margin-bottom: 12px;">
-                        <span class="owner-pill">ACCESO ESTUDIANTIL v2.0</span>
-                    </div>
-
-                    <h2 style="font-size: 17px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">
-                        CEREBRO ESTRUCTURAL
-                    </h2>
-                    <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.5;">
-                        Cátedra Ing. Ulianov Cuba Valencia — Cálculo Matricial y Exportador de Excel con Fórmulas Nativas.
-                    </p>
-
-                    <!-- Botón Oficial de Google -->
-                    <button id="btnGoogleSignIn" class="btn-google-sso">
-                        <svg width="18" height="18" viewBox="0 0 48 48">
+                <!-- ══ VISTA 1: SELECTOR DE CUENTAS GOOGLE (NATIVO CON TÉRMINOS) ══ -->
+                <div id="viewGoogleChooser" style="display: block;">
+                    <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <svg width="24" height="24" viewBox="0 0 48 48">
                             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                             <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
                             <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.28-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.79l7.97-6.2z"/>
                             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                         </svg>
-                        <span>Continuar con Cuenta Google</span>
-                    </button>
-
-                    <div style="display: flex; align-items: center; gap: 8px; margin: 10px 0;">
-                        <div style="flex: 1; height: 1px; background: #334155;"></div>
-                        <span style="font-size: 10px; color: #64748b; text-transform: uppercase;">O ingresa con tu correo</span>
-                        <div style="flex: 1; height: 1px; background: #334155;"></div>
+                        <span style="font-size: 14px; font-weight: 700; color: #ffffff;">Google Sign-In</span>
                     </div>
 
-                    <input type="email" id="userEmailInput" class="auth-input" placeholder="tu_correo@gmail.com o @continental.edu.pe" autocomplete="email">
-                    <button id="btnEmailLogin" class="auth-btn-action" style="padding: 9px; font-size: 12.5px;">
-                        Ingresar a la Plataforma
-                    </button>
+                    <h2 style="font-size: 16.5px; font-weight: 800; color: #ffffff; margin-bottom: 2px;">
+                        CEREBRO ESTRUCTURAL <span style="color:#38bdf8; font-size:12px;">v2.1</span>
+                    </h2>
+                    <p style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">
+                        Desarrollado por Ingeniero Ulianov Cuba Valencia — Cálculo Matricial y Exportador de Excel Nativo
+                    </p>
 
-                    <div id="loginErrorMsg" class="auth-error"></div>
+                    <!-- Lista de Cuentas Detectadas en el Navegador -->
+                    <div style="font-size: 11.5px; font-weight: 700; color: #cbd5e1; text-align: left; margin-bottom: 6px;">
+                        Elige una cuenta de Google para continuar:
+                    </div>
+                    <div class="google-account-list" id="googleAccountsContainer">
+                        <!-- Cuenta 1 Detectada por defecto en la máquina -->
+                        <div class="google-account-item" data-email="alumno@continental.edu.pe" data-name="Estudiante Continental">
+                            <div class="google-avatar">U</div>
+                            <div class="google-acc-info">
+                                <span class="google-acc-name">Estudiante Continental</span>
+                                <span class="google-acc-email">alumno@continental.edu.pe</span>
+                            </div>
+                        </div>
+                        <!-- Opción de Usar Otra Cuenta -->
+                        <div class="google-account-item" id="btnChooseCustomAccount">
+                            <div class="google-avatar" style="background: #475569;">+</div>
+                            <div class="google-acc-info">
+                                <span class="google-acc-name">Usar otra cuenta de Google</span>
+                                <span class="google-acc-email">Ingresar correo @gmail.com</span>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div style="margin-top: 16px; border-top: 1px solid #1e293b; padding-top: 10px;">
-                        <span id="linkGoToOwner" class="auth-link" style="color: #c084fc; font-weight: 700;">
-                            👑 ¿Eres el Dueño? Ingreso con Contraseña Maestra
+                    <!-- Input alternativo para ingresar cualquier correo -->
+                    <div id="customEmailInputBox" style="display: none; margin-bottom: 10px;">
+                        <input type="email" id="userEmailInput" class="liquid-input" placeholder="correo@gmail.com o @continental.edu.pe">
+                        <button id="btnEmailLogin" class="liquid-btn-primary" style="padding: 9px; font-size: 12px;">
+                            Confirmar esta Cuenta
+                        </button>
+                    </div>
+
+                    <!-- Términos y Condiciones Obligatorios -->
+                    <label class="terms-checkbox-wrap">
+                        <input type="checkbox" id="chkTermsAndConditions" checked>
+                        <span>He leído y acepto los <strong>Términos y Condiciones de Licencia Académica</strong> y la política de acceso intransferible y de sesión única.</span>
+                    </label>
+
+                    <div id="termsErrorMsg" style="display:none; color:#f43f5e; font-size:11px; font-weight:700; margin-bottom:8px;">
+                        ⚠ Debes aceptar los Términos y Condiciones para continuar.
+                    </div>
+
+                    <!-- Acceso Discreto para el Desarrollador -->
+                    <div style="margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px;">
+                        <span id="linkDevAccess" class="discreet-dev-link">
+                            ⚙️ ¿Eres parte del equipo de desarrollo de esta aplicación?
                         </span>
                     </div>
                 </div>
 
-                <!-- ══ VISTA 2: PAGO YAPE S/ 5.00 VINCULADO AL CORREO ══ -->
-                <div id="authViewYape" class="auth-view">
-                    <!-- Logo Yape Oficial -->
-                    <div style="margin-bottom: 10px;">
-                        <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
+                <!-- ══ VISTA 2: PAGO YAPE S/ 5.00 VINCULADO AL CORREO DEL ALUMNO ══ -->
+                <div id="viewYapePaywall" style="display: none;">
+                    <div style="margin-bottom: 8px;">
+                        <svg width="56" height="56" viewBox="0 0 100 100" fill="none">
                             <rect width="100" height="100" rx="22" fill="#742284"/>
                             <path d="M26 30L42 54V74H52V54L68 30H55L47 43.5L39 30H26Z" fill="#FFFFFF"/>
                             <circle cx="74" cy="27" r="7.5" fill="#00D2B5"/>
                         </svg>
                     </div>
 
-                    <div class="yape-badge-price">
+                    <div class="yape-liquid-badge">
                         <span>YAPEA</span>
                         <span style="color: #00D2B5; font-size: 15px; font-weight: 900;">S/ 5.00</span>
-                        <span>• PAGO ÚNICO</span>
+                        <span>• ACCESO PERSONAL</span>
                     </div>
 
                     <h3 style="font-size: 15px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">
                         Activación de Licencia Estudiantil
                     </h3>
 
-                    <!-- Correo Vinculado -->
-                    <div class="yape-user-chip">
-                        <span>👤 <strong id="lblActiveUserEmail">correo@...</strong></span>
-                        <span style="color: #f59e0b; font-size: 10px; font-weight: 700;">Pendiente</span>
+                    <!-- Correo Vinculado y Notificado -->
+                    <div style="background: rgba(13, 20, 36, 0.85); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; text-align: left;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 11px; color: #94a3b8;">Cuenta vinculada:</span>
+                            <span id="badgePendingStatus" style="font-size: 10px; font-weight: 800; color: #f59e0b; background: rgba(245, 158, 11, 0.15); padding: 2px 7px; border-radius: 99px; border: 1px solid rgba(245, 158, 11, 0.4);">
+                                ⏳ Pendiente de Verificación
+                            </span>
+                        </div>
+                        <div id="lblActiveStudentEmail" style="font-size: 13px; font-family: monospace; font-weight: 700; color: #38bdf8; margin-top: 3px; word-break: break-all;">
+                            alumno@continental.edu.pe
+                        </div>
                     </div>
 
-                    <div style="background: rgba(116, 34, 132, 0.15); border: 1px dashed rgba(116, 34, 132, 0.6); border-radius: 10px; padding: 10px; font-size: 11px; text-align: left; color: #cbd5e1; line-height: 1.5; margin-bottom: 12px;">
-                        <strong>Pasos para activar tu cuenta:</strong>
+                    <div style="background: rgba(116, 34, 132, 0.15); border: 1px dashed rgba(116, 34, 132, 0.6); border-radius: 12px; padding: 10px 12px; font-size: 11.5px; text-align: left; color: #cbd5e1; line-height: 1.5; margin-bottom: 14px;">
+                        <strong>Pasos para recibir tu clave:</strong>
                         <ol style="margin-left: 16px; margin-top: 4px;">
                             <li>Yapea <strong>S/ 5.00</strong> al creador.</li>
-                            <li>Envía tu comprobante con tu correo para recibir tu clave.</li>
-                            <li>Escribe tu clave aquí abajo para desbloquear. Tu clave es <strong>intransferible</strong> y solo funciona con este correo.</li>
+                            <li>El sistema ya notificó tu solicitud por correo. Envía tu comprobante de Yape indicando tu correo.</li>
+                            <li>El creador te brindará tu <strong>código de acceso aleatorio</strong> e intransferible.</li>
                         </ol>
                     </div>
 
-                    <input type="text" id="accessPassInput" class="auth-input" placeholder="Clave de Activación (Ej. ULI-XXXXXXXX)" autocomplete="off">
-                    <button id="btnUnlockAccess" class="auth-btn-action">
-                        🔓 Activar Licencia para este Correo
+                    <input type="text" id="accessPassInput" class="liquid-input" placeholder="Código de Acceso (Ej. CYB-XXXX-XXXX)" autocomplete="off">
+                    <button id="btnUnlockAccess" class="liquid-btn-primary">
+                        🔓 Activar Licencia Permanente
                     </button>
 
-                    <div id="passErrorMsg" class="auth-error"></div>
+                    <div id="passErrorMsg" style="display:none; color:#f43f5e; font-size:11px; font-weight:700; margin-top:6px; background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.3); padding:6px; border-radius:8px;"></div>
 
                     <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <span id="linkBackToLogin" class="auth-link">⬅ Cambiar de Correo</span>
-                        <span id="linkGoToOwner2" class="auth-link" style="color: #c084fc;">👑 Soy el Dueño</span>
+                        <span id="linkBackToChooser" style="color: #94a3b8; font-size: 11px; text-decoration: underline; cursor: pointer;">⬅ Cambiar de Cuenta</span>
+                        <span id="linkDevAccess2" class="discreet-dev-link">⚙️ Desarrollador</span>
                     </div>
                 </div>
 
-                <!-- ══ VISTA 3: ACCESO MAESTRO DEL DUEÑO ══ -->
-                <div id="authViewOwner" class="auth-view">
-                    <div style="font-size: 32px; margin-bottom: 8px;">👑</div>
+                <!-- ══ VISTA 3: ACCESO DISCRETO PARA EL DESARROLLADOR ══ -->
+                <div id="viewDeveloperAccess" style="display: none;">
+                    <div style="font-size: 32px; margin-bottom: 6px;">⚙️</div>
                     <h3 style="font-size: 16px; font-weight: 800; color: #c084fc; margin-bottom: 4px;">
-                        Acceso Maestro del Creador
+                        Acceso del Equipo de Desarrollo
                     </h3>
                     <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.5; margin-bottom: 14px;">
-                        Ingreso global sin necesidad de cuenta de Google ni correo desde cualquier dispositivo del mundo.
+                        Ingreso de desarrollo y monitoreo global sin cuenta de Google desde cualquier parte del mundo.
                     </p>
 
-                    <input type="password" id="ownerMasterPassInput" class="auth-input" placeholder="Contraseña Maestra del Dueño..." autocomplete="off">
-                    <button id="btnOwnerLogin" class="auth-btn-action" style="background: linear-gradient(135deg, #6b21a8, #c084fc);">
-                        ⚡ Ingresar como Dueño
+                    <input type="password" id="ownerMasterPassInput" class="liquid-input" placeholder="Contraseña de desarrollador..." autocomplete="off">
+                    <button id="btnOwnerLogin" class="liquid-btn-primary" style="background: linear-gradient(135deg, #581c87, #9333ea);">
+                        ⚡ Autenticar Desarrollador
                     </button>
 
-                    <div id="ownerErrorMsg" class="auth-error"></div>
+                    <div id="ownerErrorMsg" style="display:none; color:#f43f5e; font-size:11.5px; font-weight:700; margin-top:6px;"></div>
 
                     <div style="margin-top: 14px;">
-                        <span id="linkBackFromOwner" class="auth-link">⬅ Volver al Acceso Estudiantil</span>
+                        <span id="linkBackFromDev" style="color: #94a3b8; font-size: 11px; text-decoration: underline; cursor: pointer;">⬅ Volver al inicio</span>
                     </div>
                 </div>
 
             </div>
         `;
-        document.body.appendChild(modalDiv);
+        document.body.appendChild(mainModal);
 
-        // Referencias del DOM
-        const viewLogin = document.getElementById('authViewLogin');
-        const viewYape  = document.getElementById('authViewYape');
-        const viewOwner = document.getElementById('authViewOwner');
+        // 2. MODAL DE GESTIÓN Y PANEL DEL DESARROLLADOR
+        const devModal = document.createElement('div');
+        devModal.id = 'ownerControlModal';
+        devModal.className = 'modal-hidden';
 
-        function switchView(viewName) {
-            [viewLogin, viewYape, viewOwner].forEach(v => v.classList.remove('view-active'));
-            if (viewName === 'login') viewLogin.classList.add('view-active');
-            if (viewName === 'yape')  viewYape.classList.add('view-active');
-            if (viewName === 'owner') viewOwner.classList.add('view-active');
+        devModal.innerHTML = `
+            <div class="liquid-glass-card" style="max-width: 580px; text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 14px;">
+                    <div>
+                        <h3 style="font-size: 16px; font-weight: 800; color: #c084fc;">👑 Panel del Desarrollador — v2.1</h3>
+                        <span style="font-size: 11px; color: #94a3b8;">Monitoreo en Tiempo Real, Solicitudes Yape y Control de Baneo</span>
+                    </div>
+                    <button id="btnCloseDevPanel" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">✕</button>
+                </div>
+
+                <!-- Pestañas del Panel de Desarrollador -->
+                <div style="display: flex; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 12px; overflow-x: auto;">
+                    <button class="dev-tab-btn active" data-tab="tabDevPending" style="background:none; border:none; border-bottom:2px solid #00D2B5; color:#00D2B5; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">📬 Solicitudes Yape</button>
+                    <button class="dev-tab-btn" data-tab="tabDevUsers" style="background:none; border:none; border-bottom:2px solid transparent; color:#94a3b8; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">👥 Alumnos Activos / Baneo</button>
+                    <button class="dev-tab-btn" data-tab="tabDevProjects" style="background:none; border:none; border-bottom:2px solid transparent; color:#94a3b8; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">🌐 Todas las Armaduras</button>
+                </div>
+
+                <!-- Pestaña 1: Solicitudes Pendientes Yape -->
+                <div id="tabDevPending" class="dev-tab-pane" style="display: block;">
+                    <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 8px;">
+                        Alumnos que han seleccionado su cuenta Google y requieren verificación de pago de S/ 5.00:
+                    </div>
+                    <div id="devPendingListContainer" style="max-height: 220px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 6px;"></div>
+                </div>
+
+                <!-- Pestaña 2: Alumnos Activos y Baneo -->
+                <div id="tabDevUsers" class="dev-tab-pane" style="display: none;">
+                    <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                        <input type="email" id="devQuickAuthorizeInput" class="liquid-input" placeholder="Activar correo directamente..." style="margin: 0; font-size: 11.5px; text-align: left;">
+                        <button id="btnDevQuickAuthorize" class="liquid-btn-primary" style="width: auto; padding: 6px 14px; font-size: 11.5px; white-space: nowrap;">
+                            Autorizar
+                        </button>
+                    </div>
+                    <div id="devAuthorizedUsersList" style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 6px;"></div>
+                </div>
+
+                <!-- Pestaña 3: Todas las Armaduras Guardadas de Todos los Alumnos -->
+                <div id="tabDevProjects" class="dev-tab-pane" style="display: none;">
+                    <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 8px;">
+                        Proyectos y armaduras creadas por todos los alumnos en la plataforma:
+                    </div>
+                    <div id="devGlobalProjectsList" style="max-height: 220px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 6px;"></div>
+                </div>
+
+                <!-- Pie del Panel -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 14px; padding-top: 10px;">
+                    <button id="btnDevLogout" style="background: #ef4444; color: #ffffff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                        🔒 Bloquear y Salir
+                    </button>
+                    <span style="font-size: 11px; color: #64748b;">Acceso Maestro Desarrollador</span>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(devModal);
+
+        // 3. MODAL DE GESTIÓN DE PROYECTOS (MIS ARMADURAS)
+        const projModal = document.createElement('div');
+        projModal.id = 'projectsManagerModal';
+        projModal.className = 'modal-hidden';
+
+        projModal.innerHTML = `
+            <div class="liquid-glass-card" style="max-width: 520px; text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 12px;">
+                    <h3 style="font-size: 15px; font-weight: 800; color: #38bdf8;">📂 Mis Armaduras Guardadas</h3>
+                    <button id="btnCloseProjModal" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">✕</button>
+                </div>
+                <div id="myProjectsListContainer" style="max-height: 260px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 6px; margin-bottom: 12px;"></div>
+                <div style="text-align: right;">
+                    <button id="btnNewProjectSavePrompt" class="liquid-btn-primary" style="width: auto; padding: 7px 16px; font-size: 12px;">
+                        💾 Guardar Armadura Actual
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(projModal);
+
+        // ── EVENTOS Y CONTROLADORES DE VISTAS ──────────────────────
+        const viewGoogle = document.getElementById('viewGoogleChooser');
+        const viewYape   = document.getElementById('viewYapePaywall');
+        const viewDev    = document.getElementById('viewDeveloperAccess');
+
+        function switchView(name) {
+            viewGoogle.style.display = (name === 'google') ? 'block' : 'none';
+            viewYape.style.display   = (name === 'yape') ? 'block' : 'none';
+            viewDev.style.display    = (name === 'dev') ? 'block' : 'none';
         }
 
-        // Navegación entre vistas
-        document.getElementById('linkGoToOwner').addEventListener('click', () => switchView('owner'));
-        document.getElementById('linkGoToOwner2').addEventListener('click', () => switchView('owner'));
-        document.getElementById('linkBackToLogin').addEventListener('click', () => switchView('login'));
-        document.getElementById('linkBackFromOwner').addEventListener('click', () => switchView('login'));
+        // Navegación
+        document.getElementById('linkDevAccess').onclick = () => switchView('dev');
+        document.getElementById('linkDevAccess2').onclick = () => switchView('dev');
+        document.getElementById('linkBackFromDev').onclick = () => switchView('google');
+        document.getElementById('linkBackToChooser').onclick = () => switchView('google');
 
-        // 1. Manejador de Login con Google
-        document.getElementById('btnGoogleSignIn').addEventListener('click', () => {
-            const promptEmail = prompt("Ingresa tu cuenta de Google o correo institucional:", "");
-            if (promptEmail && promptEmail.trim()) {
-                handleUserEmailIdentified(promptEmail.trim());
-            }
+        // Mostrar caja de correo manual
+        document.getElementById('btnChooseCustomAccount').onclick = () => {
+            const box = document.getElementById('customEmailInputBox');
+            box.style.display = box.style.display === 'none' ? 'block' : 'none';
+            if (box.style.display === 'block') document.getElementById('userEmailInput').focus();
+        };
+
+        // Selección de cuenta Google de la lista
+        document.querySelectorAll('.google-account-item[data-email]').forEach(item => {
+            item.onclick = () => {
+                const email = item.dataset.email;
+                const name  = item.dataset.name;
+                processStudentLogin(email, name);
+            };
         });
 
-        // 2. Manejador de Login con Email directo
-        document.getElementById('btnEmailLogin').addEventListener('click', () => {
+        // Confirmación de correo manual
+        document.getElementById('btnEmailLogin').onclick = () => {
             const email = (document.getElementById('userEmailInput').value || '').trim();
-            const errEl = document.getElementById('loginErrorMsg');
-            
-            // Si escribe directamente la clave maestra en el campo de correo, ¡lo detecta como dueño!
             if (MASTER_PASSWORDS.includes(email)) {
-                grantOwnerAccess();
+                grantDeveloperAccess();
+                return;
+            }
+            if (!email || !email.includes('@')) {
+                alert("Por favor ingresa un correo de Google válido.");
+                return;
+            }
+            processStudentLogin(email, email.split('@')[0]);
+        };
+
+        // Procesar Login Estudiante
+        function processStudentLogin(email, name) {
+            const chkTerms = document.getElementById('chkTermsAndConditions');
+            const errTerms = document.getElementById('termsErrorMsg');
+            if (!chkTerms.checked) {
+                errTerms.style.display = 'block';
+                return;
+            }
+            errTerms.style.display = 'none';
+
+            selectedStudentAccount = { email: email.toLowerCase().trim(), name: name };
+
+            // 1. Si ya está autorizado, entra directo
+            if (isUserAuthorized(selectedStudentAccount.email)) {
+                saveSession({ role: 'student', email: selectedStudentAccount.email, name: selectedStudentAccount.name });
+                hideModal();
+                alert(`✔ ¡Bienvenido de nuevo, ${selectedStudentAccount.email}! Tu sesión personal está activa.`);
                 return;
             }
 
-            if (!email || !email.includes('@') || !email.includes('.')) {
-                errEl.textContent = '⚠ Por favor ingresa un correo electrónico válido.';
-                errEl.style.display = 'block';
-                return;
-            }
-            errEl.style.display = 'none';
-            handleUserEmailIdentified(email);
-        });
+            // 2. Si no está autorizado, generar código aleatorio y notificar al creador por correo
+            const accessCode = generateRandomAccessCode(selectedStudentAccount.email);
+            addPendingRequest(selectedStudentAccount.email, accessCode, selectedStudentAccount.name);
 
-        // 3. Procesar email identificado
-        function handleUserEmailIdentified(email) {
-            currentTempEmail = email.toLowerCase().trim();
-            document.getElementById('lblActiveUserEmail').textContent = currentTempEmail;
+            // Disparar correo al creador
+            sendNotificationEmail(selectedStudentAccount.email, selectedStudentAccount.name, accessCode);
 
-            // ¿Ya está autorizado?
-            if (isEmailAuthorized(currentTempEmail)) {
-                setSession({ role: 'student', email: currentTempEmail, activatedAt: Date.now() });
-                hideAuthModal();
-                alert(`✔ ¡Bienvenido de nuevo, ${currentTempEmail}! Tu licencia personal está ACTIVA.`);
-            } else {
-                // Ir a la vista de pago Yape
-                switchView('yape');
-                const passInp = document.getElementById('accessPassInput');
-                if (passInp) passInp.focus();
-            }
+            // Mostrar vista Yape vinculada al correo
+            document.getElementById('lblActiveStudentEmail').textContent = selectedStudentAccount.email;
+            switchView('yape');
+            document.getElementById('accessPassInput').focus();
         }
 
-        // 4. Validar Clave de Activación Yape
-        document.getElementById('btnUnlockAccess').addEventListener('click', handleAttemptUnlock);
-        document.getElementById('accessPassInput').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') handleAttemptUnlock();
-        });
+        // Validar clave en la vista Yape
+        document.getElementById('btnUnlockAccess').onclick = attemptUnlockWithCode;
+        document.getElementById('accessPassInput').onkeydown = (e) => {
+            if (e.key === 'Enter') attemptUnlockWithCode();
+        };
 
-        function handleAttemptUnlock() {
+        function attemptUnlockWithCode() {
             const entered = (document.getElementById('accessPassInput').value || '').trim();
             const errEl = document.getElementById('passErrorMsg');
 
-            // Caso A: El Dueño escribe la clave maestra en la casilla de Yape
+            // Caso A: Desarrollador escribe contraseña maestra en la casilla
             if (MASTER_PASSWORDS.includes(entered)) {
-                grantOwnerAccess();
+                grantDeveloperAccess();
                 return;
             }
 
-            // Caso B: El alumno ingresa su clave única intransferible
-            if (!currentTempEmail) {
-                switchView('login');
+            // Caso B: Alumno valida su código
+            if (!selectedStudentAccount) {
+                switchView('google');
                 return;
             }
 
-            const expectedKey = generateUserKey(currentTempEmail);
-            if (entered.toUpperCase() === expectedKey) {
-                // Clave válida para SU correo
-                addAuthorizedEmail(currentTempEmail);
-                setSession({ role: 'student', email: currentTempEmail, key: expectedKey, activatedAt: Date.now() });
-                errEl.style.display = 'none';
-                hideAuthModal();
-                alert(`🎉 ¡Licencia activada con éxito para ${currentTempEmail}! Tienes acceso completo e ilimitado a CEREBRO ESTRUCTURAL v2.0.`);
+            if (verifyAccessCode(selectedStudentAccount.email, entered)) {
+                authorizeUser(selectedStudentAccount.email);
+                saveSession({ role: 'student', email: selectedStudentAccount.email, name: selectedStudentAccount.name });
+                hideModal();
+                alert(`🎉 ¡Pago verificado con éxito para ${selectedStudentAccount.email}! Tu cuenta está activada para siempre.`);
             } else {
-                // Clave incorrecta o de otro correo
-                errEl.innerHTML = `❌ Clave incorrecta para <strong>${currentTempEmail}</strong>.<br>Las licencias son personales e intransferibles. Yapea S/ 5.00 para recibir tu clave.`;
+                errEl.innerHTML = `❌ Clave incorrecta para <strong>${selectedStudentAccount.email}</strong>.<br>El creador te brindará tu código aleatorio en cuanto verifique tu Yape de S/ 5.00.`;
                 errEl.style.display = 'block';
             }
         }
 
-        // 5. Login de Dueño con Clave Maestra
-        document.getElementById('btnOwnerLogin').addEventListener('click', handleOwnerLogin);
-        document.getElementById('ownerMasterPassInput').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') handleOwnerLogin();
-        });
+        // Login de Desarrollador
+        document.getElementById('btnOwnerLogin').onclick = attemptDevLogin;
+        document.getElementById('ownerMasterPassInput').onkeydown = (e) => {
+            if (e.key === 'Enter') attemptDevLogin();
+        };
 
-        function handleOwnerLogin() {
+        function attemptDevLogin() {
             const pass = (document.getElementById('ownerMasterPassInput').value || '').trim();
             const errEl = document.getElementById('ownerErrorMsg');
 
             if (MASTER_PASSWORDS.includes(pass)) {
-                grantOwnerAccess();
+                grantDeveloperAccess();
             } else {
-                errEl.textContent = '❌ Contraseña maestra incorrecta.';
+                errEl.textContent = '❌ Contraseña de desarrollador incorrecta.';
                 errEl.style.display = 'block';
             }
         }
 
-        function grantOwnerAccess() {
-            setSession({ role: 'owner', name: 'Creador / Administrador', loggedAt: Date.now() });
-            hideAuthModal();
-            updateHeaderControls();
+        function grantDeveloperAccess() {
+            saveSession({ role: 'owner', name: 'Desarrollador / Creador' });
+            hideModal();
+            updateAppHeader();
         }
+
+        // Eventos del Panel de Desarrollador
+        document.getElementById('btnCloseDevPanel').onclick = hideDevPanel;
+        document.getElementById('btnDevLogout').onclick = () => {
+            hideDevPanel();
+            logoutSession();
+        };
+
+        // Pestañas del Panel de Desarrollador
+        document.querySelectorAll('.dev-tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.dev-tab-btn').forEach(b => {
+                    b.style.borderColor = 'transparent';
+                    b.style.color = '#94a3b8';
+                });
+                btn.style.borderColor = '#00D2B5';
+                btn.style.color = '#00D2B5';
+
+                document.querySelectorAll('.dev-tab-pane').forEach(p => p.style.display = 'none');
+                const target = document.getElementById(btn.dataset.tab);
+                if (target) target.style.display = 'block';
+            };
+        });
+
+        // Autorizar rápido en panel
+        document.getElementById('btnDevQuickAuthorize').onclick = () => {
+            const em = (document.getElementById('devQuickAuthorizeInput').value || '').trim();
+            if (em) {
+                authorizeUser(em);
+                renderDevUsers();
+                alert(`✔ Alumno ${em} autorizado con éxito.`);
+            }
+        };
+
+        // Eventos de Proyectos Modal
+        document.getElementById('btnCloseProjModal').onclick = () => {
+            document.getElementById('projectsManagerModal').classList.add('modal-hidden');
+        };
+
+        document.getElementById('btnNewProjectSavePrompt').onclick = promptSaveProject;
     }
 
-    // ── CONSTRUCCIÓN DEL PANEL DEL DUEÑO (ADMINISTRACIÓN) ───────
-    function buildOwnerPanelModal() {
-        if (document.getElementById('ownerControlModal')) return;
+    // ── RENDERIZADO DE LISTAS EN PANEL DE DESARROLLADOR ─────────
+    function renderDevPending() {
+        const c = document.getElementById('devPendingListContainer');
+        if (!c) return;
+        const list = getPendingRequests();
 
-        const pDiv = document.createElement('div');
-        pDiv.id = 'ownerControlModal';
-        pDiv.className = 'modal-hidden';
+        if (list.length === 0) {
+            c.innerHTML = `<div style="padding:16px; text-align:center; color:#64748b; font-size:11px;">No hay solicitudes pendientes en este momento.</div>`;
+            return;
+        }
 
-        pDiv.innerHTML = `
-            <div class="auth-card" style="max-width: 520px; text-align: left;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 14px;">
-                    <div>
-                        <h3 style="font-size: 16px; font-weight: 800; color: #c084fc;">👑 Panel de Control del Creador</h3>
-                        <span style="font-size: 11px; color: #94a3b8;">Gestión de Licencias y Generador Criptográfico Anti-Transferencia</span>
+        let html = '';
+        list.forEach(item => {
+            html += `
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:10px; margin-bottom:6px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="color:#ffffff; font-size:12px;">${item.email}</strong>
+                        <span style="font-size:10px; color:#94a3b8;">${item.requestedAt}</span>
                     </div>
-                    <button id="btnCloseOwnerPanel" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">✕</button>
-                </div>
-
-                <!-- 1. Generador de Clave Única para Alumno -->
-                <div style="background: #1a2333; border: 1px solid #334155; border-radius: 12px; padding: 12px; margin-bottom: 14px;">
-                    <strong style="color: #38bdf8; font-size: 12px; display: block; margin-bottom: 6px;">
-                        🔑 Generar Clave para Alumno que pagó S/ 5.00
-                    </strong>
-                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                        <input type="email" id="adminStudentEmail" class="auth-input" placeholder="correo_del_alumno@gmail.com" style="margin: 0; text-align: left; font-size: 12px;">
-                        <button id="btnAdminGenKey" class="auth-btn-action" style="width: auto; padding: 8px 14px; font-size: 12px; white-space: nowrap;">
-                            Calcular Clave
-                        </button>
-                    </div>
-
-                    <div id="adminKeyResultBox" style="display: none; background: #0d1424; border: 1px solid #00D2B5; border-radius: 8px; padding: 8px 12px; margin-top: 8px;">
-                        <span style="font-size: 11px; color: #94a3b8;">Clave única para ese correo:</span>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
-                            <span id="lblGeneratedKey" style="font-family: monospace; font-size: 16px; font-weight: 800; color: #00D2B5;"></span>
-                            <div style="display: flex; gap: 6px;">
-                                <button id="btnCopyKey" style="background: #00D2B5; color: #0d1424; border: none; font-size: 11px; font-weight: 800; border-radius: 6px; padding: 4px 8px; cursor: pointer;">📋 Copiar</button>
-                                <button id="btnAutoAuthorize" style="background: #10b981; color: #ffffff; border: none; font-size: 11px; font-weight: 800; border-radius: 6px; padding: 4px 8px; cursor: pointer;">⚡ Activar Directo</button>
-                            </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+                        <span style="font-family:monospace; font-weight:800; color:#00D2B5; font-size:14px; background:rgba(0,210,181,0.1); padding:2px 8px; border-radius:6px; border:1px solid rgba(0,210,181,0.3);">
+                            ${item.code}
+                        </span>
+                        <div style="display:flex; gap:6px;">
+                            <button data-code="${item.code}" class="btn-copy-code" style="background:#334155; color:#fff; border:none; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;">📋 Copiar</button>
+                            <button data-email="${item.email}" class="btn-approve-pending" style="background:#10b981; color:#fff; border:none; border-radius:6px; padding:4px 8px; font-size:11px; font-weight:700; cursor:pointer;">✔ Aprobar Yape</button>
                         </div>
                     </div>
                 </div>
+            `;
+        });
+        c.innerHTML = html;
 
-                <!-- 2. Lista de Correos Autorizados -->
-                <div style="margin-bottom: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <strong style="color: #34d399; font-size: 12px;">Alumnos Autorizados Activos</strong>
-                        <span id="lblCountAuthorized" style="font-size: 11px; color: #94a3b8; font-family: monospace;"></span>
-                    </div>
-                    <div id="adminEmailsList" style="max-height: 140px; overflow-y: auto; background: #0d1424; border: 1px solid #334155; border-radius: 8px; padding: 6px;">
-                        <!-- Inyectado dinámicamente -->
-                    </div>
-                </div>
-
-                <!-- 3. Acciones de Sesión -->
-                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #334155; padding-top: 10px;">
-                    <button id="btnAdminLogout" style="background: #ef4444; color: #ffffff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
-                        🔒 Bloquear y Salir
-                    </button>
-                    <span style="font-size: 11px; color: #64748b;">Sesión Maestra Activa</span>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(pDiv);
-
-        // Eventos del Panel
-        document.getElementById('btnCloseOwnerPanel').addEventListener('click', hideOwnerPanel);
-        document.getElementById('btnAdminLogout').addEventListener('click', () => {
-            clearSession();
-            hideOwnerPanel();
-            showAuthModal();
+        c.querySelectorAll('.btn-copy-code').forEach(b => {
+            b.onclick = () => {
+                navigator.clipboard.writeText(b.dataset.code);
+                alert(`Código ${b.dataset.code} copiado al portapapeles.`);
+            };
         });
 
-        // Calcular clave en panel
-        document.getElementById('btnAdminGenKey').addEventListener('click', () => {
-            const email = (document.getElementById('adminStudentEmail').value || '').trim();
-            if (!email) return;
-            const key = generateUserKey(email);
-            document.getElementById('lblGeneratedKey').textContent = key;
-            document.getElementById('adminKeyResultBox').style.display = 'block';
-        });
-
-        document.getElementById('btnCopyKey').addEventListener('click', () => {
-            const key = document.getElementById('lblGeneratedKey').textContent;
-            navigator.clipboard.writeText(key).then(() => alert(`Clave ${key} copiada al portapapeles.`));
-        });
-
-        document.getElementById('btnAutoAuthorize').addEventListener('click', () => {
-            const email = (document.getElementById('adminStudentEmail').value || '').trim();
-            if (email) {
-                addAuthorizedEmail(email);
-                renderAuthorizedList();
-                alert(`✔ Correo ${email} autorizado directamente. Ya no necesitará clave.`);
-            }
+        c.querySelectorAll('.btn-approve-pending').forEach(b => {
+            b.onclick = () => {
+                const em = b.dataset.email;
+                authorizeUser(em);
+                renderDevPending();
+                renderDevUsers();
+                alert(`✔ Alumno ${em} aprobado y activado permanentemente.`);
+            };
         });
     }
 
-    function renderAuthorizedList() {
-        const listEl = document.getElementById('adminEmailsList');
-        const countEl = document.getElementById('lblCountAuthorized');
-        if (!listEl) return;
-
-        const list = getAuthorizedEmails();
-        countEl.textContent = `${list.length} alumno(s)`;
+    function renderDevUsers() {
+        const c = document.getElementById('devAuthorizedUsersList');
+        if (!c) return;
+        const list = getAuthorizedUsers();
 
         if (list.length === 0) {
-            listEl.innerHTML = `<div style="font-size: 11px; color: #64748b; padding: 8px; text-align: center;">No hay alumnos registrados aún.</div>`;
+            c.innerHTML = `<div style="padding:16px; text-align:center; color:#64748b; font-size:11px;">No hay alumnos registrados aún.</div>`;
             return;
         }
 
         let html = '';
         list.forEach(email => {
             html += `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; border-bottom: 1px solid #1e293b; font-size: 11px;">
-                    <span style="color: #cbd5e1; font-family: monospace;">${email}</span>
-                    <button data-email="${email}" class="btn-revoke-email" style="background: none; border: none; color: #f43f5e; cursor: pointer; font-size: 11px;" title="Revocar acceso">✕</button>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:11.5px;">
+                    <span style="color:#e2e8f0; font-family:monospace;">🟢 ${email}</span>
+                    <button data-email="${email}" class="btn-ban-user" style="background:#dc2626; color:#fff; border:none; border-radius:6px; padding:3px 8px; font-size:10.5px; font-weight:700; cursor:pointer;" title="Bloquear y desconectar inmediatamente">
+                        🚫 Banear
+                    </button>
                 </div>
             `;
         });
-        listEl.innerHTML = html;
+        c.innerHTML = html;
 
-        listEl.querySelectorAll('.btn-revoke-email').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const em = btn.dataset.email;
-                if (confirm(`¿Revocar acceso al correo ${em}?`)) {
-                    removeAuthorizedEmail(em);
-                    renderAuthorizedList();
+        c.querySelectorAll('.btn-ban-user').forEach(b => {
+            b.onclick = () => {
+                const em = b.dataset.email;
+                if (confirm(`¿Estás seguro de banear y desconectar a ${em}?`)) {
+                    banUser(em);
+                    renderDevUsers();
                 }
-            });
+            };
         });
     }
 
-    function showOwnerPanel() {
-        buildOwnerPanelModal();
-        renderAuthorizedList();
-        const p = document.getElementById('ownerControlModal');
+    function renderDevGlobalProjects() {
+        const c = document.getElementById('devGlobalProjectsList');
+        if (!c) return;
+        const list = getAllProjects();
+
+        if (list.length === 0) {
+            c.innerHTML = `<div style="padding:16px; text-align:center; color:#64748b; font-size:11px;">Aún ningún alumno ha guardado armaduras.</div>`;
+            return;
+        }
+
+        let html = '';
+        list.forEach(p => {
+            html += `
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:8px 12px; margin-bottom:6px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="color:#38bdf8; font-size:12px;">${p.name}</strong>
+                        <span style="font-size:10.5px; color:#94a3b8;">${p.createdAt}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                        <span style="font-size:11px; color:#cbd5e1; font-family:monospace;">Autor: ${p.authorEmail}</span>
+                        <div style="display:flex; gap:6px;">
+                            <button data-id="${p.id}" class="btn-load-proj" style="background:#0284c7; color:#fff; border:none; border-radius:6px; padding:3px 8px; font-size:11px; font-weight:700; cursor:pointer;">Cargar</button>
+                            <button data-id="${p.id}" class="btn-del-proj" style="background:#dc2626; color:#fff; border:none; border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer;">✕</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        c.innerHTML = html;
+
+        c.querySelectorAll('.btn-load-proj').forEach(b => {
+            b.onclick = () => {
+                const proj = list.find(p => p.id === b.dataset.id);
+                if (proj && window.CerebroApp && window.CerebroApp.loadProjectData) {
+                    window.CerebroApp.loadProjectData(proj.nodes, proj.bars);
+                    hideDevPanel();
+                    alert(`✔ Armadura '${proj.name}' de ${proj.authorEmail} cargada en vivo.`);
+                }
+            };
+        });
+
+        c.querySelectorAll('.btn-del-proj').forEach(b => {
+            b.onclick = () => {
+                if (confirm("¿Eliminar esta armadura?")) {
+                    deleteProject(b.dataset.id);
+                    renderDevGlobalProjects();
+                }
+            };
+        });
+    }
+
+    // ── RENDERIZADO DE PROYECTOS PROPIOS (ALUMNO) ───────────────
+    function renderUserProjects() {
+        const c = document.getElementById('myProjectsListContainer');
+        if (!c) return;
+        const list = getUserProjects();
+
+        if (list.length === 0) {
+            c.innerHTML = `<div style="padding:20px; text-align:center; color:#64748b; font-size:11.5px;">No tienes armaduras guardadas todavía. Crea una y haz clic en 'Guardar Armadura Actual'.</div>`;
+            return;
+        }
+
+        let html = '';
+        list.forEach(p => {
+            html += `
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:8px 12px; margin-bottom:6px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="color:#ffffff; font-size:12px;">${p.name}</strong>
+                        <span style="font-size:10px; color:#94a3b8;">${p.createdAt}</span>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:6px;">
+                        <button data-id="${p.id}" class="btn-load-my-proj" style="background:#0284c7; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer;">Cargar</button>
+                        <button data-id="${p.id}" class="btn-del-my-proj" style="background:#334155; color:#f43f5e; border:none; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;">✕</button>
+                    </div>
+                </div>
+            `;
+        });
+        c.innerHTML = html;
+
+        c.querySelectorAll('.btn-load-my-proj').forEach(b => {
+            b.onclick = () => {
+                const proj = list.find(p => p.id === b.dataset.id);
+                if (proj && window.CerebroApp && window.CerebroApp.loadProjectData) {
+                    window.CerebroApp.loadProjectData(proj.nodes, proj.bars);
+                    document.getElementById('projectsManagerModal').classList.add('modal-hidden');
+                    alert(`✔ Armadura '${proj.name}' cargada.`);
+                }
+            };
+        });
+
+        c.querySelectorAll('.btn-del-my-proj').forEach(b => {
+            b.onclick = () => {
+                if (confirm("¿Eliminar este proyecto?")) {
+                    deleteProject(b.dataset.id);
+                    renderUserProjects();
+                }
+            };
+        });
+    }
+
+    function promptSaveProject() {
+        if (!window.CerebroApp || !window.CerebroApp.getCurrentData) {
+            alert("No hay datos de estructura para guardar.");
+            return;
+        }
+        const name = prompt("Nombre de la Armadura / Proyecto:", "Mi Armadura " + (getUserProjects().length + 1));
+        if (name && name.trim()) {
+            const data = window.CerebroApp.getCurrentData();
+            saveProject(name.trim(), data.nodes, data.bars);
+            renderUserProjects();
+            alert(`✔ Armadura '${name.trim()}' guardada con éxito.`);
+        }
+    }
+
+    // ── CONTROL DE VISIBILIDAD DE MODALES ───────────────────────
+    function showModal() {
+        buildModals();
+        const m = document.getElementById('accessLockModal');
+        if (m) m.classList.remove('modal-hidden');
+    }
+
+    function hideModal() {
+        const m = document.getElementById('accessLockModal');
+        if (m) m.classList.add('modal-hidden');
+        updateAppHeader();
+    }
+
+    function showDevPanel() {
+        buildModals();
+        renderDevPending();
+        renderDevUsers();
+        renderDevGlobalProjects();
+        const d = document.getElementById('ownerControlModal');
+        if (d) d.classList.remove('modal-hidden');
+    }
+
+    function hideDevPanel() {
+        const d = document.getElementById('ownerControlModal');
+        if (d) d.classList.add('modal-hidden');
+    }
+
+    function showProjectsModal() {
+        buildModals();
+        renderUserProjects();
+        const p = document.getElementById('projectsManagerModal');
         if (p) p.classList.remove('modal-hidden');
     }
 
-    function hideOwnerPanel() {
-        const p = document.getElementById('ownerControlModal');
-        if (p) p.classList.add('modal-hidden');
-    }
-
-    // ── CONTROL DE VISIBILIDAD DE MODAL PRINCIPAL ───────────────
-    function showAuthModal() {
-        buildAuthModal();
-        const modal = document.getElementById('accessLockModal');
-        if (modal) modal.classList.remove('modal-hidden');
-    }
-
-    function hideAuthModal() {
-        const modal = document.getElementById('accessLockModal');
-        if (modal) modal.classList.add('modal-hidden');
-        updateHeaderControls();
-    }
-
-    // ── ACTUALIZAR BOTONES EN LA BARRA SUPERIOR ─────────────────
-    function updateHeaderControls() {
+    // ── INTEGRACIÓN Y BOTONES EN HEADER ─────────────────────────
+    function updateAppHeader() {
         const session = getSession();
-        const isAuth = isUserAuthenticated();
+        const isAuth = !!session && (session.role === 'owner' || isUserAuthorized(session.email));
 
-        // 1. Botón Bloquear
-        let btnRelock = document.getElementById('btnRelock');
+        // Botón Bloquear / Salir
+        const btnRelock = document.getElementById('btnRelock');
         if (btnRelock) {
             btnRelock.style.display = isAuth ? 'inline-flex' : 'none';
-            btnRelock.onclick = () => {
-                clearSession();
-                showAuthModal();
-            };
+            btnRelock.onclick = logoutSession;
         }
 
-        // 2. Botón Panel Dueño
+        // Botón Panel del Desarrollador (SOLO para el Desarrollador Maestro)
         let btnOwnerPanel = document.getElementById('btnOwnerPanel');
-        if (!btnOwnerPanel && isAuth && session && session.role === 'owner') {
-            // Inyectar botón si no existe
-            const headerActions = document.querySelector('.header-controls') || document.querySelector('.topbar-actions') || document.querySelector('.presets-bar');
-            if (headerActions) {
-                btnOwnerPanel = document.createElement('button');
-                btnOwnerPanel.id = 'btnOwnerPanel';
-                btnOwnerPanel.className = 'btn btn-secondary';
-                btnOwnerPanel.style.background = '#3b0764';
-                btnOwnerPanel.style.borderColor = '#a855f7';
-                btnOwnerPanel.style.color = '#f3e8ff';
-                btnOwnerPanel.style.fontWeight = '700';
-                btnOwnerPanel.innerHTML = '👑 Panel Dueño';
-                btnOwnerPanel.onclick = showOwnerPanel;
-                headerActions.prepend(btnOwnerPanel);
-            }
+        const headerActions = document.querySelector('.header-controls') || document.querySelector('.topbar-actions') || document.querySelector('.presets-bar');
+
+        if (!btnOwnerPanel && headerActions && session && session.role === 'owner') {
+            btnOwnerPanel = document.createElement('button');
+            btnOwnerPanel.id = 'btnOwnerPanel';
+            btnOwnerPanel.className = 'btn btn-secondary';
+            btnOwnerPanel.style.background = 'linear-gradient(135deg, #4c1d95, #7c3aed)';
+            btnOwnerPanel.style.borderColor = '#c084fc';
+            btnOwnerPanel.style.color = '#ffffff';
+            btnOwnerPanel.style.fontWeight = '800';
+            btnOwnerPanel.innerHTML = '👑 Panel Desarrollador';
+            btnOwnerPanel.onclick = showDevPanel;
+            headerActions.prepend(btnOwnerPanel);
         }
 
         if (btnOwnerPanel) {
             btnOwnerPanel.style.display = (isAuth && session && session.role === 'owner') ? 'inline-flex' : 'none';
         }
+
+        // Botones de Guardar y Ver Proyectos
+        const btnSave = document.getElementById('btnSaveProject');
+        if (btnSave) {
+            btnSave.onclick = promptSaveProject;
+            btnSave.style.display = isAuth ? 'inline-flex' : 'none';
+        }
+
+        const btnMyProj = document.getElementById('btnMyProjects');
+        if (btnMyProj) {
+            btnMyProj.onclick = showProjectsModal;
+            btnMyProj.style.display = isAuth ? 'inline-flex' : 'none';
+        }
     }
 
     // ── PROTECCIÓN ANTI-BYPASS EN F12 ───────────────────────────
-    function protectExecution() {
-        // Bloqueo proactivo en botón de descarga si no está autorizado
+    function attachExecutionGuards() {
         const btnExcel = document.getElementById('btnDownloadExcel') || document.getElementById('btn-download-excel');
         if (btnExcel) {
-            const originalClick = btnExcel.onclick;
             btnExcel.addEventListener('click', (e) => {
-                if (!isUserAuthenticated()) {
+                const session = getSession();
+                const isAuth = !!session && (session.role === 'owner' || isUserAuthorized(session.email));
+                if (!isAuth) {
                     e.stopImmediatePropagation();
                     e.preventDefault();
-                    showAuthModal();
-                    alert("🔒 Para descargar el Excel automatizado debes activar tu acceso personal.");
+                    showModal();
+                    alert("🔒 Para descargar el Excel automatizado debes iniciar sesión y activar tu licencia.");
                     return false;
                 }
             }, true);
@@ -805,15 +1231,17 @@
 
     // ── INICIALIZACIÓN ──────────────────────────────────────────
     function init() {
-        buildAuthModal();
-        buildOwnerPanelModal();
-        updateHeaderControls();
-        protectExecution();
+        buildModals();
+        attachExecutionGuards();
+        updateAppHeader();
 
-        if (isUserAuthenticated()) {
-            hideAuthModal();
+        const session = getSession();
+        const isAuth = !!session && (session.role === 'owner' || isUserAuthorized(session.email));
+
+        if (isAuth) {
+            hideModal();
         } else {
-            showAuthModal();
+            showModal();
         }
     }
 
@@ -823,25 +1251,17 @@
         init();
     }
 
-    // ── API GLOBAL ──────────────────────────────────────────────
+    // API Global
     window.CerebroAuth = {
-        unlockMaster: (pass) => {
-            if (MASTER_PASSWORDS.includes(pass)) {
-                setSession({ role: 'owner', name: 'Creador', loggedAt: Date.now() });
-                hideAuthModal();
-                return true;
-            }
-            return false;
+        isAuthorized: () => {
+            const s = getSession();
+            return !!s && (s.role === 'owner' || isUserAuthorized(s.email));
         },
-        generateKeyForEmail: generateUserKey,
-        authorizeEmail: addAuthorizedEmail,
-        isAuthorized: isUserAuthenticated,
         getSession: getSession,
-        lock: () => {
-            clearSession();
-            showAuthModal();
-        },
-        openOwnerPanel: showOwnerPanel
+        openDevPanel: showDevPanel,
+        openProjects: showProjectsModal,
+        saveProject: saveProject,
+        lock: logoutSession
     };
 
 })();

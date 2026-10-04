@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEREBRO ESTRUCTURAL v2.0 | Armaduras Planas & Generador de Excel Automatizado</title>
+    <title>CEREBRO ESTRUCTURAL v2.1 | Armaduras Planas & Generador de Excel Automatizado</title>
     <style>
         /* ── VARIABLES & DESIGN SYSTEM ───────────────────────────── */
         :root {
@@ -549,20 +549,22 @@
 
         .cell-select {
             width: 100%;
-            background: var(--bg-input);
-            color: var(--text-main);
-            border: 1px solid var(--border-subtle);
-            border-radius: 4px;
-            padding: 4px 4px;
-            font-size: 10px;
-            font-weight: 600;
+            background: #111a2e;
+            color: #38bdf8;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 5px 6px;
+            font-size: 11.5px;
+            font-weight: 700;
             outline: none;
             cursor: pointer;
-            transition: border-color 0.12s ease;
+            min-height: 28px;
+            transition: all 0.15s ease;
         }
 
         .cell-select:focus {
-            border-color: var(--border-focus);
+            border-color: #38bdf8;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
         }
 
         .cell-calc {
@@ -768,9 +770,9 @@
                 <div class="brand-logo">⚡</div>
                 <div class="brand-title-wrap">
                     <h1>
-                        CEREBRO ESTRUCTURAL <span class="brand-badge">v2.0</span>
+                        CEREBRO ESTRUCTURAL <span class="brand-badge">v2.1</span>
                     </h1>
-                    <div class="brand-subtitle">Análisis Estructural II — Cátedra Ing. Ulianov Cuba Valencia</div>
+                    <div class="brand-subtitle">Desarrollado por Ingeniero Ulianov Cuba Valencia — Cálculo Matricial y Exportador de Excel Nativo</div>
                 </div>
             </div>
 
@@ -778,19 +780,27 @@
                 <div class="select-wrapper">
                     <span class="select-label">Caso:</span>
                     <select id="presetSelect" class="preset-select">
-                        <option value="isostatic_3n">Caso 1: Isostático 3N — Benchmark Ulianov</option>
-                        <option value="hyperstatic_4n">Caso 2: Hiperestático San Andrés 4N (GH = 2)</option>
-                        <option value="warren_5n">Caso 3: Warren Simétrica 5N</option>
-                        <option value="roof_5n">Caso 4: Techo Howe 5N</option>
-                        <option value="blank">Limpiar / Armadura en Blanco</option>
+                        <option value="isostatic_3n">Caso 1: Isostático (3N, 3B)</option>
+                        <option value="hyperstatic_4n">Caso 2: Hiperestático (4N, 6B)</option>
+                        <option value="warren_5n">Caso 3: Warren (5N, 7B)</option>
+                        <option value="roof_5n">Caso 4: Howe (5N, 7B)</option>
+                        <option value="blank">Modelo en Blanco</option>
                     </select>
                 </div>
+
+                <button id="btnSaveProject" class="btn btn-secondary" style="display: none;" title="Guardar armadura actual con nombre">
+                    💾 Guardar
+                </button>
+
+                <button id="btnMyProjects" class="btn btn-secondary" style="display: none;" title="Mis proyectos guardados">
+                    📂 Mis Armaduras
+                </button>
 
                 <a href="WEB_ARMADURAS_ULIANOV/index.html" class="btn btn-secondary" title="Ver desglose pedagógico en 13 tablas matriciales">
                     📊 Ver 13 Tablas
                 </a>
 
-                <button id="btnRelock" class="btn btn-secondary" style="font-size: 11px; padding: 6px 10px; display: none;" title="Bloquear aplicación para solicitar contraseña">
+                <button id="btnRelock" class="btn btn-secondary" style="font-size: 11px; padding: 6px 10px; display: none;" title="Bloquear aplicación">
                     🔒 Bloquear
                 </button>
 
@@ -912,8 +922,8 @@
                         <thead>
                             <tr>
                                 <th style="width: 26px;">#</th>
-                                <th>Ini</th>
-                                <th>Fin</th>
+                                <th style="width: 62px;">Inicio</th>
+                                <th style="width: 62px;">Fin</th>
                                 <th>Área</th>
                                 <th>Mód. E</th>
                                 <th>L (cm)</th>
@@ -991,7 +1001,7 @@
 
     <!-- ══ PIE DE PÁGINA ════════════════════════════════════════════ -->
     <footer class="footer">
-        CEREBRO ESTRUCTURAL v2.0 • Código Abierto bajo Licencia MIT • Cátedra Ing. Ulianov Cuba Valencia
+        CEREBRO ESTRUCTURAL v2.1 • Desarrollado por Ingeniero Ulianov Cuba Valencia • Cálculo Matricial y Exportador de Excel Nativo
         • <a href="https://github.com/72008081-pixel/Ulianov-Continental" target="_blank">Repositorio en GitHub</a>
     </footer>
 

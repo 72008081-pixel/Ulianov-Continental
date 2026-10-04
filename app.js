@@ -194,8 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let optStart = `<option value="">—</option>`;
             let optEnd   = `<option value="">—</option>`;
             for (let n = 1; n <= 6; n++) {
-                optStart += `<option value="${n}" ${br.start === n ? 'selected' : ''}>N${n}</option>`;
-                optEnd   += `<option value="${n}" ${br.end === n ? 'selected' : ''}>N${n}</option>`;
+                optStart += `<option value="${n}" ${br.start === n ? 'selected' : ''}>Nodo ${n}</option>`;
+                optEnd   += `<option value="${n}" ${br.end === n ? 'selected' : ''}>Nodo ${n}</option>`;
             }
 
             tr.innerHTML = `
@@ -341,17 +341,44 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
 
+        // Calcular desplazamiento máximo para resaltar nodo crítico
+        let maxDispVal = 0;
+        let maxDispNodeId = null;
+        for (const nd of sol.activeNodes) {
+            const uX = sol.totalDisplacements[nd.dofX] || 0;
+            const uY = sol.totalDisplacements[nd.dofY] || 0;
+            const tD = Math.hypot(uX, uY);
+            if (tD > maxDispVal) {
+                maxDispVal = tD;
+                maxDispNodeId = nd.id;
+            }
+        }
+
         let dispRows = '';
         for (const nd of sol.activeNodes) {
             const uX = sol.totalDisplacements[nd.dofX] || 0;
             const uY = sol.totalDisplacements[nd.dofY] || 0;
             const totalD = Math.hypot(uX, uY);
+            const isMaxDeflection = (nd.id === maxDispNodeId && totalD > 1e-6);
+
+            const xColor = Math.abs(uX) < 1e-7 ? 'color:#64748b;' : (uX > 0 ? 'color:#38bdf8;' : 'color:#0284c7;');
+            const yColor = Math.abs(uY) < 1e-7 ? 'color:#64748b;' : (uY > 0 ? 'color:#34d399;' : 'color:#f43f5e;');
+
             dispRows += `
-                <tr>
-                    <td style="font-weight: 700; color: var(--accent-sky);">Nudo ${nd.id}</td>
-                    <td style="text-align: right;">${uX.toFixed(6)} cm</td>
-                    <td style="text-align: right;">${uY.toFixed(6)} cm</td>
-                    <td style="text-align: right; font-weight: 600; color: var(--text-main);">${totalD.toFixed(6)} cm</td>
+                <tr ${isMaxDeflection ? 'style="background: rgba(251, 191, 36, 0.08);"' : ''}>
+                    <td style="font-weight: 700; color: #f8fafc;">
+                        Nudo ${nd.id}
+                        ${isMaxDeflection ? '<span style="font-size:9px; font-weight:800; background:#f59e0b; color:#000; padding:1px 6px; border-radius:4px; margin-left:6px;">⭐ MÁXIMA DEFLEXIÓN</span>' : ''}
+                    </td>
+                    <td style="text-align: right; font-family: monospace; ${xColor}">
+                        <span style="font-size:10px; color:#94a3b8; margin-right:4px;">d${nd.id}x =</span>${(uX >= 0 ? '+' : '') + uX.toFixed(6)} cm
+                    </td>
+                    <td style="text-align: right; font-family: monospace; ${yColor}">
+                        <span style="font-size:10px; color:#94a3b8; margin-right:4px;">d${nd.id}y =</span>${(uY >= 0 ? '+' : '') + uY.toFixed(6)} cm
+                    </td>
+                    <td style="text-align: right; font-family: monospace; font-weight: 700; color: ${isMaxDeflection ? '#fbbf24' : '#f1f5f9'};">
+                        ${totalD.toFixed(6)} cm
+                    </td>
                 </tr>
             `;
         }
@@ -399,10 +426,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
 
-                <!-- Desplazamientos Nodales -->
+                <!-- Desplazamientos Nodales y Deflexiones -->
                 <div class="mini-card">
                     <div class="mini-card-head" style="color: var(--accent-sky);">
-                        <span>Desplazamientos Nodales</span>
+                        <span>Desplazamientos Nodales y Deflexión</span>
                         <span class="mini-card-formula">{D} = [K₁₁]⁻¹ · {C}</span>
                     </div>
                     <div style="overflow-x: auto;">
@@ -410,9 +437,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             <thead>
                                 <tr>
                                     <th style="text-align: left;">Nudo</th>
-                                    <th style="text-align: right;">Dx (cm)</th>
-                                    <th style="text-align: right;">Dy (cm)</th>
-                                    <th style="text-align: right;">Despl. Total</th>
+                                    <th style="text-align: right; color: #38bdf8;">d(i)x (Eje X)</th>
+                                    <th style="text-align: right; color: #34d399;">d(i)y (Deflexión Y)</th>
+                                    <th style="text-align: right; color: #fbbf24;">δ Total</th>
                                 </tr>
                             </thead>
                             <tbody>${dispRows}</tbody>
@@ -711,6 +738,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // API de integración para Proyectos y Guardado
+    window.CerebroApp = {
+        getCurrentData: () => ({
+            nodes: JSON.parse(JSON.stringify(state.nodes)),
+            bars: JSON.parse(JSON.stringify(state.bars))
+        }),
+        loadProjectData: (newNodes, newBars) => {
+            state.nodes = JSON.parse(JSON.stringify(newNodes));
+            state.bars = JSON.parse(JSON.stringify(newBars));
+            renderTables();
+            recalculateAndRender(true);
+        }
+    };
 
     // Inicialización inicial
     renderTables();
