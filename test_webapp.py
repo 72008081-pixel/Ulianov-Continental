@@ -54,26 +54,45 @@ with sync_playwright() as p:
     print("Title:", page.title())
     assert "CEREBRO ESTRUCTURAL" in page.title(), "Title does not match!"
 
-    # 1. Test Yape Lock Modal & Password Authentication
-    print("Testing Yape Lock Modal...")
+    # 1. Test Single Sign-On / Email & Yape Protection & Owner Master Login
+    print("Testing Student Login & Yape Protection...")
     lock_modal = page.locator("#accessLockModal")
-    assert lock_modal.is_visible(), "Yape Access Lock Modal should be visible on fresh load!"
+    assert lock_modal.is_visible(), "Access Lock Modal should be visible on fresh load!"
 
-    # Test invalid password rejection
-    page.fill("#accessPassInput", "clave_invalida_123")
+    # A. Test Student entering email: alumno@continental.edu.pe
+    page.fill("#userEmailInput", "alumno@continental.edu.pe")
+    page.click("#btnEmailLogin")
+    time.sleep(0.3)
+
+    # Verify Yape paywall view appears with student email bound
+    assert page.locator("#authViewYape").is_visible(), "Yape view should be visible for unapproved student!"
+    assert "alumno@continental.edu.pe" in page.locator("#lblActiveUserEmail").inner_text()
+    print("Student email successfully bound to Yape view!")
+
+    # Test invalid activation key rejection
+    page.fill("#accessPassInput", "ULI-INVALIDA")
     page.click("#btnUnlockAccess")
     time.sleep(0.3)
     error_msg = page.locator("#passErrorMsg")
-    assert error_msg.is_visible(), "Error message should be visible on incorrect password!"
-    print("Invalid password correctly rejected!")
+    assert error_msg.is_visible(), "Error message should be visible on invalid key!"
+    print("Anti-tamper: Invalid key correctly rejected!")
 
-    # Test master password unlock with Vayolett1404
-    print("Unlocking with Master Password: Vayolett1404...")
-    page.fill("#accessPassInput", "Vayolett1404")
-    page.click("#btnUnlockAccess")
+    # B. Test Owner Master Login (no Google account, no email needed)
+    print("Testing Owner Master Login with 'Vayolett1404'...")
+    page.click("#linkGoToOwner2")
+    time.sleep(0.3)
+    assert page.locator("#authViewOwner").is_visible(), "Owner view should be visible!"
+
+    page.fill("#ownerMasterPassInput", "Vayolett1404")
+    page.click("#btnOwnerLogin")
     time.sleep(0.5)
-    assert not lock_modal.is_visible(), "Yape Access Lock Modal should be hidden after correct password!"
-    print("Master Password 'Vayolett1404' accepted and platform successfully unlocked!")
+
+    assert not lock_modal.is_visible(), "Access Lock Modal should be hidden after Owner Master Password!"
+    print("Owner Master Password 'Vayolett1404' accepted and full platform unlocked worldwide!")
+
+    # Verify Owner Panel button exists
+    assert page.locator("#btnOwnerPanel").is_visible(), "Owner Panel button should be visible for Owner!"
+    print("Owner Panel button verified!")
 
     # Check structural status badge
     status_text = page.locator("#structuralStatusBadge").inner_text()
