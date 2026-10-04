@@ -1,0 +1,2409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema Maestro de Análisis Matricial de Armaduras 2D - Cátedra Ulianov</title>
+  <style>
+    :root {
+      --primary: #1e293b;
+      --secondary: #0f766e;
+      --accent: #2563eb;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --pastel-green: #dcfce7;
+      --pastel-diag: #d1fae5;
+      --pastel-peach: #fee2e2;
+      --pastel-yellow: #fef08a;
+      --pastel-lavender: #ededfa;
+      --pastel-butter: #fff2cc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding-bottom: 60px;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: white;
+      padding: 24px 32px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .header-title h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .header-title p {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    .header-badges {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .badge-teal { background: #0d9488; color: white; }
+    .badge-emerald { background: #059669; color: white; }
+    .badge-amber { background: #d97706; color: white; }
+    .badge-blue { background: #2563eb; color: white; }
+
+    .main-container {
+      max-width: 1400px;
+      margin: 24px auto;
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Preset Bar */
+    .presets-bar {
+      background: white;
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .preset-label {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-preset {
+      background: #f1f5f9;
+      color: #334155;
+      border-color: #cbd5e1;
+    }
+    .btn-preset:hover {
+      background: #e2e8f0;
+      border-color: #94a3b8;
+    }
+
+    .btn-primary {
+      background: #0f766e;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #115e59;
+    }
+
+    .btn-outline {
+      background: white;
+      color: #475569;
+      border-color: #cbd5e1;
+    }
+    .btn-outline:hover {
+      background: #f8fafc;
+      color: #1e293b;
+    }
+
+    /* Grid for Inputs and Live Graphic */
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .workspace-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-header {
+      background: #f8fafc;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Table styling */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    table.input-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    table.input-table th {
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 600;
+      padding: 10px 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    table.input-table td {
+      padding: 6px 8px;
+      border: 1px solid #e2e8f0;
+      vertical-align: middle;
+    }
+
+    .input-cell {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.85rem;
+      text-align: right;
+      font-weight: 600;
+      color: #1e3a8a;
+      background: #fffbeb;
+      transition: border-color 0.15s;
+    }
+    .input-cell:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
+    }
+
+    .select-cell {
+      width: 100%;
+      padding: 6px 6px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.8rem;
+      font-weight: 500;
+      background: white;
+      color: #1e293b;
+    }
+
+    /* Graphic Canvas Container */
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      height: 480px;
+      background: #ffffff;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .canvas-toolbar {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 6px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      backdrop-filter: blur(4px);
+      z-index: 10;
+    }
+
+    .canvas-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background: white;
+      color: #334155;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .canvas-btn:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    .canvas-legend {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background: rgba(255, 255, 255, 0.92);
+      padding: 8px 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      font-size: 0.75rem;
+      color: #475569;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      pointer-events: none;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* Verification Double-Card */
+    .verification-card {
+      background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+      border: 2px solid #86efac;
+      border-radius: 12px;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .verification-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .verification-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #166534;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .verification-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .verification-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .check-box {
+      background: white;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .check-box-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #15803d;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .check-box-detail {
+      font-size: 0.8rem;
+      color: #334155;
+    }
+
+    /* Step-by-Step Sections */
+    .section-card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .section-header {
+      background: #334155;
+      color: white;
+      padding: 14px 20px;
+      font-weight: 700;
+      font-size: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .section-header:hover {
+      background: #1e293b;
+    }
+
+    .section-body {
+      padding: 24px;
+      overflow-x: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Classroom Yellow Banner */
+    .yellow-banner {
+      background: #fef08a;
+      border: 1px solid #fde047;
+      color: #854d0e;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .teacher-note {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #475569;
+      font-style: italic;
+      padding: 4px 8px;
+      border-left: 3px solid #0f766e;
+      background: #f8fafc;
+    }
+
+    /* Matrix Display Styles */
+    .matrix-wrapper {
+      display: inline-flex;
+      align-items: center;
+      position: relative;
+      padding: 0 8px;
+      overflow-x: auto;
+      max-width: 100%;
+    }
+
+    .matrix-wrapper::before,
+    .matrix-wrapper::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      border-top: 2px solid #1e293b;
+      border-bottom: 2px solid #1e293b;
+    }
+
+    .matrix-wrapper::before {
+      left: 0;
+      border-left: 2px solid #1e293b;
+    }
+
+    .matrix-wrapper::after {
+      right: 0;
+      border-right: 2px solid #1e293b;
+    }
+
+    table.matrix-table {
+      border-collapse: collapse;
+      text-align: right;
+      font-size: 0.8rem;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    table.matrix-table th {
+      background: #e2e8f0;
+      color: #1e293b;
+      padding: 6px 8px;
+      font-weight: 700;
+      text-align: center;
+      border: 1px solid #cbd5e1;
+    }
+
+    table.matrix-table td {
+      padding: 6px 8px;
+      border: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+
+    .cell-diag {
+      background-color: var(--pastel-diag) !important;
+      font-weight: 700;
+    }
+
+    .cell-k11 {
+      background-color: var(--pastel-green) !important;
+      font-weight: 600;
+    }
+
+    .cell-peach {
+      background-color: var(--pastel-peach) !important;
+      font-weight: 600;
+    }
+
+    .cell-lavender {
+      background-color: var(--pastel-lavender) !important;
+      font-weight: 600;
+    }
+
+    .cell-butter {
+      background-color: var(--pastel-butter) !important;
+      font-weight: 700;
+    }
+
+    /* Bar Force Card */
+    .bar-force-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      background: #fafafa;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .bar-force-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bar-indicator {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      display: inline-block;
+      border: 1px solid rgba(0,0,0,0.15);
+    }
+
+    /* Summary Final Table */
+    table.summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    table.summary-table th {
+      background: #0f766e;
+      color: white;
+      font-weight: 700;
+      padding: 10px 8px;
+      border: 1px solid #115e59;
+    }
+
+    table.summary-table td {
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .status-tension {
+      color: #15803d;
+      background: #dcfce7;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .status-compression {
+      color: #b91c1c;
+      background: #fee2e2;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .status-zero {
+      color: #64748b;
+      background: #f1f5f9;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    /* Print media styling */
+    @media print {
+      body { background: white; padding: 0; }
+      header { background: #1e293b; color: white; padding: 12px; }
+      .presets-bar, .canvas-toolbar, .no-print { display: none !important; }
+      .workspace-grid { display: block; }
+      .card, .section-card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; margin-bottom: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-content">
+      <div class="header-title">
+        <h1>📐 SISTEMA MAESTRO DE ANÁLISIS MATRICIAL DE ARMADURAS 2D</h1>
+        <p>Método de Rigidez Directa • Cátedra Ing. Ulianov Cuba Valencia • Doble Verificación Estática</p>
+      </div>
+      <div class="header-badges">
+        <span class="badge badge-emerald">✓ Cero Errores</span>
+        <span class="badge badge-teal">⚡ Cálculo en Tiempo Real</span>
+        <span class="badge badge-amber">📊 Formato Oficial Cátedra</span>
+        <span class="badge badge-blue">🌐 Dominio Público</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-container">
+
+    <!-- Preset Selection Bar -->
+    <div class="presets-bar">
+      <span class="preset-label">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        Cargar Casos Rápidos:
+      </span>
+      <button class="btn btn-preset" onclick="loadPreset('whatsapp')">📌 Caso 1: Triángulo WhatsApp (3N, 3B)</button>
+      <button class="btn btn-preset" onclick="loadPreset('ulianov')">📐 Caso 2: Cátedra Ulianov (3N, 3B)</button>
+      <button class="btn btn-preset" onclick="loadPreset('asimetrica')">🏗️ Caso 6: Cercha Asimétrica (4N, 5B)</button>
+      <button class="btn btn-preset" onclick="loadPreset('san_andres')">🌉 Caso 41: Panel San Andrés en X (4N, 6B - Hiperestática)</button>
+      <button class="btn btn-preset" onclick="loadPreset('warren')">⚡ Caso 16: Warren Clásica (5N, 7B)</button>
+      <button class="btn btn-outline" onclick="resetTruss()" style="margin-left: auto;">🔄 Limpiar Todo</button>
+      <button class="btn btn-primary no-print" onclick="window.print()">🖨️ Imprimir / PDF</button>
+    </div>
+
+    <!-- Workspace: Inputs + Live Graphic -->
+    <div class="workspace-grid">
+
+      <!-- Left Column: Geometry & Inputs -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
+            1. Geometría de Nudos y Cargas (Hasta 6 Nudos)
+          </span>
+          <span style="font-size: 0.8rem; color: #64748b;">Unidades: cm, Kgf</span>
+        </div>
+        <div class="card-body">
+          <div class="table-container">
+            <table class="input-table" id="nodes-table">
+              <thead>
+                <tr>
+                  <th>NUDO #</th>
+                  <th>X (cm)</th>
+                  <th>Y (cm)</th>
+                  <th>TIPO DE APOYO</th>
+                  <th>Px (Kgf)</th>
+                  <th>Py (Kgf)</th>
+                </tr>
+              </thead>
+              <tbody id="nodes-tbody">
+                <!-- Dynamically populated rows 1 to 6 -->
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top: 8px;">
+            <div class="card-title" style="margin-bottom: 12px; font-size: 0.95rem;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              2. Conectividad de Barras y Propiedades (Hasta 8 Barras)
+            </div>
+            <div class="table-container">
+              <table class="input-table" id="bars-table">
+                <thead>
+                  <tr>
+                    <th>BARRA #</th>
+                    <th>NUDO INI</th>
+                    <th>NUDO FIN</th>
+                    <th>ÁREA A (cm²)</th>
+                    <th>E (Kgf/cm²)</th>
+                  </tr>
+                </thead>
+                <tbody id="bars-tbody">
+                  <!-- Dynamically populated rows 1 to 8 -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 12px; align-items: center; justify-content: flex-end; margin-top: 4px;">
+            <button class="btn btn-outline" onclick="applyUniformProps()">⚡ Replicar A y E a todas las barras</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Live Graphic Visualizer -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 9 6 6m0-6-6 6"/></svg>
+            Gráfica Estructural Interactiva en Vivo
+          </span>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <label style="font-size: 0.8rem; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="checkbox" id="chk-deformed" onchange="redrawCanvas()"> Ver Deformada
+            </label>
+          </div>
+        </div>
+        <div class="card-body" style="padding: 12px;">
+          <div class="canvas-container">
+            <canvas id="trussCanvas"></canvas>
+            <div class="canvas-toolbar">
+              <button class="canvas-btn" title="Acercar (Zoom In)" onclick="zoom(1.2)">+</button>
+              <button class="canvas-btn" title="Alejar (Zoom Out)" onclick="zoom(0.8)">-</button>
+              <button class="canvas-btn" title="Centrar Vista" onclick="resetZoom()">⌂</button>
+              <button class="canvas-btn" title="Descargar Imagen PNG" onclick="exportCanvasPNG()">📷</button>
+            </div>
+            <div class="canvas-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:#2563eb;"></div> Nudo Estructural</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#0f766e;"></div> Apoyo Fijo / Móvil</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div> Carga Puntual P</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#9333ea;"></div> Deformada Escala ×200</div>
+            </div>
+          </div>
+          <div style="font-size: 0.8rem; color: #64748b; text-align: center; margin-top: 6px;">
+            Arrastra el ratón para desplazar la vista • Usa la rueda para hacer zoom
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Double Verification Card -->
+    <div class="verification-card" id="verification-card">
+      <div class="verification-header">
+        <span class="verification-title">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          SISTEMA DE AUTO-VERIFICACIÓN DUAL DE INGENIERÍA
+        </span>
+        <span class="badge badge-emerald" id="badge-stability-gh">Estabilidad Verificada</span>
+      </div>
+
+      <div class="verification-grid">
+        <div class="check-box" id="check-box-1">
+          <div class="check-box-title">
+            <span>✓ VERIFICACIÓN 1: Determinación Estática (Criterio GH = b + r - 2j)</span>
+          </div>
+          <div class="check-box-detail" id="check-detail-1">
+            Calculando grado de indeterminación estática...
+          </div>
+        </div>
+
+        <div class="check-box" id="check-box-2">
+          <div class="check-box-title">
+            <span>✓ VERIFICACIÓN 2: Equilibrio Estático Global (ΣFx = 0, ΣFy = 0)</span>
+          </div>
+          <div class="check-box-detail" id="check-detail-2">
+            Verificando sumatoria de fuerzas nodales y reacciones...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 1: TABLA 1 GEOMETRÍA DE BARRAS -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSection('sec-geom')">
+        <span>1. TABLA 1: GEOMETRÍA DE BARRAS Y PROPIEDADES MECÁNICAS (cm, cm², Kgf/cm²)</span>
+        <span id="icon-sec-geom">▼</span>
+      </div>
+      <div class="section-body" id="sec-geom">
+        <div class="table-container">
+          <table class="summary-table" id="table-geometry">
+            <thead>
+              <tr>
+                <th>BARRA #</th>
+                <th>NUDO INI</th>
+                <th>NUDO FIN</th>
+                <th>X_ini</th>
+                <th>Y_ini</th>
+                <th>X_fin</th>
+                <th>Y_fin</th>
+                <th>ΔX (cm)</th>
+                <th>ΔY (cm)</th>
+                <th>LONGITUD L (cm)</th>
+                <th>Cx (cos)</th>
+                <th>Cy (sen)</th>
+                <th>ÁREA A (cm²)</th>
+                <th>E (Kgf/cm²)</th>
+                <th>AE/L (Kgf/cm)</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-geom"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: TABLA 2 CONECTIVIDAD Y GRADOS DE LIBERTAD -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSection('sec-conn')">
+        <span>2. TABLA 2: CONECTIVIDAD Y GRADOS DE LIBERTAD ASOCIADOS [Uix, Uiy, Ujx, Ujy]</span>
+        <span id="icon-sec-conn">▼</span>
+      </div>
+      <div class="section-body" id="sec-conn">
+        <div class="table-container">
+          <table class="summary-table" id="table-connectivity">
+            <thead>
+              <tr>
+                <th>BARRA #</th>
+                <th>NUDO INICIO</th>
+                <th>u_ini_x</th>
+                <th>u_ini_y</th>
+                <th>NUDO FIN</th>
+                <th>u_fin_x</th>
+                <th>u_fin_y</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-conn"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: MATRICES LOCALES Y EXPANDIDAS -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSection('sec-local-mats')">
+        <span>3. MATRICES DE RIGIDEZ LOCALES (4×4) Y EXPANDIDAS CON TRAZABILIDAD PASTEL</span>
+        <span id="icon-sec-local-mats">▼</span>
+      </div>
+      <div class="section-body" id="sec-local-mats">
+        <div id="container-local-mats" style="display:flex; flex-direction:column; gap:24px;"></div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: MATRIZ GLOBAL KARMADURA -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSection('sec-karm')">
+        <span>4. MATRIZ DE RIGIDEZ GLOBAL DE LA ARMADURA (Karmadura) CON DIAGONAL PRINCIPAL PASTEL</span>
+        <span id="icon-sec-karm">▼</span>
+      </div>
+      <div class="section-body" id="sec-karm">
+        <div class="teacher-note">
+          Diagonal principal continua resaltada en Verde Menta Suave (#D1FAE5) garantizando simetría y positividad definida.
+        </div>
+        <div class="matrix-wrapper" id="container-karmadura"></div>
+      </div>
+    </div>
+
+    <!-- SECTION 5: VECTORES DE CARGAS Y DESPLAZAMIENTOS -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSection('sec-vectors')">
+        <span>5. VECTORES GLOBALES: MATRIZ DE CARGAS {C} Y MATRIZ DE DESPLAZAMIENTOS {D}</span>
+        <span id="icon-sec-vectors">▼</span>
+      </div>
+      <div class="section-body" id="sec-vectors">
+        <div style="display:flex; gap:32px; flex-wrap:wrap; align-items:flex-start;">
+          <div>
+            <div style="font-weight:700; margin-bottom:8px; color:#1e293b;">Vector de Cargas {C} (Kgf):</div>
+            <div class="matrix-wrapper" id="container-vector-c"></div>
+          </div>
+          <div>
+            <div style="font-weight:700; margin-bottom:8px; color:#1e293b;">Vector de Desplazamientos {D} (cm):</div>
+            <div class="matrix-wrapper" id="container-vector-d"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 6: ECUACION MATRICIAL REDUCIDA, INVERSION Y MMULT -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSection('sec-solution')">
+        <span>6. ECUACIÓN REDUCIDA, INVERSA D=MINVERSA(K)*C Y DESPLAZAMIENTOS FINALES D=MMULT</span>
+        <span id="icon-sec-solution">▼</span>
+      </div>
+      <div class="section-body" id="sec-solution">
+        <div class="yellow-banner">
+          <span>📋 C = Karmadura · D</span>
+        </div>
+        <div class="teacher-note">
+          "ELIMINO FILA Y COLUMNA DE LOS QUE NO CORRESPONDE PARA HALLAR LOS DESPLAZAMIENTOS" — Se extrae la submatriz K₁₁ (Grados Libres).
+        </div>
+
+        <div style="margin-top:16px;">
+          <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:8px;">Submatriz K₁₁ (Grados de Libertad Libres):</h4>
+          <div class="matrix-wrapper" id="container-k11"></div>
+        </div>
+
+        <div style="margin-top:20px;">
+          <div class="yellow-banner">
+            <span>D = MINVERSA(K₁₁) · C</span>
+          </div>
+          <div style="margin-top:10px;">
+            <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:8px;">Matriz Inversa [K₁₁]⁻¹:</h4>
+            <div class="matrix-wrapper" id="container-k11-inv"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;">
+          <div class="yellow-banner">
+            <span>D = MMULT(MIN) · C (Desplazamientos Calculados en cm)</span>
+          </div>
+          <div class="matrix-wrapper" id="container-disp-results" style="margin-top:10px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 7: REACCIONES EN LOS APOYOS -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSection('sec-reac')">
+        <span>7. ECUACIÓN REDUCIDA PARA EL CÁLCULO DE REACCIONES {R} = [K₂₁] · {D}</span>
+        <span id="icon-sec-reac">▼</span>
+      </div>
+      <div class="section-body" id="sec-reac">
+        <div style="margin-bottom:12px;">
+          <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:8px;">Submatriz K₂₁ (Filas Restringidas × Columnas Libres):</h4>
+          <div class="matrix-wrapper" id="container-k21"></div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:8px;">Reacciones Calculadas en los Apoyos (Kgf):</h4>
+          <div class="matrix-wrapper" id="container-reactions-table"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 8: DESPLAZAMIENTOS TOTALES -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSection('sec-dtot')">
+        <span>8. MATRIZ DE DESPLAZAMIENTOS TOTAL UNIFICADA {D} (cm)</span>
+        <span id="icon-sec-dtot">▼</span>
+      </div>
+      <div class="section-body" id="sec-dtot">
+        <div class="matrix-wrapper" id="container-dtot"></div>
+      </div>
+    </div>
+
+    <!-- SECTION 9: CALCULO DE FUERZAS EN BARRAS PASO A PASO -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSection('sec-forces')">
+        <span>9. CÁLCULO PASO A PASO DE FUERZAS EN LAS BARRAS: Fm = (AE/L) · [-cx, -cy, +cx, +cy] · {D}</span>
+        <span id="icon-sec-forces">▼</span>
+      </div>
+      <div class="section-body" id="sec-forces">
+        <div class="teacher-note">
+          Vinculación 100% dinámica de nudo inicial a nudo final: las deformaciones se extraen con precisión directa de los desplazamientos correspondientes.
+        </div>
+        <div id="container-bar-forces" style="display:flex; flex-direction:column; gap:20px;"></div>
+      </div>
+    </div>
+
+    <!-- SECTION 10: RESUMEN GENERAL DE FUERZAS -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSection('sec-summary')">
+        <span>10. RESUMEN GENERAL DE FUERZAS EN LAS BARRAS (TABLA OFICIAL DE 7 COLUMNAS)</span>
+        <span id="icon-sec-summary">▼</span>
+      </div>
+      <div class="section-body" id="sec-summary">
+        <div class="table-container">
+          <table class="summary-table" id="table-forces-summary">
+            <thead>
+              <tr>
+                <th>BARRA #</th>
+                <th>NUDO INI</th>
+                <th>NUDO FIN</th>
+                <th>LONGITUD L (cm)</th>
+                <th>ÁREA A (cm²)</th>
+                <th>FUERZA AXIAL N (Kgf)</th>
+                <th>ESTADO ESTRUCTURAL</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-forces-summary"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // =========================================================================
+    // PASTEL COLOR PALETTE (Exact match with Excel workbook)
+    // =========================================================================
+    const PASTEL_PALETTE = [
+      { bg: "#E0F2FE", border: "#38bdf8", name: "Azul Cielo", text: "#0369a1" },
+      { bg: "#DCFCE7", border: "#4ade80", name: "Menta Suave", text: "#15803d" },
+      { bg: "#FEE2E2", border: "#f87171", name: "Rosa Coral", text: "#b91c1c" },
+      { bg: "#FEF3C7", border: "#fbbf24", name: "Melocotón", text: "#b45309" },
+      { bg: "#F3E8FF", border: "#c084fc", name: "Lavanda", text: "#7e22ce" },
+      { bg: "#CCFBF1", border: "#2dd4bf", name: "Turquesa", text: "#0f766e" },
+      { bg: "#FEF9C3", border: "#facc15", name: "Mantequilla", text: "#a16207" },
+      { bg: "#EDE7F6", border: "#b39ddb", name: "Lila Pastel", text: "#5e35b1" }
+    ];
+
+    // =========================================================================
+    // PRESETS DATA
+    // =========================================================================
+    const PRESETS = {
+      whatsapp: {
+        name: "Caso 1: Triángulo WhatsApp (3N, 3B - Isostática)",
+        nodes: [
+          { id: 1, x: 300, y: 500, support: "Libre", px: 4000, py: -5000 },
+          { id: 2, x: 700, y: 0,   support: "Rodillo Y", px: 0, py: 0 },
+          { id: 3, x: 0,   y: 0,   support: "Fijo", px: 0, py: 0 },
+          { id: 4, x: null, y: null, support: "Libre", px: 0, py: 0 },
+          { id: 5, x: null, y: null, support: "Libre", px: 0, py: 0 },
+          { id: 6, x: null, y: null, support: "Libre", px: 0, py: 0 }
+        ],
+        bars: [
+          { id: 1, start: 1, end: 2, a: 12, e: 2100000 },
+          { id: 2, start: 2, end: 3, a: 12, e: 2100000 },
+          { id: 3, start: 3, end: 1, a: 12, e: 2100000 },
+          { id: 4, start: null, end: null, a: 12, e: 2100000 },
+          { id: 5, start: null, end: null, a: 12, e: 2100000 },
+          { id: 6, start: null, end: null, a: 12, e: 2100000 },
+          { id: 7, start: null, end: null, a: 12, e: 2100000 },
+          { id: 8, start: null, end: null, a: 12, e: 2100000 }
+        ]
+      },
+      ulianov: {
+        name: "Caso 2: Triángulo Cátedra Profesor Ulianov (3N, 3B - Isostática)",
+        nodes: [
+          { id: 1, x: 0,   y: 0,   support: "Fijo", px: 0, py: 0 },
+          { id: 2, x: 400, y: 0,   support: "Rodillo Y", px: 0, py: 0 },
+          { id: 3, x: 200, y: 300, support: "Libre", px: 0, py: -8000 },
+          { id: 4, x: null, y: null, support: "Libre", px: 0, py: 0 },
+          { id: 5, x: null, y: null, support: "Libre", px: 0, py: 0 },
+          { id: 6, x: null, y: null, support: "Libre", px: 0, py: 0 }
+        ],
+        bars: [
+          { id: 1, start: 1, end: 2, a: 15, e: 2100000 },
+          { id: 2, start: 2, end: 3, a: 15, e: 2100000 },
+          { id: 3, start: 3, end: 1, a: 15, e: 2100000 },
+          { id: 4, start: null, end: null, a: 15, e: 2100000 },
+          { id: 5, start: null, end: null, a: 15, e: 2100000 },
+          { id: 6, start: null, end: null, a: 15, e: 2100000 },
+          { id: 7, start: null, end: null, a: 15, e: 2100000 },
+          { id: 8, start: null, end: null, a: 15, e: 2100000 }
+        ]
+      },
+      asimetrica: {
+        name: "Caso 6: Cercha Asimétrica (4 Nudos, 5 Barras - Cátedra Ulianov)",
+        nodes: [
+          { id: 1, x: 0,   y: 0,   support: "Fijo", px: 0, py: 0 },
+          { id: 2, x: 300, y: 0,   support: "Rodillo Y", px: 0, py: 0 },
+          { id: 3, x: 700, y: 0,   support: "Libre", px: 4000, py: -5000 },
+          { id: 4, x: 300, y: 500, support: "Libre", px: 4000, py: -5000 },
+          { id: 5, x: null, y: null, support: "Libre", px: 0, py: 0 },
+          { id: 6, x: null, y: null, support: "Libre", px: 0, py: 0 }
+        ],
+        bars: [
+          { id: 1, start: 4, end: 1, a: 12, e: 2100000 },
+          { id: 2, start: 1, end: 2, a: 12, e: 2100000 },
+          { id: 3, start: 2, end: 3, a: 12, e: 2100000 },
+          { id: 4, start: 3, end: 4, a: 12, e: 2100000 },
+          { id: 5, start: 4, end: 2, a: 12, e: 2100000 },
+          { id: 6, start: null, end: null, a: 12, e: 2100000 },
+          { id: 7, start: null, end: null, a: 12, e: 2100000 },
+          { id: 8, start: null, end: null, a: 12, e: 2100000 }
+        ]
+      },
+      san_andres: {
+        name: "Caso 41: Panel San Andrés con Cruz (4N, 6B - Hiperestática GH=1)",
+        nodes: [
+          { id: 1, x: 0,   y: 0,   support: "Fijo", px: 0, py: 0 },
+          { id: 2, x: 400, y: 0,   support: "Fijo", px: 0, py: 0 },
+          { id: 3, x: 400, y: 300, support: "Libre", px: 3500, py: -5000 },
+          { id: 4, x: 0,   y: 300, support: "Libre", px: 3500, py: 0 },
+          { id: 5, x: null, y: null, support: "Libre", px: 0, py: 0 },
+          { id: 6, x: null, y: null, support: "Libre", px: 0, py: 0 }
+        ],
+        bars: [
+          { id: 1, start: 1, end: 2, a: 12, e: 2100000 },
+          { id: 2, start: 2, end: 3, a: 12, e: 2100000 },
+          { id: 3, start: 3, end: 4, a: 12, e: 2100000 },
+          { id: 4, start: 4, end: 1, a: 12, e: 2100000 },
+          { id: 5, start: 1, end: 3, a: 12, e: 2100000 },
+          { id: 6, start: 2, end: 4, a: 12, e: 2100000 },
+          { id: 7, start: null, end: null, a: 12, e: 2100000 },
+          { id: 8, start: null, end: null, a: 12, e: 2100000 }
+        ]
+      },
+      warren: {
+        name: "Caso 16: Warren Clásica (5 Nudos, 7 Barras - Isostática)",
+        nodes: [
+          { id: 1, x: 0,   y: 0,   support: "Fijo", px: 0, py: 0 },
+          { id: 2, x: 300, y: 0,   support: "Libre", px: 0, py: -6000 },
+          { id: 3, x: 600, y: 0,   support: "Rodillo Y", px: 0, py: 0 },
+          { id: 4, x: 450, y: 260, support: "Libre", px: 0, py: 0 },
+          { id: 5, x: 150, y: 260, support: "Libre", px: 2000, py: 0 },
+          { id: 6, x: null, y: null, support: "Libre", px: 0, py: 0 }
+        ],
+        bars: [
+          { id: 1, start: 1, end: 2, a: 14, e: 2100000 },
+          { id: 2, start: 2, end: 3, a: 14, e: 2100000 },
+          { id: 3, start: 1, end: 5, a: 14, e: 2100000 },
+          { id: 4, start: 5, end: 2, a: 14, e: 2100000 },
+          { id: 5, start: 5, end: 4, a: 14, e: 2100000 },
+          { id: 6, start: 2, end: 4, a: 14, e: 2100000 },
+          { id: 7, start: 4, end: 3, a: 14, e: 2100000 },
+          { id: 8, start: null, end: null, a: 14, e: 2100000 }
+        ]
+      }
+    };
+
+    // =========================================================================
+    // STATE MANAGEMENT
+    // =========================================================================
+    let currentNodes = JSON.parse(JSON.stringify(PRESETS.whatsapp.nodes));
+    let currentBars = JSON.parse(JSON.stringify(PRESETS.whatsapp.bars));
+
+    // Canvas view state
+    let viewZoom = 1.0;
+    let viewPanX = 0;
+    let viewPanY = 0;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    // Calculation cached output
+    let calcResults = null;
+
+    // =========================================================================
+    // DOM INITIALIZATION
+    // =========================================================================
+    window.addEventListener("DOMContentLoaded", () => {
+      renderInputTables();
+      initCanvasEvents();
+      recalculateAndRender();
+      window.addEventListener("resize", () => {
+        resizeCanvas();
+        redrawCanvas();
+      });
+    });
+
+    function renderInputTables() {
+      // 1. Populate Nodes Table
+      const nTbody = document.getElementById("nodes-tbody");
+      nTbody.innerHTML = "";
+      for (let i = 1; i <= 6; i++) {
+        const nd = currentNodes[i - 1] || { id: i, x: null, y: null, support: "Libre", px: 0, py: 0 };
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td style="font-weight:700; background:#f8fafc;">Nudo ${i}</td>
+          <td><input type="number" step="any" class="input-cell" value="${nd.x !== null ? nd.x : ''}" placeholder="-" oninput="onNodeChange(${i}, 'x', this.value)"></td>
+          <td><input type="number" step="any" class="input-cell" value="${nd.y !== null ? nd.y : ''}" placeholder="-" oninput="onNodeChange(${i}, 'y', this.value)"></td>
+          <td>
+            <select class="select-cell" onchange="onNodeChange(${i}, 'support', this.value)">
+              <option value="Libre" ${nd.support === 'Libre' ? 'selected' : ''}>Libre (0 reac.)</option>
+              <option value="Fijo" ${nd.support === 'Fijo' ? 'selected' : ''}>Fijo (articulado) [Rx=1, Ry=1]</option>
+              <option value="Rodillo Y" ${nd.support === 'Rodillo Y' ? 'selected' : ''}>Rodillo Y (despl. X libre) [Ry=1]</option>
+              <option value="Rodillo X" ${nd.support === 'Rodillo X' ? 'selected' : ''}>Rodillo X (despl. Y libre) [Rx=1]</option>
+            </select>
+          </td>
+          <td><input type="number" step="any" class="input-cell" value="${nd.px || 0}" oninput="onNodeChange(${i}, 'px', this.value)"></td>
+          <td><input type="number" step="any" class="input-cell" value="${nd.py || 0}" oninput="onNodeChange(${i}, 'py', this.value)"></td>
+        `;
+        nTbody.appendChild(tr);
+      }
+
+      // 2. Populate Bars Table
+      const bTbody = document.getElementById("bars-tbody");
+      bTbody.innerHTML = "";
+      for (let m = 1; m <= 8; m++) {
+        const br = currentBars[m - 1] || { id: m, start: null, end: null, a: 12, e: 2100000 };
+        const col = PASTEL_PALETTE[(m - 1) % PASTEL_PALETTE.length];
+        const tr = document.createElement("tr");
+
+        let optStart = `<option value="">- Vacío -</option>`;
+        let optEnd = `<option value="">- Vacío -</option>`;
+        for (let n = 1; n <= 6; n++) {
+          optStart += `<option value="${n}" ${br.start === n ? 'selected' : ''}>Nudo ${n}</option>`;
+          optEnd += `<option value="${n}" ${br.end === n ? 'selected' : ''}>Nudo ${n}</option>`;
+        }
+
+        tr.innerHTML = `
+          <td style="font-weight:700; background:${col.bg}; color:${col.text}; border-left: 4px solid ${col.border};">
+            Barra ${m}
+          </td>
+          <td>
+            <select class="select-cell" onchange="onBarChange(${m}, 'start', this.value)">
+              ${optStart}
+            </select>
+          </td>
+          <td>
+            <select class="select-cell" onchange="onBarChange(${m}, 'end', this.value)">
+              ${optEnd}
+            </select>
+          </td>
+          <td><input type="number" step="any" class="input-cell" value="${br.a || 12}" oninput="onBarChange(${m}, 'a', this.value)"></td>
+          <td><input type="number" step="any" class="input-cell" value="${br.e || 2100000}" oninput="onBarChange(${m}, 'e', this.value)"></td>
+        `;
+        bTbody.appendChild(tr);
+      }
+    }
+
+    function onNodeChange(id, field, val) {
+      const nd = currentNodes[id - 1];
+      if (field === 'x' || field === 'y') {
+        nd[field] = val === '' ? null : parseFloat(val);
+      } else if (field === 'px' || field === 'py') {
+        nd[field] = val === '' ? 0 : parseFloat(val);
+      } else {
+        nd[field] = val;
+      }
+      recalculateAndRender();
+    }
+
+    function onBarChange(id, field, val) {
+      const br = currentBars[id - 1];
+      if (field === 'start' || field === 'end') {
+        br[field] = val === '' ? null : parseInt(val);
+      } else if (field === 'a' || field === 'e') {
+        br[field] = val === '' ? 0 : parseFloat(val);
+      }
+      recalculateAndRender();
+    }
+
+    function applyUniformProps() {
+      const aVal = currentBars[0].a || 12;
+      const eVal = currentBars[0].e || 2100000;
+      currentBars.forEach(br => {
+        br.a = aVal;
+        br.e = eVal;
+      });
+      renderInputTables();
+      recalculateAndRender();
+    }
+
+    function loadPreset(key) {
+      if (!PRESETS[key]) return;
+      currentNodes = JSON.parse(JSON.stringify(PRESETS[key].nodes));
+      currentBars = JSON.parse(JSON.stringify(PRESETS[key].bars));
+      renderInputTables();
+      resetZoom();
+      recalculateAndRender();
+    }
+
+    function resetTruss() {
+      for (let i = 0; i < 6; i++) {
+        currentNodes[i] = { id: i + 1, x: null, y: null, support: "Libre", px: 0, py: 0 };
+      }
+      for (let m = 0; m < 8; m++) {
+        currentBars[m] = { id: m + 1, start: null, end: null, a: 12, e: 2100000 };
+      }
+      renderInputTables();
+      resetZoom();
+      recalculateAndRender();
+    }
+
+    // =========================================================================
+    // MATHEMATICAL ENGINE (DIRECT STIFFNESS METHOD)
+    // =========================================================================
+    function solveTruss(nodes, bars) {
+      // 1. Identify active nodes
+      const activeNodes = nodes.filter(n => n.x !== null && n.y !== null);
+      const activeNodeMap = new Map();
+      activeNodes.forEach((n, idx) => activeNodeMap.set(n.id, idx + 1));
+      const j = activeNodes.length;
+
+      if (j < 2) {
+        return { error: "Se requieren al menos 2 nudos con coordenadas válidas." };
+      }
+
+      // 2. Identify active bars
+      const activeBars = [];
+      bars.forEach(b => {
+        if (b.start && b.end && activeNodeMap.has(b.start) && activeNodeMap.has(b.end) && b.start !== b.end) {
+          const n1 = nodes.find(n => n.id === b.start);
+          const n2 = nodes.find(n => n.id === b.end);
+          const dx = n2.x - n1.x;
+          const dy = n2.y - n1.y;
+          const L = Math.sqrt(dx * dx + dy * dy);
+          if (L > 1e-6) {
+            activeBars.push({
+              ...b,
+              n1, n2,
+              dx, dy, L,
+              cx: dx / L,
+              cy: dy / L,
+              ae_l: (b.a * b.e) / L
+            });
+          }
+        }
+      });
+
+      const b_count = activeBars.length;
+      if (b_count < 1) {
+        return { error: "Se requiere al menos 1 barra conectada entre nudos válidos." };
+      }
+
+      // 3. DOFs & Reactions
+      let r_count = 0;
+      const dofs = [];
+      const freeDofIndices = [];
+      const restDofIndices = [];
+
+      activeNodes.forEach((n, idx) => {
+        const dofX = 2 * idx;
+        const dofY = 2 * idx + 1;
+        dofs.push({ name: `U${n.id}X`, dName: `D${n.id}X`, node: n.id, axis: 'X', index: dofX });
+        dofs.push({ name: `U${n.id}Y`, dName: `D${n.id}Y`, node: n.id, axis: 'Y', index: dofY });
+
+        let rx = 0, ry = 0;
+        if (n.support === "Fijo") { rx = 1; ry = 1; }
+        else if (n.support === "Rodillo Y") { rx = 0; ry = 1; }
+        else if (n.support === "Rodillo X") { rx = 1; ry = 0; }
+
+        r_count += (rx + ry);
+
+        if (rx === 1) restDofIndices.push(dofX);
+        else freeDofIndices.push(dofX);
+
+        if (ry === 1) restDofIndices.push(dofY);
+        else freeDofIndices.push(dofY);
+      });
+
+      const totalDofs = 2 * j;
+      const GH = b_count + r_count - 2 * j;
+
+      // 4. Assemble Global Stiffness Matrix
+      const K = Array.from({ length: totalDofs }, () => Array(totalDofs).fill(0));
+      const localMatrices = [];
+
+      activeBars.forEach(br => {
+        const idx1 = activeNodeMap.get(br.start) - 1;
+        const idx2 = activeNodeMap.get(br.end) - 1;
+        const barDofIndices = [2 * idx1, 2 * idx1 + 1, 2 * idx2, 2 * idx2 + 1];
+
+        const T = [-br.cx, -br.cy, br.cx, br.cy];
+        const ke = Array.from({ length: 4 }, () => Array(4).fill(0));
+
+        for (let i = 0; i < 4; i++) {
+          for (let k = 0; k < 4; k++) {
+            ke[i][k] = br.ae_l * T[i] * T[k];
+          }
+        }
+
+        localMatrices.push({
+          bar: br,
+          barDofIndices,
+          T,
+          ke
+        });
+
+        // Add to global K
+        for (let i = 0; i < 4; i++) {
+          for (let k = 0; k < 4; k++) {
+            K[barDofIndices[i]][barDofIndices[k]] += ke[i][k];
+          }
+        }
+      });
+
+      // 5. Build Submatrices K11 and K21
+      const n_free = freeDofIndices.length;
+      const n_rest = restDofIndices.length;
+
+      const K11 = Array.from({ length: n_free }, () => Array(n_free).fill(0));
+      for (let i = 0; i < n_free; i++) {
+        for (let k = 0; k < n_free; k++) {
+          K11[i][k] = K[freeDofIndices[i]][freeDofIndices[k]];
+        }
+      }
+
+      const K21 = Array.from({ length: n_rest }, () => Array(n_free).fill(0));
+      for (let i = 0; i < n_rest; i++) {
+        for (let k = 0; k < n_free; k++) {
+          K21[i][k] = K[restDofIndices[i]][freeDofIndices[k]];
+        }
+      }
+
+      // 6. Known loads vector C_lib
+      const C_lib = Array(n_free).fill(0);
+      for (let i = 0; i < n_free; i++) {
+        const dofIdx = freeDofIndices[i];
+        const nodeIdx = Math.floor(dofIdx / 2);
+        const isY = dofIdx % 2 === 1;
+        const nd = activeNodes[nodeIdx];
+        C_lib[i] = isY ? (nd.py || 0) : (nd.px || 0);
+      }
+
+      // 7. Matrix Inversion of K11 (Gauss-Jordan with Partial Pivoting)
+      const invK11 = invertMatrix(K11);
+      if (!invK11) {
+        return {
+          error: "La submatriz K₁₁ es singular (det = 0). La estructura presenta un mecanismo cinemático o falta de arriostramiento.",
+          activeNodes, activeBars, j, b_count, r_count, GH
+        };
+      }
+
+      // 8. Calculate Displacements: D_lib = [K11]^-1 * C_lib
+      const D_lib = Array(n_free).fill(0);
+      for (let i = 0; i < n_free; i++) {
+        let sum = 0;
+        for (let k = 0; k < n_free; k++) {
+          sum += invK11[i][k] * C_lib[k];
+        }
+        D_lib[i] = sum;
+      }
+
+      // 9. Calculate Reactions: R = K21 * D_lib - P_rest
+      const R_calc = Array(n_rest).fill(0);
+      for (let i = 0; i < n_rest; i++) {
+        let sum = 0;
+        for (let k = 0; k < n_free; k++) {
+          sum += K21[i][k] * D_lib[k];
+        }
+        const dofIdx = restDofIndices[i];
+        const nodeIdx = Math.floor(dofIdx / 2);
+        const isY = dofIdx % 2 === 1;
+        const nd = activeNodes[nodeIdx];
+        const p_rest = isY ? (nd.py || 0) : (nd.px || 0);
+        R_calc[i] = sum - p_rest;
+      }
+
+      // 10. Total Displacements Vector
+      const D_tot = Array(totalDofs).fill(0);
+      freeDofIndices.forEach((dofIdx, i) => {
+        D_tot[dofIdx] = D_lib[i];
+      });
+
+      // 11. Calculate Axial Forces for each bar
+      const barForces = [];
+      activeBars.forEach(br => {
+        const idx1 = activeNodeMap.get(br.start) - 1;
+        const idx2 = activeNodeMap.get(br.end) - 1;
+        const barDofs = [2 * idx1, 2 * idx1 + 1, 2 * idx2, 2 * idx2 + 1];
+        const d_vec = barDofs.map(idx => D_tot[idx]);
+
+        const T = [-br.cx, -br.cy, br.cx, br.cy];
+        let force = 0;
+        for (let i = 0; i < 4; i++) {
+          force += T[i] * d_vec[i];
+        }
+        force *= br.ae_l;
+
+        let status = "BARRA DE FUERZA NULA";
+        let statusClass = "status-zero";
+        if (force > 0.001) {
+          status = "BARRA A TRACCIÓN (+)";
+          statusClass = "status-tension";
+        } else if (force < -0.001) {
+          status = "BARRA A COMPRESIÓN (-)";
+          statusClass = "status-compression";
+        }
+
+        barForces.push({
+          bar: br,
+          barDofs,
+          d_vec,
+          force,
+          status,
+          statusClass
+        });
+      });
+
+      // 12. Verification 2: Global Equilibrium Check
+      let sumFx = 0;
+      let sumFy = 0;
+      activeNodes.forEach(n => {
+        sumFx += (n.px || 0);
+        sumFy += (n.py || 0);
+      });
+      restDofIndices.forEach((dofIdx, i) => {
+        if (dofIdx % 2 === 0) sumFx += R_calc[i];
+        else sumFy += R_calc[i];
+      });
+
+      const eqOk = Math.abs(sumFx) < 1e-4 && Math.abs(sumFy) < 1e-4;
+
+      return {
+        activeNodes,
+        activeBars,
+        activeNodeMap,
+        j, b_count, r_count, GH,
+        dofs,
+        freeDofIndices,
+        restDofIndices,
+        K,
+        localMatrices,
+        K11,
+        invK11,
+        K21,
+        C_lib,
+        D_lib,
+        R_calc,
+        D_tot,
+        barForces,
+        sumFx,
+        sumFy,
+        eqOk
+      };
+    }
+
+    // Invert Matrix via Gauss-Jordan Elimination with Partial Pivoting
+    function invertMatrix(M) {
+      const n = M.length;
+      const A = M.map(row => [...row]);
+      const inv = Array.from({ length: n }, (_, i) => {
+        const row = Array(n).fill(0);
+        row[i] = 1;
+        return row;
+      });
+
+      for (let i = 0; i < n; i++) {
+        // Find pivot
+        let maxRow = i;
+        let maxVal = Math.abs(A[i][i]);
+        for (let k = i + 1; k < n; k++) {
+          if (Math.abs(A[k][i]) > maxVal) {
+            maxVal = Math.abs(A[k][i]);
+            maxRow = k;
+          }
+        }
+
+        if (maxVal < 1e-12) return null; // Singular
+
+        // Swap rows
+        [A[i], A[maxRow]] = [A[maxRow], A[i]];
+        [inv[i], inv[maxRow]] = [inv[maxRow], inv[i]];
+
+        // Scale pivot row to 1
+        const pivot = A[i][i];
+        for (let j = 0; j < n; j++) {
+          A[i][j] /= pivot;
+          inv[i][j] /= pivot;
+        }
+
+        // Eliminate column entries in other rows
+        for (let k = 0; k < n; k++) {
+          if (k !== i) {
+            const factor = A[k][i];
+            for (let j = 0; j < n; j++) {
+              A[k][j] -= factor * A[i][j];
+              inv[k][j] -= factor * inv[i][j];
+            }
+          }
+        }
+      }
+
+      return inv;
+    }
+
+    // =========================================================================
+    // RECALCULATE AND RENDER EVERYTHING
+    // =========================================================================
+    function recalculateAndRender() {
+      calcResults = solveTruss(currentNodes, currentBars);
+
+      updateVerificationBadges(calcResults);
+
+      if (calcResults.error) {
+        document.getElementById("sec-geom").innerHTML = `<div style="color:#b91c1c; font-weight:700;">${calcResults.error}</div>`;
+        redrawCanvas();
+        return;
+      }
+
+      renderTableGeometry(calcResults);
+      renderTableConnectivity(calcResults);
+      renderLocalMatrices(calcResults);
+      renderKarmadura(calcResults);
+      renderVectors(calcResults);
+      renderSolutionStep(calcResults);
+      renderReactions(calcResults);
+      renderTotalDisplacements(calcResults);
+      renderBarForces(calcResults);
+      renderForcesSummary(calcResults);
+
+      redrawCanvas();
+    }
+
+    // =========================================================================
+    // UI RENDERING HELPERS
+    // =========================================================================
+    function updateVerificationBadges(res) {
+      const vCard = document.getElementById("verification-card");
+      const bGh = document.getElementById("badge-stability-gh");
+      const d1 = document.getElementById("check-detail-1");
+      const d2 = document.getElementById("check-detail-2");
+
+      if (res.error) {
+        bGh.className = "badge badge-amber";
+        bGh.innerText = "Configuración Incompleta o Inestable";
+        d1.innerHTML = `⚠️ ${res.error}`;
+        d2.innerHTML = `Esperando geometría consistente para verificar equilibrio.`;
+        return;
+      }
+
+      // Check 1: GH
+      if (res.GH === 0) {
+        bGh.className = "badge badge-emerald";
+        bGh.innerText = `✅ ISOSTÁTICA (GH = 0)`;
+        d1.innerHTML = `<strong>Estructura Isostática y Cinemáticamente Estable:</strong> j = ${res.j} nudos, b = ${res.b_count} barras, r = ${res.r_count} reacciones. (2j = ${2*res.j}, b+r = ${res.b_count+res.r_count}).`;
+      } else if (res.GH > 0) {
+        bGh.className = "badge badge-blue";
+        bGh.innerText = `🔷 HIPERESTÁTICA (GH = +${res.GH})`;
+        d1.innerHTML = `<strong>Estructura Hiperestática de Grado ${res.GH}:</strong> j = ${res.j} nudos, b = ${res.b_count} barras, r = ${res.r_count} reacciones. Resoluble exactamente por el Método de Rigidez Directa.`;
+      } else {
+        bGh.className = "badge badge-amber";
+        bGh.innerText = `⚠️ HIPOESTÁTICA (GH = ${res.GH})`;
+        d1.innerHTML = `<strong>Peligro de Mecanismo:</strong> Faltan ${Math.abs(res.GH)} restricciones o barras para estabilidad estática.`;
+      }
+
+      // Check 2: Equilibrium
+      if (res.eqOk) {
+        d2.innerHTML = `<span style="color:#15803d; font-weight:700;">Equilibrio Perfecto:</span> ΣFx = ${res.sumFx.toFixed(4)} Kgf, ΣFy = ${res.sumFy.toFixed(4)} Kgf. La submatriz K₁₁ fue invertida sin singularidad.`;
+      } else {
+        d2.innerHTML = `<span style="color:#b91c1c; font-weight:700;">Desequilibrio detectado:</span> ΣFx = ${res.sumFx.toFixed(2)} Kgf, ΣFy = ${res.sumFy.toFixed(2)} Kgf.`;
+      }
+    }
+
+    function renderTableGeometry(res) {
+      const tbody = document.getElementById("tbody-geom");
+      tbody.innerHTML = "";
+      res.activeBars.forEach((br, idx) => {
+        const col = PASTEL_PALETTE[idx % PASTEL_PALETTE.length];
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td style="font-weight:700; background:${col.bg}; color:${col.text}; border-left:4px solid ${col.border};">${br.id}</td>
+          <td style="font-weight:600;">Nudo ${br.start}</td>
+          <td style="font-weight:600;">Nudo ${br.end}</td>
+          <td>${br.n1.x.toFixed(2)}</td>
+          <td>${br.n1.y.toFixed(2)}</td>
+          <td>${br.n2.x.toFixed(2)}</td>
+          <td>${br.n2.y.toFixed(2)}</td>
+          <td>${br.dx.toFixed(2)}</td>
+          <td>${br.dy.toFixed(2)}</td>
+          <td style="font-weight:700;">${br.L.toFixed(2)}</td>
+          <td>${br.cx.toFixed(4)}</td>
+          <td>${br.cy.toFixed(4)}</td>
+          <td>${br.a.toFixed(2)}</td>
+          <td>${br.e.toLocaleString()}</td>
+          <td style="font-weight:700; background:#f8fafc;">${br.ae_l.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderTableConnectivity(res) {
+      const tbody = document.getElementById("tbody-conn");
+      tbody.innerHTML = "";
+      res.activeBars.forEach((br, idx) => {
+        const col = PASTEL_PALETTE[idx % PASTEL_PALETTE.length];
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td style="font-weight:700; background:${col.bg}; color:${col.text}; border-left:4px solid ${col.border};">${br.id}</td>
+          <td style="font-weight:700;">${br.start}</td>
+          <td style="font-weight:600; color:#0369a1;">U${br.start}X</td>
+          <td style="font-weight:600; color:#0369a1;">U${br.start}Y</td>
+          <td style="font-weight:700;">${br.end}</td>
+          <td style="font-weight:600; color:#0369a1;">U${br.end}X</td>
+          <td style="font-weight:600; color:#0369a1;">U${br.end}Y</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderLocalMatrices(res) {
+      const cont = document.getElementById("container-local-mats");
+      cont.innerHTML = "";
+
+      res.localMatrices.forEach((lm, idx) => {
+        const col = PASTEL_PALETTE[idx % PASTEL_PALETTE.length];
+        const br = lm.bar;
+        const dofNames = [`U${br.start}X`, `U${br.start}Y`, `U${br.end}X`, `U${br.end}Y`];
+
+        const card = document.createElement("div");
+        card.className = "bar-force-box";
+        card.style.borderLeft = `5px solid ${col.border}`;
+
+        let tableHtml = `
+          <div class="bar-force-title">
+            <span class="bar-indicator" style="background:${col.bg}; border-color:${col.border};"></span>
+            <span>Matriz Local de Rigidez k${br.id} (4×4) • Barra ${br.id} [Nudo ${br.start} → Nudo ${br.end}]:</span>
+          </div>
+          <div class="matrix-wrapper">
+            <table class="matrix-table">
+              <thead>
+                <tr>
+                  <th>k${br.id}</th>
+                  ${dofNames.map(d => `<th style="background:${col.bg}; color:${col.text};">${d}</th>`).join("")}
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        for (let r = 0; r < 4; r++) {
+          tableHtml += `<tr><th style="background:${col.bg}; color:${col.text};">${dofNames[r]}</th>`;
+          for (let c = 0; c < 4; c++) {
+            tableHtml += `<td style="background:${col.bg};">${lm.ke[r][c].toFixed(2)}</td>`;
+          }
+          tableHtml += `</tr>`;
+        }
+
+        tableHtml += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        card.innerHTML = tableHtml;
+        cont.appendChild(card);
+      });
+    }
+
+    function renderKarmadura(res) {
+      const cont = document.getElementById("container-karmadura");
+      const n = res.K.length;
+      let html = `<table class="matrix-table"><thead><tr><th>K</th>`;
+      res.dofs.forEach(d => {
+        html += `<th>${d.name}</th>`;
+      });
+      html += `</tr></thead><tbody>`;
+
+      for (let r = 0; r < n; r++) {
+        html += `<tr><th>${res.dofs[r].name}</th>`;
+        for (let c = 0; c < n; c++) {
+          const isDiag = (r === c);
+          const isK11 = res.freeDofIndices.includes(r) && res.freeDofIndices.includes(c);
+          let cls = isDiag ? "cell-diag" : (isK11 ? "cell-k11" : "");
+          html += `<td class="${cls}">${res.K[r][c].toFixed(2)}</td>`;
+        }
+        html += `</tr>`;
+      }
+      html += `</tbody></table>`;
+      cont.innerHTML = html;
+    }
+
+    function renderVectors(res) {
+      // Vector C
+      const contC = document.getElementById("container-vector-c");
+      let htmlC = `<table class="matrix-table"><thead><tr><th>DOF</th><th>Cargas {C}</th></tr></thead><tbody>`;
+      res.dofs.forEach((d, idx) => {
+        const isFree = res.freeDofIndices.includes(idx);
+        const nodeIdx = Math.floor(idx / 2);
+        const nd = res.activeNodes[nodeIdx];
+        const isY = idx % 2 === 1;
+        const pVal = isY ? (nd.py || 0) : (nd.px || 0);
+
+        if (isFree) {
+          htmlC += `<tr><th>${d.name}</th><td class="cell-peach">${pVal.toFixed(2)}</td></tr>`;
+        } else {
+          htmlC += `<tr><th>${d.name}</th><td style="color:#64748b; font-style:italic;">C${d.node}${d.axis}</td></tr>`;
+        }
+      });
+      htmlC += `</tbody></table>`;
+      contC.innerHTML = htmlC;
+
+      // Vector D
+      const contD = document.getElementById("container-vector-d");
+      let htmlD = `<table class="matrix-table"><thead><tr><th>DOF</th><th>Despl. {D}</th></tr></thead><tbody>`;
+      res.dofs.forEach((d, idx) => {
+        const isFree = res.freeDofIndices.includes(idx);
+        if (isFree) {
+          htmlD += `<tr><th>${d.name}</th><td class="cell-peach">D${d.node}${d.axis}</td></tr>`;
+        } else {
+          htmlD += `<tr><th>${d.name}</th><td style="font-weight:700;">0.0000</td></tr>`;
+        }
+      });
+      htmlD += `</tbody></table>`;
+      contD.innerHTML = htmlD;
+    }
+
+    function renderSolutionStep(res) {
+      // 1. K11
+      const contK11 = document.getElementById("container-k11");
+      const n_free = res.freeDofIndices.length;
+      let htmlK11 = `<table class="matrix-table"><thead><tr><th>K₁₁</th>`;
+      res.freeDofIndices.forEach(idx => {
+        htmlK11 += `<th style="background:#bbf7d0;">${res.dofs[idx].name}</th>`;
+      });
+      htmlK11 += `</tr></thead><tbody>`;
+
+      for (let r = 0; r < n_free; r++) {
+        htmlK11 += `<tr><th style="background:#bbf7d0;">${res.dofs[res.freeDofIndices[r]].name}</th>`;
+        for (let c = 0; c < n_free; c++) {
+          const isDiag = (r === c);
+          htmlK11 += `<td class="${isDiag ? 'cell-diag' : 'cell-k11'}">${res.K11[r][c].toFixed(2)}</td>`;
+        }
+        htmlK11 += `</tr>`;
+      }
+      htmlK11 += `</tbody></table>`;
+      contK11.innerHTML = htmlK11;
+
+      // 2. Inverted K11
+      const contInv = document.getElementById("container-k11-inv");
+      let htmlInv = `<table class="matrix-table"><thead><tr><th>MIN</th>`;
+      res.freeDofIndices.forEach(idx => {
+        htmlInv += `<th>${res.dofs[idx].name}</th>`;
+      });
+      htmlInv += `</tr></thead><tbody>`;
+
+      for (let r = 0; r < n_free; r++) {
+        htmlInv += `<tr><th>${res.dofs[res.freeDofIndices[r]].name}</th>`;
+        for (let c = 0; c < n_free; c++) {
+          htmlInv += `<td>${res.invK11[r][c].toExponential(5)}</td>`;
+        }
+        htmlInv += `</tr>`;
+      }
+      htmlInv += `</tbody></table>`;
+      contInv.innerHTML = htmlInv;
+
+      // 3. Displacement Results
+      const contDisp = document.getElementById("container-disp-results");
+      let htmlDisp = `<table class="matrix-table"><thead><tr><th>Grado Libre</th><th>Desplazamiento (cm)</th></tr></thead><tbody>`;
+      res.freeDofIndices.forEach((dofIdx, i) => {
+        htmlDisp += `<tr><th style="background:#fef08a;">${res.dofs[dofIdx].dName}</th><td style="font-weight:700; background:#fef08a;">${res.D_lib[i].toFixed(8)} cm</td></tr>`;
+      });
+      htmlDisp += `</tbody></table>`;
+      contDisp.innerHTML = htmlDisp;
+    }
+
+    function renderReactions(res) {
+      // 1. K21
+      const contK21 = document.getElementById("container-k21");
+      const n_rest = res.restDofIndices.length;
+      const n_free = res.freeDofIndices.length;
+
+      let htmlK21 = `<table class="matrix-table"><thead><tr><th>K₂₁</th>`;
+      res.freeDofIndices.forEach(idx => {
+        htmlK21 += `<th>${res.dofs[idx].name}</th>`;
+      });
+      htmlK21 += `</tr></thead><tbody>`;
+
+      for (let r = 0; r < n_rest; r++) {
+        htmlK21 += `<tr><th style="background:#ede9fe;">${res.dofs[res.restDofIndices[r]].name}</th>`;
+        for (let c = 0; c < n_free; c++) {
+          htmlK21 += `<td class="cell-lavender">${res.K21[r][c].toFixed(2)}</td>`;
+        }
+        htmlK21 += `</tr>`;
+      }
+      htmlK21 += `</tbody></table>`;
+      contK21.innerHTML = htmlK21;
+
+      // 2. Reactions Table
+      const contReac = document.getElementById("container-reactions-table");
+      let htmlReac = `<table class="matrix-table"><thead><tr><th>Reacción</th><th>Magnitud Calculada (Kgf)</th><th>Unidad</th></tr></thead><tbody>`;
+      res.restDofIndices.forEach((dofIdx, i) => {
+        const d = res.dofs[dofIdx];
+        htmlReac += `
+          <tr>
+            <th style="background:#ede9fe;">C${d.node}${d.axis}</th>
+            <td style="font-weight:700; background:#ede9fe;">${res.R_calc[i].toFixed(2)}</td>
+            <td style="font-weight:600; text-align:center;">Kgf</td>
+          </tr>
+        `;
+      });
+      htmlReac += `</tbody></table>`;
+      contReac.innerHTML = htmlReac;
+    }
+
+    function renderTotalDisplacements(res) {
+      const cont = document.getElementById("container-dtot");
+      let html = `<table class="matrix-table"><thead><tr><th>Identificador</th><th>Grado DOF</th><th>Desplazamiento Total (cm)</th></tr></thead><tbody>`;
+      res.dofs.forEach((d, idx) => {
+        const val = res.D_tot[idx];
+        const isFree = res.freeDofIndices.includes(idx);
+        html += `
+          <tr>
+            <th style="font-weight:700;">${d.dName}</th>
+            <th>${d.name}</th>
+            <td style="font-weight:700; ${isFree ? 'background:#fef08a;' : ''}">${val.toFixed(8)} cm</td>
+          </tr>
+        `;
+      });
+      html += `</tbody></table>`;
+      cont.innerHTML = html;
+    }
+
+    function renderBarForces(res) {
+      const cont = document.getElementById("container-bar-forces");
+      cont.innerHTML = "";
+
+      res.barForces.forEach((bf, idx) => {
+        const br = bf.bar;
+        const col = PASTEL_PALETTE[idx % PASTEL_PALETTE.length];
+        const card = document.createElement("div");
+        card.className = "bar-force-box";
+        card.style.borderLeft = `5px solid ${col.border}`;
+
+        const dofLabels = [`D${br.start}X`, `D${br.start}Y`, `D${br.end}X`, `D${br.end}Y`];
+
+        card.innerHTML = `
+          <div class="bar-force-title">
+            <span class="bar-indicator" style="background:${col.bg}; border-color:${col.border};"></span>
+            <span>Cálculo de Fuerza en Barra ${br.id} (Nudo ${br.start} → Nudo ${br.end}):</span>
+          </div>
+
+          <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+            <div style="font-size:0.85rem; font-weight:700;">
+              AE/L = <span style="background:#f1f5f9; padding:4px 8px; border-radius:4px;">${br.ae_l.toFixed(2)} Kgf/cm</span>
+            </div>
+            <div style="font-size:0.85rem; font-weight:700;">
+              Vector [-cx, -cy, +cx, +cy] =
+              <span style="background:#f1f5f9; padding:4px 8px; border-radius:4px;">
+                [${(-br.cx).toFixed(4)}, ${(-br.cy).toFixed(4)}, ${br.cx.toFixed(4)}, ${br.cy.toFixed(4)}]
+              </span>
+            </div>
+          </div>
+
+          <div class="matrix-wrapper" style="margin-top:4px;">
+            <table class="matrix-table">
+              <thead>
+                <tr>
+                  <th>Fuerza</th>
+                  <th>-Cx</th>
+                  <th>-Cy</th>
+                  <th>+Cx</th>
+                  <th>+Cy</th>
+                  <th>Desplazamiento {D}</th>
+                  <th>DOF</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th rowspan="4" style="background:#f8fafc; font-size:1rem; vertical-align:middle;">F${br.id}=</th>
+                  <td>${(-br.cx).toFixed(4)}</td>
+                  <td>${(-br.cy).toFixed(4)}</td>
+                  <td>${br.cx.toFixed(4)}</td>
+                  <td>${br.cy.toFixed(4)}</td>
+                  <td style="font-weight:600;">${bf.d_vec[0].toFixed(8)}</td>
+                  <th style="background:${col.bg};">${dofLabels[0]}</th>
+                </tr>
+                <tr>
+                  <td colspan="4" rowspan="3" style="text-align:center; vertical-align:middle; background:#f8fafc; color:#64748b; font-style:italic;">
+                    F${br.id} = (AE/L) · MMULT(C:F, G:G)
+                  </td>
+                  <td style="font-weight:600;">${bf.d_vec[1].toFixed(8)}</td>
+                  <th style="background:${col.bg};">${dofLabels[1]}</th>
+                </tr>
+                <tr>
+                  <td style="font-weight:600;">${bf.d_vec[2].toFixed(8)}</td>
+                  <th style="background:${col.bg};">${dofLabels[2]}</th>
+                </tr>
+                <tr>
+                  <td style="font-weight:600;">${bf.d_vec[3].toFixed(8)}</td>
+                  <th style="background:${col.bg};">${dofLabels[3]}</th>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="display:flex; gap:16px; align-items:center; margin-top:6px; flex-wrap:wrap;">
+            <div style="font-size:1.05rem; font-weight:800; background:var(--pastel-butter); padding:6px 14px; border-radius:6px; border:1px solid #fde047;">
+              F${br.id} = ${bf.force.toFixed(3)} Kgf
+            </div>
+            <span class="${bf.statusClass}">${bf.status}</span>
+          </div>
+        `;
+        cont.appendChild(card);
+      });
+    }
+
+    function renderForcesSummary(res) {
+      const tbody = document.getElementById("tbody-forces-summary");
+      tbody.innerHTML = "";
+
+      res.barForces.forEach((bf, idx) => {
+        const br = bf.bar;
+        const col = PASTEL_PALETTE[idx % PASTEL_PALETTE.length];
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+          <td style="font-weight:700; background:${col.bg}; color:${col.text}; border-left:4px solid ${col.border};">${br.id}</td>
+          <td style="font-weight:700;">${br.start}</td>
+          <td style="font-weight:700;">${br.end}</td>
+          <td>${br.L.toFixed(2)}</td>
+          <td>${br.a.toFixed(2)}</td>
+          <td style="font-weight:800; background:var(--pastel-butter);">${bf.force.toFixed(3)}</td>
+          <td><span class="${bf.statusClass}">${bf.status}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function toggleSection(id) {
+      const el = document.getElementById(id);
+      const icon = document.getElementById("icon-" + id);
+      if (el.style.display === "none") {
+        el.style.display = "flex";
+        if (icon) icon.innerText = "▼";
+      } else {
+        el.style.display = "none";
+        if (icon) icon.innerText = "▶";
+      }
+    }
+
+    // =========================================================================
+    // LIVE CANVAS VISUALIZER (High-Resolution Real-Time Renderer)
+    // =========================================================================
+    const canvas = document.getElementById("trussCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+    }
+
+    function initCanvasEvents() {
+      resizeCanvas();
+
+      canvas.addEventListener("mousedown", e => {
+        isDragging = true;
+        dragStartX = e.clientX - viewPanX;
+        dragStartY = e.clientY - viewPanY;
+      });
+
+      window.addEventListener("mousemove", e => {
+        if (!isDragging) return;
+        viewPanX = e.clientX - dragStartX;
+        viewPanY = e.clientY - dragStartY;
+        redrawCanvas();
+      });
+
+      window.addEventListener("mouseup", () => {
+        isDragging = false;
+      });
+
+      canvas.addEventListener("wheel", e => {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.1 : 0.9;
+        viewZoom *= factor;
+        viewZoom = Math.max(0.2, Math.min(5.0, viewZoom));
+        redrawCanvas();
+      }, { passive: false });
+    }
+
+    function zoom(factor) {
+      viewZoom *= factor;
+      viewZoom = Math.max(0.2, Math.min(5.0, viewZoom));
+      redrawCanvas();
+    }
+
+    function resetZoom() {
+      viewZoom = 1.0;
+      viewPanX = 0;
+      viewPanY = 0;
+      redrawCanvas();
+    }
+
+    function redrawCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Draw Background Grid
+      drawGrid(w, h);
+
+      // Collect active elements
+      const activeNodes = currentNodes.filter(n => n.x !== null && n.y !== null);
+      if (activeNodes.length === 0) {
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "14px Segoe UI, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Ingrese coordenadas de nudos para visualizar la armadura...", w / 2, h / 2);
+        return;
+      }
+
+      // Compute bounding box in World Coordinates (cm)
+      let minX = Math.min(...activeNodes.map(n => n.x));
+      let maxX = Math.max(...activeNodes.map(n => n.x));
+      let minY = Math.min(...activeNodes.map(n => n.y));
+      let maxY = Math.max(...activeNodes.map(n => n.y));
+
+      const spanX = Math.max(maxX - minX, 100);
+      const spanY = Math.max(maxY - minY, 100);
+
+      const margin = 80;
+      const scaleX = (w - 2 * margin) / spanX;
+      const scaleY = (h - 2 * margin) / spanY;
+      const autoScale = Math.min(scaleX, scaleY);
+
+      // World to Canvas coordinate transforms
+      function toScreen(x, y) {
+        const cx = (minX + maxX) / 2;
+        const cy = (minY + maxY) / 2;
+        const sx = w / 2 + (x - cx) * autoScale * viewZoom + viewPanX;
+        const sy = h / 2 - (y - cy) * autoScale * viewZoom + viewPanY;
+        return { x: sx, y: sy };
+      }
+
+      const showDeformed = document.getElementById("chk-deformed").checked && calcResults && calcResults.D_tot;
+
+      // Draw Bars
+      currentBars.forEach((br, idx) => {
+        if (!br.start || !br.end) return;
+        const n1 = currentNodes.find(n => n.id === br.start);
+        const n2 = currentNodes.find(n => n.id === br.end);
+        if (!n1 || !n2 || n1.x === null || n2.x === null) return;
+
+        const p1 = toScreen(n1.x, n1.y);
+        const p2 = toScreen(n2.x, n2.y);
+        const col = PASTEL_PALETTE[idx % PASTEL_PALETTE.length];
+
+        // Draw bar shadow/halo
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = col.border;
+        ctx.lineWidth = 7;
+        ctx.lineCap = "round";
+        ctx.stroke();
+
+        // Inner solid core
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = "#1e293b";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Direction arrow from Nudo Inicio -> Nudo Fin
+        drawArrowOnLine(p1, p2, col.text);
+
+        // Bar Badge at midpoint
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        ctx.beginPath();
+        ctx.arc(midX, midY, 11, 0, Math.PI * 2);
+        ctx.fillStyle = col.bg;
+        ctx.fill();
+        ctx.strokeStyle = col.border;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = col.text;
+        ctx.font = "bold 10px Segoe UI, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(br.id, midX, midY);
+      });
+
+      // Draw Deformed Shape (if enabled)
+      if (showDeformed) {
+        const ampFactor = 200.0;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = "#9333ea";
+        ctx.lineWidth = 2;
+
+        currentBars.forEach(br => {
+          if (!br.start || !br.end) return;
+          const idx1 = calcResults.activeNodeMap.get(br.start) - 1;
+          const idx2 = calcResults.activeNodeMap.get(br.end) - 1;
+          if (idx1 === undefined || idx2 === undefined) return;
+
+          const n1 = currentNodes.find(n => n.id === br.start);
+          const n2 = currentNodes.find(n => n.id === br.end);
+
+          const dx1 = calcResults.D_tot[2 * idx1] * ampFactor;
+          const dy1 = calcResults.D_tot[2 * idx1 + 1] * ampFactor;
+          const dx2 = calcResults.D_tot[2 * idx2] * ampFactor;
+          const dy2 = calcResults.D_tot[2 * idx2 + 1] * ampFactor;
+
+          const dp1 = toScreen(n1.x + dx1, n1.y + dy1);
+          const dp2 = toScreen(n2.x + dx2, n2.y + dy2);
+
+          ctx.beginPath();
+          ctx.moveTo(dp1.x, dp1.y);
+          ctx.lineTo(dp2.x, dp2.y);
+          ctx.stroke();
+        });
+        ctx.setLineDash([]);
+      }
+
+      // Draw Nodes & Supports & Loads
+      activeNodes.forEach(nd => {
+        const p = toScreen(nd.x, nd.y);
+
+        // 1. Draw Support Symbol
+        drawSupport(p.x, p.y, nd.support);
+
+        // 2. Draw Point Load Vector (if any)
+        if (nd.px && Math.abs(nd.px) > 1e-4) {
+          drawLoadArrow(p.x, p.y, nd.px, 0, `Px=${nd.px} Kgf`);
+        }
+        if (nd.py && Math.abs(nd.py) > 1e-4) {
+          drawLoadArrow(p.x, p.y, 0, nd.py, `Py=${nd.py} Kgf`);
+        }
+
+        // 3. Draw Node Circle
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = "#2563eb";
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Node ID
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 11px Segoe UI, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(nd.id, p.x, p.y);
+
+        // Coordinates Label
+        ctx.fillStyle = "#334155";
+        ctx.font = "9px Segoe UI, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`(${nd.x}, ${nd.y})`, p.x, p.y - 18);
+      });
+    }
+
+    function drawGrid(w, h) {
+      ctx.strokeStyle = "#f1f5f9";
+      ctx.lineWidth = 1;
+      const step = 40;
+      for (let x = 0; x < w; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+    }
+
+    function drawArrowOnLine(p1, p2, color) {
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const angle = Math.atan2(dy, dx);
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 40) return;
+
+      const arrowPos = 0.65;
+      const ax = p1.x + dx * arrowPos;
+      const ay = p1.y + dy * arrowPos;
+      const arrowSize = 6;
+
+      ctx.save();
+      ctx.translate(ax, ay);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(-arrowSize * 1.5, -arrowSize);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(-arrowSize * 1.5, arrowSize);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawSupport(x, y, type) {
+      if (type === "Libre") return;
+
+      const size = 18;
+      ctx.save();
+      ctx.translate(x, y);
+
+      if (type === "Fijo") {
+        // Triangle
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-size / 2, size);
+        ctx.lineTo(size / 2, size);
+        ctx.closePath();
+        ctx.fillStyle = "#0f766e";
+        ctx.fill();
+
+        // Base line
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.8, size);
+        ctx.lineTo(size * 0.8, size);
+        ctx.strokeStyle = "#0f766e";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Hatch lines
+        ctx.lineWidth = 1;
+        for (let i = -size * 0.7; i <= size * 0.7; i += 6) {
+          ctx.beginPath();
+          ctx.moveTo(i, size);
+          ctx.lineTo(i - 4, size + 5);
+          ctx.stroke();
+        }
+      } else if (type === "Rodillo Y") {
+        // Triangle with rollers underneath
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-size / 2, size * 0.75);
+        ctx.lineTo(size / 2, size * 0.75);
+        ctx.closePath();
+        ctx.fillStyle = "#0d9488";
+        ctx.fill();
+
+        // Rollers
+        ctx.beginPath();
+        ctx.arc(-size * 0.3, size * 0.95, 3, 0, Math.PI * 2);
+        ctx.arc(size * 0.3, size * 0.95, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#0f766e";
+        ctx.fill();
+
+        // Base ground line
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.8, size * 1.15);
+        ctx.lineTo(size * 0.8, size * 1.15);
+        ctx.strokeStyle = "#0f766e";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else if (type === "Rodillo X") {
+        // Vertical support wall
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-size * 0.75, -size / 2);
+        ctx.lineTo(-size * 0.75, size / 2);
+        ctx.closePath();
+        ctx.fillStyle = "#0d9488";
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(-size * 0.95, -size * 0.3, 3, 0, Math.PI * 2);
+        ctx.arc(-size * 0.95, size * 0.3, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#0f766e";
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(-size * 1.15, -size * 0.8);
+        ctx.lineTo(-size * 1.15, size * 0.8);
+        ctx.strokeStyle = "#0f766e";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawLoadArrow(x, y, px, py, text) {
+      const len = 42;
+      const angle = Math.atan2(-py, px); // Canvas Y is downwards
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+
+      // Arrow pointing TOWARDS node if pushing, or AWAY if pulling.
+      // Standard convention: Vector starts at (len, 0) and points to (0, 0)
+      ctx.beginPath();
+      ctx.moveTo(-len, 0);
+      ctx.lineTo(0, 0);
+      ctx.strokeStyle = "#ef4444";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Arrowhead
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-9, -5);
+      ctx.lineTo(-9, 5);
+      ctx.closePath();
+      ctx.fillStyle = "#ef4444";
+      ctx.fill();
+
+      // Text label
+      ctx.rotate(-angle); // keep text upright
+      ctx.fillStyle = "#b91c1c";
+      ctx.font = "bold 9px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(text, px >= 0 ? -len - 14 : len + 14, py >= 0 ? 14 : -14);
+
+      ctx.restore();
+    }
+
+    function exportCanvasPNG() {
+      const link = document.createElement("a");
+      link.download = "armadura_grafica.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+  </script>
+</body>
+</html>
