@@ -2,7 +2,9 @@
  * auth.js - CEREBRO ESTRUCTURAL v2.1
  * Sistema de Control de Acceso Estudiantil con Google Sign-In Real,
  * Detección Automática de Cuentas en el Navegador, Pasarela Yape S/ 5.00,
- * Control de Sesión Única por Dispositivo y Panel de Desarrollador Maestro.
+ * Control de Sesión Única por Dispositivo, Gestión de Proyectos Multi-Usuario,
+ * Control de Licencias VIP para Descarga de Plantillas Excel (.xlsx) y
+ * Panel de Desarrollador Maestro.
  *
  * Desarrollado por Ingeniero Ulianov Cuba Valencia
  * Contraseña Maestra de Desarrollador: Vayolett1404
@@ -24,6 +26,8 @@
     const KEY_PROJECTS = 'cerebro_global_projects_v21';
     const KEY_GOOGLE_ACCOUNTS = 'cerebro_real_google_accounts_v21';
     const KEY_DEVICE_ID = 'cerebro_device_id_v21';
+    const KEY_EXCEL_WHITELIST = 'cerebro_excel_authorized_users_v21';
+    const KEY_EXCEL_REQUESTS  = 'cerebro_excel_requests_v21';
 
     // Identificador único persistente de este dispositivo/navegador
     let myDeviceId = localStorage.getItem(KEY_DEVICE_ID);
@@ -157,7 +161,7 @@
         setStoredJSON(KEY_GOOGLE_ACCOUNTS, filtered);
     }
 
-    // ── WHITELIST, BANEO Y SOLICITUDES ───────────────────────────
+    // ── WHITELIST DE ALUMNOS, BANEO Y SOLICITUDES ────────────────
     function getAuthorizedUsers() { return getStoredJSON(KEY_WHITELIST, []); }
     function isUserAuthorized(email) {
         if (!email) return false;
@@ -195,6 +199,7 @@
             setStoredJSON(KEY_BANNED, list);
         }
         revokeUser(clean);
+        revokeExcelPermission(clean);
         if (sessionChannel) {
             sessionChannel.postMessage({ type: 'USER_BANNED', email: clean });
         }
@@ -218,6 +223,72 @@
         const clean = (email || '').trim().toLowerCase();
         const list = getPendingRequests().filter(p => p.email !== clean);
         setStoredJSON(KEY_PENDING, list);
+    }
+
+    // ── CONTROL DE LICENCIAS VIP PARA DESCARGA DE EXCEL (.XLSX) ──
+    function getExcelAuthorizedUsers() { return getStoredJSON(KEY_EXCEL_WHITELIST, []); }
+
+    function hasExcelPermission(email) {
+        const session = getSession();
+        if (session && session.role === 'owner') return true; // Creador/Dueño siempre puede descargar Excel
+        const target = email || (session ? session.email : '');
+        if (!target) return false;
+        return getExcelAuthorizedUsers().includes(target.toLowerCase().trim());
+    }
+
+    function grantExcelPermission(email) {
+        const clean = (email || '').toLowerCase().trim();
+        if (!clean) return;
+        const list = getExcelAuthorizedUsers();
+        if (!list.includes(clean)) {
+            list.push(clean);
+            setStoredJSON(KEY_EXCEL_WHITELIST, list);
+        }
+        const reqs = getExcelRequests();
+        const found = reqs.find(r => r.email === clean);
+        if (found) {
+            found.status = 'APPROVED';
+            setStoredJSON(KEY_EXCEL_REQUESTS, reqs);
+        }
+    }
+
+    function revokeExcelPermission(email) {
+        const clean = (email || '').toLowerCase().trim();
+        const list = getExcelAuthorizedUsers().filter(e => e !== clean);
+        setStoredJSON(KEY_EXCEL_WHITELIST, list);
+    }
+
+    function getExcelRequests() { return getStoredJSON(KEY_EXCEL_REQUESTS, []); }
+
+    function requestExcelPermission(email, name) {
+        const session = getSession();
+        const targetEmail = (email || (session ? session.email : '')).toLowerCase().trim();
+        if (!targetEmail) return;
+
+        const reqs = getExcelRequests().filter(r => r.email !== targetEmail);
+        reqs.unshift({
+            email: targetEmail,
+            name: name || (session ? session.name : targetEmail.split('@')[0]),
+            requestedAt: new Date().toLocaleString(),
+            status: 'PENDING'
+        });
+        setStoredJSON(KEY_EXCEL_REQUESTS, reqs);
+
+        // Notificar al correo del creador vía FormSubmit
+        const payload = {
+            _subject: `⭐ Solicitud de Plantilla Excel (.xlsx): ${targetEmail}`,
+            email: targetEmail,
+            mensaje: `El alumno ${targetEmail} ha solicitado la plantilla maestra editable en Excel (.xlsx) con fórmulas dinámicas.`,
+            fecha: new Date().toLocaleString()
+        };
+
+        try {
+            fetch(`https://formsubmit.co/ajax/${NOTIFICATION_EMAIL}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(payload)
+            }).catch(() => {});
+        } catch (e) {}
     }
 
     // ── SESIÓN PERSISTENTE Y SIN REPETICIÓN DE PROMPTS ────────────
@@ -262,7 +333,6 @@
 
             const mySession = getSession();
             if (mySession && mySession.role === 'student' && mySession.email === data.email) {
-                // SOLO desconectar si proviene de un dispositivo DISTINTO (otro navegador/ordenador)
                 if (data.type === 'SESSION_STARTED' && data.deviceId && data.deviceId !== myDeviceId) {
                     logoutSession();
                     alert("⚠ SESIÓN CERRADA AUTOMÁTICAMENTE:\n\nTu cuenta ha sido abierta en otro dispositivo o ventana externa. Por seguridad académica se permite 1 sesión activa a la vez.");
@@ -347,7 +417,7 @@
     styleSheet.id = 'cerebro-liquid-glass-styles';
     styleSheet.textContent = `
         /* Overlay Vidrioso Liquid Glass */
-        #accessLockModal, #ownerControlModal, #projectsManagerModal {
+        #accessLockModal, #ownerControlModal, #projectsManagerModal, #modalExcelVipNotice {
             position: fixed;
             inset: 0;
             z-index: 999999;
@@ -377,7 +447,7 @@
             border: 1px solid rgba(255, 255, 255, 0.14);
             border-top: 1px solid rgba(255, 255, 255, 0.28);
             border-radius: 24px;
-            max-width: 480px;
+            max-width: 490px;
             width: 100%;
             padding: 26px 24px;
             box-shadow: 0 30px 80px rgba(0, 0, 0, 0.75),
@@ -796,11 +866,11 @@
         devModal.className = 'modal-hidden';
 
         devModal.innerHTML = `
-            <div class="liquid-glass-card" style="max-width: 580px; text-align: left;">
+            <div class="liquid-glass-card" style="max-width: 600px; text-align: left;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 14px;">
                     <div>
                         <h3 style="font-size: 16px; font-weight: 800; color: #c084fc;">👑 Panel del Desarrollador — v2.1</h3>
-                        <span style="font-size: 11px; color: #94a3b8;">Monitoreo en Tiempo Real, Solicitudes Yape y Control de Baneo</span>
+                        <span style="font-size: 11px; color: #94a3b8;">Monitoreo en Tiempo Real, Solicitudes Yape, Permisos Excel y Baneo</span>
                     </div>
                     <button id="btnCloseDevPanel" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">✕</button>
                 </div>
@@ -809,13 +879,14 @@
                 <div style="display: flex; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 12px; overflow-x: auto;">
                     <button class="dev-tab-btn active" data-tab="tabDevPending" style="background:none; border:none; border-bottom:2px solid #00D2B5; color:#00D2B5; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">📬 Solicitudes Yape</button>
                     <button class="dev-tab-btn" data-tab="tabDevUsers" style="background:none; border:none; border-bottom:2px solid transparent; color:#94a3b8; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">👥 Alumnos Activos / Baneo</button>
+                    <button class="dev-tab-btn" data-tab="tabDevExcel" style="background:none; border:none; border-bottom:2px solid transparent; color:#94a3b8; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">⭐ Licencias Excel (.xlsx)</button>
                     <button class="dev-tab-btn" data-tab="tabDevProjects" style="background:none; border:none; border-bottom:2px solid transparent; color:#94a3b8; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">🌐 Todas las Armaduras</button>
                 </div>
 
                 <!-- Pestaña 1: Solicitudes Pendientes Yape -->
                 <div id="tabDevPending" class="dev-tab-pane" style="display: block;">
                     <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 8px;">
-                        Alumnos que han seleccionado su cuenta Google y requieren verificación de pago de S/ 5.00:
+                        Alumnos que han ingresado su cuenta Google y requieren verificación de pago de S/ 5.00:
                     </div>
                     <div id="devPendingListContainer" style="max-height: 220px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 6px;"></div>
                 </div>
@@ -831,7 +902,24 @@
                     <div id="devAuthorizedUsersList" style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 6px;"></div>
                 </div>
 
-                <!-- Pestaña 3: Todas las Armaduras Guardadas de Todos los Alumnos -->
+                <!-- Pestaña 3: Licencias y Permisos de Plantilla Excel (.xlsx) -->
+                <div id="tabDevExcel" class="dev-tab-pane" style="display: none;">
+                    <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 8px;">
+                        Control de Fórmulas VIP: Por defecto los alumnos descargan el informe en PDF no editable. Aquí puedes autorizar la descarga de la plantilla Excel (.xlsx) con fórmulas dinámicas tras verificar su pago adicional.
+                    </div>
+                    <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+                        <input type="email" id="devQuickExcelAuthInput" class="liquid-input" placeholder="Habilitar permiso Excel a correo..." style="margin: 0; font-size: 11.5px; text-align: left;">
+                        <button id="btnDevQuickExcelAuth" class="liquid-btn-primary" style="width: auto; padding: 6px 14px; font-size: 11.5px; white-space: nowrap; background: linear-gradient(135deg, #059669, #10b981);">
+                            ⭐ Conceder Excel
+                        </button>
+                    </div>
+                    <div style="font-size: 11px; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">📬 Solicitudes de Alumnos para Plantilla Excel:</div>
+                    <div id="devExcelRequestsContainer" style="max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 6px; margin-bottom: 10px;"></div>
+                    <div style="font-size: 11px; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">👥 Alumnos con Permiso VIP de Excel (.xlsx) Activo:</div>
+                    <div id="devExcelAuthorizedList" style="max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 6px;"></div>
+                </div>
+
+                <!-- Pestaña 4: Todas las Armaduras Guardadas de Todos los Alumnos -->
                 <div id="tabDevProjects" class="dev-tab-pane" style="display: none;">
                     <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 8px;">
                         Proyectos y armaduras creadas por todos los alumnos en la plataforma:
@@ -870,6 +958,40 @@
             </div>
         `;
         document.body.appendChild(projModal);
+
+        // 4. MODAL DE AVISO DE DESCARGA PDF Y LICENCIA VIP EXCEL (.XLSX)
+        const vipModal = document.createElement('div');
+        vipModal.id = 'modalExcelVipNotice';
+        vipModal.className = 'modal-hidden';
+
+        vipModal.innerHTML = `
+            <div class="liquid-glass-card" style="max-width: 480px; text-align: center;">
+                <div style="font-size: 38px; margin-bottom: 4px;">📄🔒</div>
+                <h3 style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">
+                    Informe Técnico en PDF Descargado
+                </h3>
+                <p style="font-size: 11.5px; color: #10b981; font-weight: 700; margin-bottom: 10px;">
+                    ✔ Tu informe oficial de cálculo estructural ha sido generado con éxito en PDF.
+                </p>
+                <div style="background: rgba(116, 34, 132, 0.15); border: 1px dashed rgba(116, 34, 132, 0.6); border-radius: 12px; padding: 12px; font-size: 11.5px; text-align: left; color: #cbd5e1; line-height: 1.5; margin-bottom: 14px;">
+                    <strong style="color: #f8fafc;">Plantilla Maestra en Excel (.xlsx) Protegida:</strong><br>
+                    El archivo Excel original con fórmulas matriciales dinámicas completas (<code style="color:#38bdf8;">=MINVERSE</code>, <code style="color:#34d399;">=MMULT</code>) y tablas pedagógicas automatizadas es de propiedad intelectual del <strong>Ing. Ulianov Cuba Valencia</strong>.<br><br>
+                    Para obtener el archivo Excel (.xlsx) editable, solicita tu <strong>Licencia VIP</strong> al creador con un aporte adicional.
+                </div>
+                <div style="display: flex; gap: 8px; justify-content: center;">
+                    <button id="btnRequestExcelVip" class="liquid-btn-primary" style="background: linear-gradient(135deg, #059669, #10b981); font-size: 12px; padding: 10px 16px;">
+                        📩 Solicitar Plantilla Excel (.xlsx)
+                    </button>
+                    <button id="btnCloseExcelVipNotice" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 10px; padding: 10px 14px; font-size: 12px; font-weight: 700; cursor: pointer;">
+                        Entendido
+                    </button>
+                </div>
+                <div id="excelVipConfirmMsg" style="display:none; color:#10b981; font-size:11.5px; font-weight:700; margin-top:10px;">
+                    ✔ ¡Solicitud enviada al Ing. Ulianov Cuba Valencia! Una vez verificado tu pago adicional en el panel de desarrollador, se habilitará la descarga en Excel (.xlsx).
+                </div>
+            </div>
+        `;
+        document.body.appendChild(vipModal);
 
         // ── EVENTOS Y CONTROLADORES DE VISTAS ──────────────────────
         const viewGoogle = document.getElementById('viewGoogleChooser');
@@ -922,7 +1044,6 @@
             const input = document.getElementById('userGoogleEmailInput');
             const entered = (input.value || '').trim();
 
-            // Si es la contraseña de desarrollador directa, desbloquear inmediatamente
             if (MASTER_PASSWORDS.includes(entered)) {
                 grantDeveloperAccess();
                 return;
@@ -946,7 +1067,6 @@
             const cleanEmail = email.toLowerCase().trim();
             currentSelectedAccount = { email: cleanEmail, name: name };
 
-            // 1. Si ya está autorizado en la lista blanca, entra directo a la aplicación
             if (isUserAuthorized(cleanEmail)) {
                 saveSession({ role: 'student', email: cleanEmail, name: name });
                 hideModal();
@@ -954,14 +1074,11 @@
                 return;
             }
 
-            // 2. Si es una nueva solicitud, generar código aleatorio e intransferible
             const accessCode = generateRandomAccessCode(cleanEmail);
             addPendingRequest(cleanEmail, accessCode, name);
 
-            // Notificar al correo del creador
             sendNotificationEmail(cleanEmail, name, accessCode);
 
-            // Mostrar pantalla de pago Yape vinculada al correo
             const lblEmail = document.getElementById('lblActiveStudentEmail');
             if (lblEmail) lblEmail.textContent = cleanEmail;
             switchView('yape');
@@ -978,13 +1095,11 @@
             const entered = (document.getElementById('accessPassInput').value || '').trim();
             const errEl = document.getElementById('passErrorMsg');
 
-            // Caso A: Desarrollador escribe contraseña maestra
             if (MASTER_PASSWORDS.includes(entered)) {
                 grantDeveloperAccess();
                 return;
             }
 
-            // Caso B: Validación del código del estudiante
             if (!currentSelectedAccount) {
                 switchView('google');
                 return;
@@ -1048,7 +1163,7 @@
             };
         });
 
-        // Autorizar rápido en panel
+        // Autorizar rápido alumno en panel
         document.getElementById('btnDevQuickAuthorize').onclick = () => {
             const em = (document.getElementById('devQuickAuthorizeInput').value || '').trim();
             if (em) {
@@ -1058,12 +1173,44 @@
             }
         };
 
+        // Autorizar permiso Excel VIP rápido en panel
+        const btnQuickExcel = document.getElementById('btnDevQuickExcelAuth');
+        if (btnQuickExcel) {
+            btnQuickExcel.onclick = () => {
+                const em = (document.getElementById('devQuickExcelAuthInput').value || '').trim();
+                if (em) {
+                    grantExcelPermission(em);
+                    renderDevExcelAuthorized();
+                    renderDevExcelRequests();
+                    alert(`✔ Permiso VIP de descarga Excel (.xlsx) concedido a ${em}.`);
+                }
+            };
+        }
+
         // Eventos de Proyectos Modal
         document.getElementById('btnCloseProjModal').onclick = () => {
             document.getElementById('projectsManagerModal').classList.add('modal-hidden');
         };
 
         document.getElementById('btnNewProjectSavePrompt').onclick = promptSaveProject;
+
+        // Eventos de Modal Aviso Excel VIP
+        const btnReqExcel = document.getElementById('btnRequestExcelVip');
+        if (btnReqExcel) {
+            btnReqExcel.onclick = () => {
+                requestExcelPermission();
+                btnReqExcel.disabled = true;
+                btnReqExcel.innerHTML = "✔ Solicitud Registrada";
+                btnReqExcel.style.background = "#334155";
+                const msg = document.getElementById('excelVipConfirmMsg');
+                if (msg) msg.style.display = 'block';
+            };
+        }
+
+        const btnCloseVip = document.getElementById('btnCloseExcelVipNotice');
+        if (btnCloseVip) {
+            btnCloseVip.onclick = hideExcelVipNotice;
+        }
 
         // Intentar inicializar Google Identity Services si está configurado
         initGoogleGIS();
@@ -1215,9 +1362,13 @@
 
         let html = '';
         list.forEach(email => {
+            const hasVip = hasExcelPermission(email);
             html += `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:11.5px;">
-                    <span style="color:#e2e8f0; font-family:monospace;">🟢 ${email}</span>
+                    <div>
+                        <span style="color:#e2e8f0; font-family:monospace;">🟢 ${email}</span>
+                        ${hasVip ? '<span style="font-size:10px; color:#10b981; background:rgba(16,185,129,0.15); padding:1px 6px; border-radius:99px; margin-left:6px;">⭐ Excel VIP</span>' : '<span style="font-size:10px; color:#94a3b8; background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:99px; margin-left:6px;">📄 Solo PDF</span>'}
+                    </div>
                     <button data-email="${email}" class="btn-ban-user" style="background:#dc2626; color:#fff; border:none; border-radius:6px; padding:3px 8px; font-size:10.5px; font-weight:700; cursor:pointer;" title="Bloquear y desconectar inmediatamente">
                         🚫 Banear
                     </button>
@@ -1231,6 +1382,80 @@
                 const em = b.dataset.email;
                 if (confirm(`¿Estás seguro de banear y desconectar a ${em}?`)) {
                     banUser(em);
+                    renderDevUsers();
+                    renderDevExcelAuthorized();
+                }
+            };
+        });
+    }
+
+    function renderDevExcelRequests() {
+        const c = document.getElementById('devExcelRequestsContainer');
+        if (!c) return;
+        const list = getExcelRequests().filter(r => r.status === 'PENDING');
+
+        if (list.length === 0) {
+            c.innerHTML = `<div style="padding:12px; text-align:center; color:#64748b; font-size:11px;">No hay solicitudes de plantilla Excel pendientes.</div>`;
+            return;
+        }
+
+        let html = '';
+        list.forEach(r => {
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:11px;">
+                    <div>
+                        <strong style="color:#ffffff;">${r.email}</strong>
+                        <span style="font-size:10px; color:#94a3b8; margin-left:6px;">(${r.requestedAt})</span>
+                    </div>
+                    <button data-email="${r.email}" class="btn-grant-excel-vip" style="background:#059669; color:#fff; border:none; border-radius:6px; padding:3px 8px; font-size:11px; font-weight:700; cursor:pointer;">
+                        ⭐ Habilitar Excel
+                    </button>
+                </div>
+            `;
+        });
+        c.innerHTML = html;
+
+        c.querySelectorAll('.btn-grant-excel-vip').forEach(b => {
+            b.onclick = () => {
+                const em = b.dataset.email;
+                grantExcelPermission(em);
+                renderDevExcelRequests();
+                renderDevExcelAuthorized();
+                renderDevUsers();
+                alert(`✔ Permiso de descarga de plantilla Excel (.xlsx) concedido a ${em}.`);
+            };
+        });
+    }
+
+    function renderDevExcelAuthorized() {
+        const c = document.getElementById('devExcelAuthorizedList');
+        if (!c) return;
+        const list = getExcelAuthorizedUsers();
+
+        if (list.length === 0) {
+            c.innerHTML = `<div style="padding:12px; text-align:center; color:#64748b; font-size:11px;">Aún ningún alumno tiene permiso VIP para Excel.</div>`;
+            return;
+        }
+
+        let html = '';
+        list.forEach(email => {
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:11px;">
+                    <span style="color:#38bdf8; font-family:monospace;">⭐ ${email}</span>
+                    <button data-email="${email}" class="btn-revoke-excel-vip" style="background:#dc2626; color:#fff; border:none; border-radius:6px; padding:2px 6px; font-size:10px; cursor:pointer;" title="Revocar a Solo PDF">
+                        ✕ Quitar
+                    </button>
+                </div>
+            `;
+        });
+        c.innerHTML = html;
+
+        c.querySelectorAll('.btn-revoke-excel-vip').forEach(b => {
+            b.onclick = () => {
+                const em = b.dataset.email;
+                if (confirm(`¿Revocar permiso Excel a ${em}? Solo podrá descargar PDF.`)) {
+                    revokeExcelPermission(em);
+                    renderDevExcelAuthorized();
                     renderDevUsers();
                 }
             };
@@ -1374,6 +1599,8 @@
         buildModals();
         renderDevPending();
         renderDevUsers();
+        renderDevExcelRequests();
+        renderDevExcelAuthorized();
         renderDevGlobalProjects();
         const d = document.getElementById('ownerControlModal');
         if (d) {
@@ -1397,6 +1624,31 @@
         if (p) {
             p.classList.remove('modal-hidden');
             p.style.display = 'flex';
+        }
+    }
+
+    function showExcelVipNotice() {
+        buildModals();
+        const v = document.getElementById('modalExcelVipNotice');
+        if (v) {
+            v.classList.remove('modal-hidden');
+            v.style.display = 'flex';
+            const msg = document.getElementById('excelVipConfirmMsg');
+            if (msg) msg.style.display = 'none';
+            const btn = document.getElementById('btnRequestExcelVip');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = "📩 Solicitar Plantilla Excel (.xlsx)";
+                btn.style.background = "linear-gradient(135deg, #059669, #10b981)";
+            }
+        }
+    }
+
+    function hideExcelVipNotice() {
+        const v = document.getElementById('modalExcelVipNotice');
+        if (v) {
+            v.classList.add('modal-hidden');
+            v.style.display = 'none';
         }
     }
 
@@ -1468,6 +1720,12 @@
     // API Global
     window.CerebroAuth = {
         isAuthorized: isAuthorized,
+        hasExcelPermission: hasExcelPermission,
+        grantExcelPermission: grantExcelPermission,
+        revokeExcelPermission: revokeExcelPermission,
+        requestExcelPermission: requestExcelPermission,
+        showExcelVipNotice: showExcelVipNotice,
+        hideExcelVipNotice: hideExcelVipNotice,
         getSession: getSession,
         openDevPanel: showDevPanel,
         openProjects: showProjectsModal,

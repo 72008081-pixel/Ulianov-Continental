@@ -702,28 +702,52 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 13. BOTÓN MAESTRO DE DESCARGA EXCEL CON FÓRMULAS AUTOMATIZADAS
+    // 13. BOTÓN MAESTRO DE DESCARGA (PDF O EXCEL SEGÚN PERMISOS VIP)
     const btnDownloadExcel = document.getElementById('btnDownloadExcel');
     if (btnDownloadExcel) {
         btnDownloadExcel.addEventListener('click', async () => {
             try {
                 btnDownloadExcel.disabled = true;
                 const originalHtml = btnDownloadExcel.innerHTML;
-                btnDownloadExcel.innerHTML = `
-                    <svg class="animate-spin" style="animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
-                        <path d="M12 2a10 10 0 0 1 10 10"></path>
-                    </svg> Generando Excel...
-                `;
-
                 const isIsostatic = (state.solution && state.solution.gh === 0);
                 const prefix = isIsostatic ? "Isostatica" : "Hiperestatica";
-                const filename = `Plantilla_Armaduras_${prefix}_Catedra_Ulianov_${Date.now().toString().slice(-4)}.xlsx`;
+                const hasExcel = window.CerebroAuth && window.CerebroAuth.hasExcelPermission();
 
-                await ExcelGenerator.downloadTrussExcel(state.nodes, state.bars, isIsostatic, filename);
+                if (hasExcel) {
+                    // DESCARGA DE EXCEL .XLSX (Solo para Dueño o Alumno con Permiso VIP)
+                    btnDownloadExcel.innerHTML = `
+                        <svg class="animate-spin" style="animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                            <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+                            <path d="M12 2a10 10 0 0 1 10 10"></path>
+                        </svg> Generando Excel VIP...
+                    `;
 
-                btnDownloadExcel.innerHTML = `✔ ¡Excel Descargado!`;
-                btnDownloadExcel.style.background = "#047857";
+                    const filename = `Plantilla_Armaduras_${prefix}_Catedra_Ulianov_${Date.now().toString().slice(-4)}.xlsx`;
+                    await ExcelGenerator.downloadTrussExcel(state.nodes, state.bars, isIsostatic, filename);
+
+                    btnDownloadExcel.innerHTML = `✔ ¡Excel VIP Descargado!`;
+                    btnDownloadExcel.style.background = "#047857";
+                } else {
+                    // DESCARGA DE INFORME TÉCNICO EN PDF (Para Alumno Normal - Protege Fórmulas)
+                    btnDownloadExcel.innerHTML = `
+                        <svg class="animate-spin" style="animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                            <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+                            <path d="M12 2a10 10 0 0 1 10 10"></path>
+                        </svg> Generando Informe PDF...
+                    `;
+
+                    const canvasImg = renderer ? renderer.exportImage() : null;
+                    const pdfFilename = `Informe_Calculo_Armadura_${prefix}_Ulianov_${Date.now().toString().slice(-4)}.pdf`;
+                    await PDFGenerator.downloadTrussPDF(state.nodes, state.bars, state.solution, canvasImg, pdfFilename);
+
+                    btnDownloadExcel.innerHTML = `✔ ¡Informe PDF Descargado!`;
+                    btnDownloadExcel.style.background = "#0284c7";
+
+                    // Mostrar modal informativo de Licencia VIP de Excel al alumno
+                    if (window.CerebroAuth && window.CerebroAuth.showExcelVipNotice) {
+                        window.CerebroAuth.showExcelVipNotice();
+                    }
+                }
 
                 setTimeout(() => {
                     btnDownloadExcel.disabled = false;
@@ -731,10 +755,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     btnDownloadExcel.style.background = "";
                 }, 2500);
             } catch (err) {
-                console.error("Error al generar Excel:", err);
-                alert("Ocurrió un error al generar el archivo Excel: " + err.message);
+                console.error("Error al generar archivo:", err);
+                alert("Ocurrió un error al generar el archivo: " + err.message);
                 btnDownloadExcel.disabled = false;
-                btnDownloadExcel.innerHTML = `Descargar Excel con Fórmulas`;
+                btnDownloadExcel.innerHTML = `Descargar Reporte de Cálculo`;
             }
         });
     }

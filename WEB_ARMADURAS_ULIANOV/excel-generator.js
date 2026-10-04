@@ -1419,6 +1419,19 @@
             ws.getRow(r).height = 20;
         }
 
+        // Protección de hoja de cálculo contra edición de fórmulas con la contraseña maestra
+        ws.protect('Vayolett1404', {
+            selectLockedCells: true,
+            selectUnlockedCells: true,
+            formatCells: false,
+            formatColumns: false,
+            formatRows: false,
+            insertColumns: false,
+            insertRows: false,
+            deleteColumns: false,
+            deleteRows: false
+        });
+
         return ws;
     }
 

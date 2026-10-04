@@ -2410,28 +2410,37 @@
     }
 
     async function downloadExcelManual(event) {
-      if (typeof ExcelGenerator === "undefined") {
-        alert("Cargando motor de Excel... por favor intente en un segundo.");
-        return;
-      }
       const isIsostatic = (calcResults && calcResults.gh === 0);
+      const prefix = isIsostatic ? "Isostatica" : "Hiperestatica";
       const btn = event ? event.target : document.getElementById("btn-download-excel");
       const oldHtml = btn ? btn.innerHTML : "";
       if (btn) {
-        btn.innerHTML = "⏳ Generando Excel...";
         btn.disabled = true;
       }
       try {
-        await ExcelGenerator.downloadTrussExcel(currentNodes, currentBars, isIsostatic);
+        const hasExcel = window.CerebroAuth && window.CerebroAuth.hasExcelPermission();
+        if (hasExcel) {
+          if (btn) btn.innerHTML = "⏳ Generando Excel VIP...";
+          await ExcelGenerator.downloadTrussExcel(currentNodes, currentBars, isIsostatic);
+          if (btn) btn.innerHTML = "✔ ¡Excel VIP Descargado!";
+        } else {
+          if (btn) btn.innerHTML = "⏳ Generando Informe PDF...";
+          const canvasImg = canvas ? canvas.toDataURL("image/png") : null;
+          const pdfFilename = `Informe_Calculo_Armadura_${prefix}_Ulianov_${Date.now().toString().slice(-4)}.pdf`;
+          await PDFGenerator.downloadTrussPDF(currentNodes, currentBars, calcResults, canvasImg, pdfFilename);
+          if (btn) btn.innerHTML = "✔ ¡Informe PDF Descargado!";
+          if (window.CerebroAuth && window.CerebroAuth.showExcelVipNotice) {
+            window.CerebroAuth.showExcelVipNotice();
+          }
+        }
         if (btn) {
-          btn.innerHTML = "✔ ¡Excel Descargado!";
           setTimeout(() => {
             btn.innerHTML = oldHtml;
             btn.disabled = false;
           }, 2500);
         }
       } catch (err) {
-        alert("Error al generar Excel: " + err.message);
+        alert("Error al generar archivo: " + err.message);
         if (btn) {
           btn.innerHTML = oldHtml;
           btn.disabled = false;
@@ -2440,6 +2449,8 @@
     }
   </script>
   <script src="auth.js"></script>
+  <script src="assets/jspdf.umd.min.js"></script>
+  <script src="pdf-generator.js"></script>
   <script src="assets/exceljs.min.js"></script>
   <script src="excel-generator.js"></script>
 </body>
