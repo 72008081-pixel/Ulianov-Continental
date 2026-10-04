@@ -1,7 +1,8 @@
 /**
  * auth.js - CEREBRO ESTRUCTURAL v2.1
- * Sistema de Control de Acceso Estudiantil, Google SSO, Pasarela Yape S/ 5.00,
- * Control de Sesión Única, Guardado de Proyectos Multi-Usuario y Panel de Desarrollador.
+ * Sistema de Control de Acceso Estudiantil, Google SSO con Menú Desplegable de Cuentas,
+ * Pasarela Yape S/ 5.00 con Generador de Códigos Aleatorios, Control de Sesión Única por Dispositivo,
+ * Guardado de Armaduras Multi-Usuario y Panel de Desarrollador Maestro.
  *
  * Desarrollado por Ingeniero Ulianov Cuba Valencia
  * Contraseña Maestra de Desarrollador: Vayolett1404
@@ -13,22 +14,35 @@
     // ── CONSTANTES GLOBALES Y SEGURIDAD ─────────────────────────
     const MASTER_PASSWORDS = ['Vayolett1404', 'vayolett1404'];
     const CRYPTO_SALT = 'CYBORG_ULIANOV_V21_MASTER_SALT_2026';
-    const NOTIFICATION_EMAIL = 'ulianov.continental@gmail.com'; // Correo de notificación
+    const NOTIFICATION_EMAIL = 'ulianov.continental@gmail.com';
 
-    // Claves de almacenamiento
+    // Claves de almacenamiento local (compartidas entre páginas del mismo origen)
     const KEY_SESSION = 'cerebro_auth_session_v21';
     const KEY_WHITELIST = 'cerebro_authorized_users_v21';
     const KEY_PENDING = 'cerebro_pending_requests_v21';
     const KEY_BANNED = 'cerebro_banned_users_v21';
     const KEY_PROJECTS = 'cerebro_global_projects_v21';
-    const KEY_DEVICE_SESSION = 'cerebro_device_session_token';
+    const KEY_GOOGLE_ACCOUNTS = 'cerebro_google_accounts_list_v21';
+    const KEY_DEVICE_ID = 'cerebro_device_id_v21';
 
-    // Canal de sincronización entre pestañas y dispositivos
+    // Identificador único persistente de este dispositivo/navegador
+    let myDeviceId = localStorage.getItem(KEY_DEVICE_ID);
+    if (!myDeviceId) {
+        myDeviceId = 'dev_' + Math.random().toString(36).substring(2) + Date.now();
+        localStorage.setItem(KEY_DEVICE_ID, myDeviceId);
+    }
+
+    // Canal de sincronización entre ventanas/dispositivos
     const sessionChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('cerebro_session_sync') : null;
-    const currentSessionToken = 'sess_' + Math.random().toString(36).substring(2) + Date.now();
-    localStorage.setItem(KEY_DEVICE_SESSION, currentSessionToken);
 
-    // ── MOTOR CRIPTOGRÁFICO SHA-256 Y CÓDIGOS DE ALTA ENTROPÍA ─
+    // Cuentas de Google preconfiguradas para el menú desplegable
+    const DEFAULT_GOOGLE_ACCOUNTS = [
+        { email: 'alumno@continental.edu.pe', name: 'Estudiante Universidad Continental', avatar: 'U' },
+        { email: 'estudiante.ingenieria@gmail.com', name: 'Alumno Ingeniería Civil', avatar: 'E' },
+        { email: 'ulianov.cuba@gmail.com', name: 'Ing. Ulianov Cuba Valencia', avatar: 'U' }
+    ];
+
+    // ── MOTOR CRIPTOGRÁFICO SHA-256 ──────────────────────────────
     function sha256(ascii) {
         function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
         const mathPow = Math.pow;
@@ -83,7 +97,7 @@
         return result;
     }
 
-    // Generar código aleatorio difícil de adivinar y criptográficamente ligado
+    // Generar código aleatorio seguro para verificación Yape
     function generateRandomAccessCode(email) {
         const clean = (email || '').trim().toLowerCase();
         const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -97,19 +111,19 @@
         const cleanEmail = email.trim().toLowerCase();
         const cleanCode = code.trim().toUpperCase();
 
-        // 1. Revisar si la clave fue generada y guardada en solicitudes
+        if (MASTER_PASSWORDS.includes(cleanCode)) return true;
+
         const pending = getPendingRequests();
         const found = pending.find(p => p.email === cleanEmail && p.code === cleanCode);
         if (found) return true;
 
-        // 2. Revisar si es clave hash directa
         const directKey = 'ULI-' + sha256(cleanEmail + CRYPTO_SALT).substring(0, 8).toUpperCase();
         if (cleanCode === directKey) return true;
 
         return false;
     }
 
-    // ── GESTIÓN DE ALMACENAMIENTO DE USUARIOS Y WHITELIST ─────────
+    // ── GESTIÓN DE ALMACENAMIENTO JSON ───────────────────────────
     function getStoredJSON(key, defaultVal) {
         try {
             const item = localStorage.getItem(key);
@@ -120,9 +134,35 @@
     }
 
     function setStoredJSON(key, val) {
-        localStorage.setItem(key, JSON.stringify(val));
+        try {
+            localStorage.setItem(key, JSON.stringify(val));
+        } catch (e) {
+            console.error("Error al guardar en localStorage:", e);
+        }
     }
 
+    // ── GESTIÓN DE CUENTAS DE GOOGLE EN EL DESPLEGABLE ────────────
+    function getGoogleAccounts() {
+        const stored = getStoredJSON(KEY_GOOGLE_ACCOUNTS, []);
+        const map = new Map();
+        DEFAULT_GOOGLE_ACCOUNTS.forEach(a => map.set(a.email.toLowerCase(), a));
+        stored.forEach(a => map.set(a.email.toLowerCase(), a));
+        return Array.from(map.values());
+    }
+
+    function saveGoogleAccount(email, name, photo) {
+        if (!email) return;
+        const cleanEmail = email.trim().toLowerCase();
+        const cleanName = name || cleanEmail.split('@')[0];
+        const avatar = cleanName.charAt(0).toUpperCase();
+
+        const current = getGoogleAccounts();
+        const filtered = current.filter(a => a.email.toLowerCase() !== cleanEmail);
+        filtered.unshift({ email: cleanEmail, name: cleanName, avatar: avatar, photo: photo || '' });
+        setStoredJSON(KEY_GOOGLE_ACCOUNTS, filtered);
+    }
+
+    // ── WHITELIST, BANEO Y SOLICITUDES ───────────────────────────
     function getAuthorizedUsers() { return getStoredJSON(KEY_WHITELIST, []); }
     function isUserAuthorized(email) {
         if (!email) return false;
@@ -130,6 +170,7 @@
         if (isUserBanned(clean)) return false;
         return getAuthorizedUsers().includes(clean);
     }
+
     function authorizeUser(email) {
         const clean = email.trim().toLowerCase();
         const list = getAuthorizedUsers();
@@ -137,9 +178,9 @@
             list.push(clean);
             setStoredJSON(KEY_WHITELIST, list);
         }
-        // Quitar de pendientes si estaba
         removePendingRequest(clean);
     }
+
     function revokeUser(email) {
         const clean = email.trim().toLowerCase();
         const list = getAuthorizedUsers().filter(e => e !== clean);
@@ -150,6 +191,7 @@
     function isUserBanned(email) {
         return getBannedUsers().includes((email || '').trim().toLowerCase());
     }
+
     function banUser(email) {
         const clean = (email || '').trim().toLowerCase();
         const list = getBannedUsers();
@@ -158,7 +200,6 @@
             setStoredJSON(KEY_BANNED, list);
         }
         revokeUser(clean);
-        // Desconectar inmediatamente
         if (sessionChannel) {
             sessionChannel.postMessage({ type: 'USER_BANNED', email: clean });
         }
@@ -177,33 +218,48 @@
         });
         setStoredJSON(KEY_PENDING, list);
     }
+
     function removePendingRequest(email) {
         const clean = (email || '').trim().toLowerCase();
         const list = getPendingRequests().filter(p => p.email !== clean);
         setStoredJSON(KEY_PENDING, list);
     }
 
-    // ── GESTIÓN DE SESIÓN Y CONTROL DE SESIÓN ÚNICA ──────────────
+    // ── SESIÓN PERSISTENTE Y SIN REPETICIÓN DE PROMPTS ────────────
     function getSession() { return getStoredJSON(KEY_SESSION, null); }
+
+    function isAuthorized() {
+        const session = getSession();
+        if (!session) return false;
+        if (session.role === 'owner') return true;
+        if (session.role === 'student') {
+            if (isUserBanned(session.email)) return false;
+            if (isUserAuthorized(session.email)) return true;
+            if (localStorage.getItem('cerebro_unlocked') === 'true') return true;
+        }
+        return false;
+    }
+
     function saveSession(sessionObj) {
         setStoredJSON(KEY_SESSION, sessionObj);
         localStorage.setItem('cerebro_unlocked', 'true');
-        // Notificar inicio de sesión para forzar cierre de cualquier otra pestaña/dispositivo
         if (sessionChannel) {
             sessionChannel.postMessage({
                 type: 'SESSION_STARTED',
                 email: sessionObj.email,
-                token: currentSessionToken
+                deviceId: myDeviceId
             });
         }
     }
+
     function logoutSession() {
         localStorage.removeItem(KEY_SESSION);
         localStorage.removeItem('cerebro_unlocked');
         showModal();
+        updateAppHeader();
     }
 
-    // Escuchar mensajes de otras pestañas para garantizar SESIÓN ÚNICA
+    // Escuchar mensajes para control de sesión única entre distintos dispositivos
     if (sessionChannel) {
         sessionChannel.onmessage = (event) => {
             const data = event.data;
@@ -211,10 +267,10 @@
 
             const mySession = getSession();
             if (mySession && mySession.role === 'student' && mySession.email === data.email) {
-                if (data.type === 'SESSION_STARTED' && data.token !== currentSessionToken) {
-                    // Cerrar sesión automáticamente en esta ventana
+                // SOLO desconectar si proviene de un dispositivo DISTINTO (otro navegador/ordenador)
+                if (data.type === 'SESSION_STARTED' && data.deviceId && data.deviceId !== myDeviceId) {
                     logoutSession();
-                    alert("⚠ SESIÓN CERRADA AUTOMÁTICAMENTE:\n\nTu cuenta ha sido abierta en otra ventana o dispositivo. Solo se permite 1 sesión activa simultánea.");
+                    alert("⚠ SESIÓN CERRADA AUTOMÁTICAMENTE:\n\nTu cuenta ha sido abierta en otro dispositivo o ventana externa. Por seguridad académica se permite 1 sesión activa a la vez.");
                 } else if (data.type === 'USER_BANNED') {
                     logoutSession();
                     alert("🚫 ACCESO DENEGADO:\n\nTu cuenta ha sido suspendida o bloqueada por el desarrollador.");
@@ -223,8 +279,9 @@
         };
     }
 
-    // ── ALMACENAMIENTO DE PROYECTOS / ARMADURAS MULTI-USUARIO ────
+    // ── PROYECTOS / ARMADURAS MULTI-USUARIO ──────────────────────
     function getAllProjects() { return getStoredJSON(KEY_PROJECTS, []); }
+
     function saveProject(projectName, nodes, bars) {
         const session = getSession();
         if (!session) throw new Error("Debes tener una sesión activa para guardar un proyecto.");
@@ -252,43 +309,41 @@
         const session = getSession();
         if (!session) return [];
         const all = getAllProjects();
-        if (session.role === 'owner') return all; // El dueño ve TODO
+        if (session.role === 'owner') return all;
         return all.filter(p => p.authorEmail === session.email);
     }
 
     function deleteProject(projectId) {
         const session = getSession();
         let all = getAllProjects();
-        if (session.role === 'owner') {
+        if (session && session.role === 'owner') {
             all = all.filter(p => p.id !== projectId);
-        } else {
+        } else if (session) {
             all = all.filter(p => p.id !== projectId || p.authorEmail === session.email);
         }
         setStoredJSON(KEY_PROJECTS, all);
     }
 
-    // ── SERVICIO DE NOTIFICACIÓN AUTOMÁTICA POR CORREO ──────────
+    // ── NOTIFICACIÓN AUTOMÁTICA POR CORREO AL CREADOR ───────────
     async function sendNotificationEmail(studentEmail, studentName, generatedCode) {
         const payload = {
-            _subject: `🔔 Nueva Solicitud de Acceso: ${studentEmail} - CEREBRO ESTRUCTURAL v2.1`,
+            _subject: `🔔 Solicitud Yape S/ 5.00: ${studentEmail} - CEREBRO ESTRUCTURAL v2.1`,
             email: studentEmail,
             nombre: studentName,
             codigo_acceso_generado: generatedCode,
-            mensaje: `El alumno ${studentEmail} ha iniciado sesión con Google y solicita activación vía Yape (S/ 5.00).`,
+            mensaje: `El alumno ${studentEmail} ha iniciado sesión con Google y solicita validación Yape (S/ 5.00).`,
             fecha: new Date().toLocaleString(),
             _template: 'table'
         };
 
         try {
-            // Intentar envío transparente vía FormSubmit AJAX
             await fetch(`https://formsubmit.co/ajax/${NOTIFICATION_EMAIL}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            console.log("Notificación por correo enviada con éxito.");
         } catch (e) {
-            console.warn("No se pudo enviar correo por red (se registrará en el panel del dueño):", e);
+            console.warn("Nota de red en notificación:", e);
         }
     }
 
@@ -301,7 +356,7 @@
             position: fixed;
             inset: 0;
             z-index: 999999;
-            background: rgba(3, 7, 18, 0.75);
+            background: rgba(3, 7, 18, 0.78);
             backdrop-filter: blur(28px) saturate(190%);
             -webkit-backdrop-filter: blur(28px) saturate(190%);
             display: flex;
@@ -309,102 +364,161 @@
             justify-content: center;
             padding: 16px;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s;
+            transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s;
         }
 
         .modal-hidden {
             opacity: 0 !important;
             visibility: hidden !important;
             pointer-events: none !important;
+            display: none !important;
         }
 
         /* Tarjeta Liquid Glass */
         .liquid-glass-card {
-            background: rgba(17, 24, 39, 0.65);
-            background-image: radial-gradient(at 100% 0%, rgba(116, 34, 132, 0.22) 0px, transparent 50%),
-                              radial-gradient(at 0% 100%, rgba(0, 210, 181, 0.15) 0px, transparent 50%);
+            background: rgba(17, 24, 39, 0.72);
+            background-image: radial-gradient(at 100% 0%, rgba(116, 34, 132, 0.25) 0px, transparent 50%),
+                              radial-gradient(at 0% 100%, rgba(0, 210, 181, 0.18) 0px, transparent 50%);
             border: 1px solid rgba(255, 255, 255, 0.14);
-            border-top: 1px solid rgba(255, 255, 255, 0.25);
+            border-top: 1px solid rgba(255, 255, 255, 0.28);
             border-radius: 24px;
-            max-width: 470px;
+            max-width: 480px;
             width: 100%;
             padding: 26px 24px;
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7),
-                        inset 0 1px 1px rgba(255, 255, 255, 0.2),
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.75),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.25),
                         0 0 40px rgba(116, 34, 132, 0.25);
             color: #f8fafc;
             text-align: center;
             position: relative;
-            animation: liquidGlassPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: liquidGlassPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
             max-height: 92vh;
             overflow-y: auto;
         }
 
         @keyframes liquidGlassPop {
-            0% { transform: scale(0.93) translateY(8px); opacity: 0; }
+            0% { transform: scale(0.94) translateY(8px); opacity: 0; }
             100% { transform: scale(1) translateY(0); opacity: 1; }
         }
 
-        /* Cuentas de Google Chooser */
-        .google-account-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin: 12px 0;
+        /* Desplegable de Cuentas de Google */
+        .google-dropdown-container {
+            margin: 14px 0 12px;
             text-align: left;
         }
 
-        .google-account-item {
+        .google-dropdown-label {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .google-dropdown-select-wrap {
+            position: relative;
+            width: 100%;
+        }
+
+        .google-dropdown-select {
+            width: 100%;
+            background: #0d1424;
+            color: #f8fafc;
+            border: 1.5px solid rgba(255, 255, 255, 0.16);
+            border-radius: 12px;
+            padding: 11px 36px 11px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .google-dropdown-select:focus, .google-dropdown-select:hover {
+            border-color: #38bdf8;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+            background: #111a2e;
+        }
+
+        .google-dropdown-select option {
+            background: #0d1424;
+            color: #f8fafc;
+            padding: 8px 10px;
+        }
+
+        .google-dropdown-arrow {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #38bdf8;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Tarjeta de Cuenta Google Seleccionada */
+        .selected-account-preview {
             display: flex;
             align-items: center;
             gap: 12px;
             padding: 10px 14px;
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 14px;
-            cursor: pointer;
+            margin-top: 10px;
+            text-align: left;
             transition: all 0.18s ease;
         }
 
-        .google-account-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(56, 189, 248, 0.4);
-            transform: translateY(-1px);
-        }
-
-        .google-avatar {
-            width: 36px;
-            height: 36px;
+        .google-avatar-circle {
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             background: linear-gradient(135deg, #4285F4, #34A853);
             color: #ffffff;
             font-weight: 800;
+            font-size: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 15px;
             flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
-        .google-acc-info {
+        .selected-account-details {
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            flex: 1;
         }
 
-        .google-acc-name {
+        .selected-account-name {
             font-size: 13px;
             font-weight: 700;
             color: #ffffff;
         }
 
-        .google-acc-email {
-            font-size: 11px;
-            color: #94a3b8;
+        .selected-account-email {
+            font-size: 11.5px;
+            color: #38bdf8;
             font-family: monospace;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        .account-badge-verified {
+            font-size: 10px;
+            font-weight: 700;
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            padding: 2px 6px;
+            border-radius: 99px;
+            align-self: center;
         }
 
         /* Checkbox Términos */
@@ -415,12 +529,12 @@
             text-align: left;
             font-size: 11px;
             color: #cbd5e1;
-            margin: 14px 0 10px;
+            margin: 12px 0 10px;
             line-height: 1.4;
             padding: 8px 10px;
             background: rgba(0, 0, 0, 0.25);
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .terms-checkbox-wrap input[type="checkbox"] {
@@ -429,6 +543,33 @@
             cursor: pointer;
             width: 15px;
             height: 15px;
+        }
+
+        /* Botón Continuar con Google */
+        .btn-google-continue {
+            width: 100%;
+            background: #ffffff;
+            color: #1f2937;
+            font-size: 13.5px;
+            font-weight: 700;
+            padding: 11px 16px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+            transition: all 0.15s ease;
+            box-sizing: border-box;
+            margin-top: 6px;
+        }
+
+        .btn-google-continue:hover {
+            background: #f1f5f9;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.2);
         }
 
         /* Yape Badge */
@@ -510,7 +651,7 @@
     document.head.appendChild(styleSheet);
 
     // ── CONSTRUCCIÓN DE MODALES DE ACCESO (LIQUID GLASS) ─────────
-    let selectedStudentAccount = null;
+    let currentSelectedAccount = null;
 
     function buildModals() {
         if (document.getElementById('accessLockModal')) return;
@@ -523,9 +664,9 @@
         mainModal.innerHTML = `
             <div class="liquid-glass-card">
                 
-                <!-- ══ VISTA 1: SELECTOR DE CUENTAS GOOGLE (NATIVO CON TÉRMINOS) ══ -->
+                <!-- ══ VISTA 1: SELECTOR DESPLEGABLE DE CUENTAS GOOGLE ══ -->
                 <div id="viewGoogleChooser" style="display: block;">
-                    <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                         <svg width="24" height="24" viewBox="0 0 48 48">
                             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                             <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
@@ -538,40 +679,40 @@
                     <h2 style="font-size: 16.5px; font-weight: 800; color: #ffffff; margin-bottom: 2px;">
                         CEREBRO ESTRUCTURAL <span style="color:#38bdf8; font-size:12px;">v2.1</span>
                     </h2>
-                    <p style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">
+                    <p style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;">
                         Desarrollado por Ingeniero Ulianov Cuba Valencia — Cálculo Matricial y Exportador de Excel Nativo
                     </p>
 
-                    <!-- Lista de Cuentas Detectadas en el Navegador -->
-                    <div style="font-size: 11.5px; font-weight: 700; color: #cbd5e1; text-align: left; margin-bottom: 6px;">
-                        Elige una cuenta de Google para continuar:
-                    </div>
-                    <div class="google-account-list" id="googleAccountsContainer">
-                        <!-- Cuenta 1 Detectada por defecto en la máquina -->
-                        <div class="google-account-item" data-email="alumno@continental.edu.pe" data-name="Estudiante Continental">
-                            <div class="google-avatar">U</div>
-                            <div class="google-acc-info">
-                                <span class="google-acc-name">Estudiante Continental</span>
-                                <span class="google-acc-email">alumno@continental.edu.pe</span>
-                            </div>
+                    <!-- DESPLEGABLE INTERACTIVO DE CUENTAS DE GOOGLE -->
+                    <div class="google-dropdown-container">
+                        <label class="google-dropdown-label">
+                            <span style="color: #38bdf8;">▼</span> Elige tu cuenta de Google en la lista desplegable:
+                        </label>
+                        <div class="google-dropdown-select-wrap">
+                            <select id="googleAccountDropdown" class="google-dropdown-select">
+                                <!-- Opciones inyectadas dinámicamente -->
+                            </select>
+                            <span class="google-dropdown-arrow">▼</span>
                         </div>
-                        <!-- Opción de Usar Otra Cuenta -->
-                        <div class="google-account-item" id="btnChooseCustomAccount">
-                            <div class="google-avatar" style="background: #475569;">+</div>
-                            <div class="google-acc-info">
-                                <span class="google-acc-name">Usar otra cuenta de Google</span>
-                                <span class="google-acc-email">Ingresar correo @gmail.com</span>
+
+                        <!-- Tarjeta de Cuenta Seleccionada en Vivo -->
+                        <div class="selected-account-preview" id="selectedAccountCard">
+                            <div class="google-avatar-circle" id="selectedAvatarCircle">U</div>
+                            <div class="selected-account-details">
+                                <span class="selected-account-name" id="selectedAccountName">Estudiante Continental</span>
+                                <span class="selected-account-email" id="selectedAccountEmail">alumno@continental.edu.pe</span>
                             </div>
+                            <span class="account-badge-verified">✓ Google</span>
+                        </div>
+
+                        <!-- Input para nueva cuenta personalizada si el usuario elige 'Usar otra' -->
+                        <div id="customEmailInputBox" style="display: none; margin-top: 10px;">
+                            <input type="email" id="customUserEmailInput" class="liquid-input" placeholder="correo@gmail.com o @continental.edu.pe" style="text-align: left;">
                         </div>
                     </div>
 
-                    <!-- Input alternativo para ingresar cualquier correo -->
-                    <div id="customEmailInputBox" style="display: none; margin-bottom: 10px;">
-                        <input type="email" id="userEmailInput" class="liquid-input" placeholder="correo@gmail.com o @continental.edu.pe">
-                        <button id="btnEmailLogin" class="liquid-btn-primary" style="padding: 9px; font-size: 12px;">
-                            Confirmar esta Cuenta
-                        </button>
-                    </div>
+                    <!-- Contenedor Oficial Google GIS One Tap si está disponible -->
+                    <div id="googleOfficialBtnWrap" style="margin: 8px 0; display: flex; justify-content: center;"></div>
 
                     <!-- Términos y Condiciones Obligatorios -->
                     <label class="terms-checkbox-wrap">
@@ -582,6 +723,17 @@
                     <div id="termsErrorMsg" style="display:none; color:#f43f5e; font-size:11px; font-weight:700; margin-bottom:8px;">
                         ⚠ Debes aceptar los Términos y Condiciones para continuar.
                     </div>
+
+                    <!-- Botón Principal: Continuar con Google -->
+                    <button id="btnConfirmGoogleAccount" class="btn-google-continue">
+                        <svg width="18" height="18" viewBox="0 0 48 48">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.28-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.79l7.97-6.2z"/>
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                        </svg>
+                        <span>Continuar con cuenta de Google</span>
+                    </button>
 
                     <!-- Acceso Discreto para el Desarrollador -->
                     <div style="margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px;">
@@ -627,7 +779,7 @@
                     <div style="background: rgba(116, 34, 132, 0.15); border: 1px dashed rgba(116, 34, 132, 0.6); border-radius: 12px; padding: 10px 12px; font-size: 11.5px; text-align: left; color: #cbd5e1; line-height: 1.5; margin-bottom: 14px;">
                         <strong>Pasos para recibir tu clave:</strong>
                         <ol style="margin-left: 16px; margin-top: 4px;">
-                            <li>Yapea <strong>S/ 5.00</strong> al creador.</li>
+                            <li>Yapea <strong>S/ 5.00</strong> a Ulianov Cuba Valencia.</li>
                             <li>El sistema ya notificó tu solicitud por correo. Envía tu comprobante de Yape indicando tu correo.</li>
                             <li>El creador te brindará tu <strong>código de acceso aleatorio</strong> e intransferible.</li>
                         </ol>
@@ -641,7 +793,7 @@
                     <div id="passErrorMsg" style="display:none; color:#f43f5e; font-size:11px; font-weight:700; margin-top:6px; background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.3); padding:6px; border-radius:8px;"></div>
 
                     <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <span id="linkBackToChooser" style="color: #94a3b8; font-size: 11px; text-decoration: underline; cursor: pointer;">⬅ Cambiar de Cuenta</span>
+                        <span id="linkBackToChooser" style="color: #94a3b8; font-size: 11px; text-decoration: underline; cursor: pointer;">⬅ Cambiar de Cuenta de Google</span>
                         <span id="linkDevAccess2" class="discreet-dev-link">⚙️ Desarrollador</span>
                     </div>
                 </div>
@@ -764,44 +916,48 @@
             viewDev.style.display    = (name === 'dev') ? 'block' : 'none';
         }
 
-        // Navegación
+        // Navegación entre vistas
         document.getElementById('linkDevAccess').onclick = () => switchView('dev');
         document.getElementById('linkDevAccess2').onclick = () => switchView('dev');
         document.getElementById('linkBackFromDev').onclick = () => switchView('google');
         document.getElementById('linkBackToChooser').onclick = () => switchView('google');
 
-        // Mostrar caja de correo manual
-        document.getElementById('btnChooseCustomAccount').onclick = () => {
-            const box = document.getElementById('customEmailInputBox');
-            box.style.display = box.style.display === 'none' ? 'block' : 'none';
-            if (box.style.display === 'block') document.getElementById('userEmailInput').focus();
+        // Inicializar y renderizar las opciones del menú desplegable de Google
+        renderGoogleDropdown();
+
+        // Controlador de cambio en el menú desplegable
+        const dropdown = document.getElementById('googleAccountDropdown');
+        dropdown.onchange = () => {
+            const selectedVal = dropdown.value;
+            const customBox = document.getElementById('customEmailInputBox');
+            if (selectedVal === '__NEW_ACCOUNT__') {
+                customBox.style.display = 'block';
+                document.getElementById('customUserEmailInput').focus();
+                updateAccountPreview('Nueva Cuenta', 'Escribe tu correo abajo...', '+');
+            } else {
+                customBox.style.display = 'none';
+                const accounts = getGoogleAccounts();
+                const found = accounts.find(a => a.email.toLowerCase() === selectedVal.toLowerCase());
+                if (found) {
+                    currentSelectedAccount = found;
+                    updateAccountPreview(found.name, found.email, found.avatar);
+                }
+            }
         };
 
-        // Selección de cuenta Google de la lista
-        document.querySelectorAll('.google-account-item[data-email]').forEach(item => {
-            item.onclick = () => {
-                const email = item.dataset.email;
-                const name  = item.dataset.name;
-                processStudentLogin(email, name);
-            };
-        });
-
-        // Confirmación de correo manual
-        document.getElementById('btnEmailLogin').onclick = () => {
-            const email = (document.getElementById('userEmailInput').value || '').trim();
-            if (MASTER_PASSWORDS.includes(email)) {
-                grantDeveloperAccess();
-                return;
+        // Escuchar input personalizado
+        const customInput = document.getElementById('customUserEmailInput');
+        customInput.oninput = () => {
+            const val = customInput.value.trim();
+            if (val) {
+                updateAccountPreview(val.split('@')[0], val, val.charAt(0).toUpperCase());
+            } else {
+                updateAccountPreview('Nueva Cuenta', 'Escribe tu correo...', '+');
             }
-            if (!email || !email.includes('@')) {
-                alert("Por favor ingresa un correo de Google válido.");
-                return;
-            }
-            processStudentLogin(email, email.split('@')[0]);
         };
 
-        // Procesar Login Estudiante
-        function processStudentLogin(email, name) {
+        // Botón "Continuar con cuenta de Google"
+        document.getElementById('btnConfirmGoogleAccount').onclick = () => {
             const chkTerms = document.getElementById('chkTermsAndConditions');
             const errTerms = document.getElementById('termsErrorMsg');
             if (!chkTerms.checked) {
@@ -810,30 +966,63 @@
             }
             errTerms.style.display = 'none';
 
-            selectedStudentAccount = { email: email.toLowerCase().trim(), name: name };
+            let chosenEmail = '';
+            let chosenName = '';
 
-            // 1. Si ya está autorizado, entra directo
-            if (isUserAuthorized(selectedStudentAccount.email)) {
-                saveSession({ role: 'student', email: selectedStudentAccount.email, name: selectedStudentAccount.name });
-                hideModal();
-                alert(`✔ ¡Bienvenido de nuevo, ${selectedStudentAccount.email}! Tu sesión personal está activa.`);
+            if (dropdown.value === '__NEW_ACCOUNT__') {
+                chosenEmail = (customInput.value || '').trim();
+                chosenName = chosenEmail.split('@')[0];
+            } else {
+                const accounts = getGoogleAccounts();
+                const found = accounts.find(a => a.email.toLowerCase() === dropdown.value.toLowerCase());
+                if (found) {
+                    chosenEmail = found.email;
+                    chosenName = found.name;
+                }
+            }
+
+            // Permitir contraseña de desarrollador directa si se ingresa en el campo
+            if (MASTER_PASSWORDS.includes(chosenEmail)) {
+                grantDeveloperAccess();
                 return;
             }
 
-            // 2. Si no está autorizado, generar código aleatorio y notificar al creador por correo
-            const accessCode = generateRandomAccessCode(selectedStudentAccount.email);
-            addPendingRequest(selectedStudentAccount.email, accessCode, selectedStudentAccount.name);
+            if (!chosenEmail || !chosenEmail.includes('@')) {
+                alert("Por favor selecciona o ingresa un correo de Google válido (@gmail.com o @continental.edu.pe).");
+                return;
+            }
 
-            // Disparar correo al creador
-            sendNotificationEmail(selectedStudentAccount.email, selectedStudentAccount.name, accessCode);
+            saveGoogleAccount(chosenEmail, chosenName);
+            processStudentLogin(chosenEmail, chosenName);
+        };
 
-            // Mostrar vista Yape vinculada al correo
-            document.getElementById('lblActiveStudentEmail').textContent = selectedStudentAccount.email;
+        // Procesar login del estudiante
+        function processStudentLogin(email, name) {
+            const cleanEmail = email.toLowerCase().trim();
+            currentSelectedAccount = { email: cleanEmail, name: name };
+
+            // 1. Si ya está autorizado, entra directo a la aplicación
+            if (isUserAuthorized(cleanEmail)) {
+                saveSession({ role: 'student', email: cleanEmail, name: name });
+                hideModal();
+                alert(`✔ ¡Bienvenido de nuevo, ${cleanEmail}!\nTu sesión personal de CEREBRO ESTRUCTURAL v2.1 está activa.`);
+                return;
+            }
+
+            // 2. Si es nuevo, generar código aleatorio e intransferible
+            const accessCode = generateRandomAccessCode(cleanEmail);
+            addPendingRequest(cleanEmail, accessCode, name);
+
+            // Notificar al correo del creador
+            sendNotificationEmail(cleanEmail, name, accessCode);
+
+            // Mostrar pantalla de pago Yape
+            document.getElementById('lblActiveStudentEmail').textContent = cleanEmail;
             switchView('yape');
             document.getElementById('accessPassInput').focus();
         }
 
-        // Validar clave en la vista Yape
+        // Validar clave en la pantalla Yape
         document.getElementById('btnUnlockAccess').onclick = attemptUnlockWithCode;
         document.getElementById('accessPassInput').onkeydown = (e) => {
             if (e.key === 'Enter') attemptUnlockWithCode();
@@ -843,30 +1032,30 @@
             const entered = (document.getElementById('accessPassInput').value || '').trim();
             const errEl = document.getElementById('passErrorMsg');
 
-            // Caso A: Desarrollador escribe contraseña maestra en la casilla
+            // Caso A: Desarrollador escribe contraseña maestra
             if (MASTER_PASSWORDS.includes(entered)) {
                 grantDeveloperAccess();
                 return;
             }
 
-            // Caso B: Alumno valida su código
-            if (!selectedStudentAccount) {
+            // Caso B: Validación del código del estudiante
+            if (!currentSelectedAccount) {
                 switchView('google');
                 return;
             }
 
-            if (verifyAccessCode(selectedStudentAccount.email, entered)) {
-                authorizeUser(selectedStudentAccount.email);
-                saveSession({ role: 'student', email: selectedStudentAccount.email, name: selectedStudentAccount.name });
+            if (verifyAccessCode(currentSelectedAccount.email, entered)) {
+                authorizeUser(currentSelectedAccount.email);
+                saveSession({ role: 'student', email: currentSelectedAccount.email, name: currentSelectedAccount.name });
                 hideModal();
-                alert(`🎉 ¡Pago verificado con éxito para ${selectedStudentAccount.email}! Tu cuenta está activada para siempre.`);
+                alert(`🎉 ¡Licencia activada con éxito para ${currentSelectedAccount.email}!\nAcceso permanente desbloqueado.`);
             } else {
-                errEl.innerHTML = `❌ Clave incorrecta para <strong>${selectedStudentAccount.email}</strong>.<br>El creador te brindará tu código aleatorio en cuanto verifique tu Yape de S/ 5.00.`;
+                errEl.innerHTML = `❌ Código incorrecto para <strong>${currentSelectedAccount.email}</strong>.<br>El creador te brindará tu código en cuanto verifique tu Yape de S/ 5.00.`;
                 errEl.style.display = 'block';
             }
         }
 
-        // Login de Desarrollador
+        // Login de Desarrollador Maestro
         document.getElementById('btnOwnerLogin').onclick = attemptDevLogin;
         document.getElementById('ownerMasterPassInput').onkeydown = (e) => {
             if (e.key === 'Enter') attemptDevLogin();
@@ -929,9 +1118,88 @@
         };
 
         document.getElementById('btnNewProjectSavePrompt').onclick = promptSaveProject;
+
+        // Intentar inicializar Google Identity Services si está disponible en la página
+        initGoogleGIS();
     }
 
-    // ── RENDERIZADO DE LISTAS EN PANEL DE DESARROLLADOR ─────────
+    // Actualizar la vista previa de la cuenta seleccionada
+    function updateAccountPreview(name, email, avatar) {
+        const nameEl = document.getElementById('selectedAccountName');
+        const emailEl = document.getElementById('selectedAccountEmail');
+        const avatarEl = document.getElementById('selectedAvatarCircle');
+        if (nameEl) nameEl.textContent = name;
+        if (emailEl) emailEl.textContent = email;
+        if (avatarEl) avatarEl.textContent = avatar || name.charAt(0).toUpperCase();
+    }
+
+    // Renderizar opciones del menú desplegable de Google
+    function renderGoogleDropdown() {
+        const dropdown = document.getElementById('googleAccountDropdown');
+        if (!dropdown) return;
+
+        const accounts = getGoogleAccounts();
+        let html = '';
+        accounts.forEach((acc, idx) => {
+            html += `<option value="${acc.email}">${acc.email} (${acc.name})</option>`;
+        });
+        html += `<option value="__NEW_ACCOUNT__">➕ Usar otra cuenta de Google...</option>`;
+        dropdown.innerHTML = html;
+
+        if (accounts.length > 0) {
+            currentSelectedAccount = accounts[0];
+            dropdown.value = accounts[0].email;
+            updateAccountPreview(accounts[0].name, accounts[0].email, accounts[0].avatar);
+        }
+    }
+
+    // Inicializar Google Identity Services (GIS) oficial si está configurado
+    function initGoogleGIS() {
+        const clientId = window.GOOGLE_CLIENT_ID || localStorage.getItem('cerebro_google_client_id');
+        if (clientId && typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+            try {
+                google.accounts.id.initialize({
+                    client_id: clientId,
+                    callback: (response) => {
+                        if (!response || !response.credential) return;
+                        try {
+                            const base64Url = response.credential.split('.')[1];
+                            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                            const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                            const data = JSON.parse(jsonPayload);
+                            if (data.email) {
+                                saveGoogleAccount(data.email, data.name, data.picture);
+                                renderGoogleDropdown();
+                                const dropdown = document.getElementById('googleAccountDropdown');
+                                if (dropdown) dropdown.value = data.email;
+                                updateAccountPreview(data.name || data.email, data.email, (data.name || data.email).charAt(0).toUpperCase());
+                            }
+                        } catch (e) {
+                            console.warn("GIS decode note:", e);
+                        }
+                    },
+                    auto_select: false
+                });
+
+                const btnWrap = document.getElementById('googleOfficialBtnWrap');
+                if (btnWrap) {
+                    google.accounts.id.renderButton(btnWrap, {
+                        theme: 'outline',
+                        size: 'large',
+                        type: 'standard',
+                        shape: 'pill',
+                        text: 'continue_with',
+                        logo_alignment: 'left',
+                        width: 340
+                    });
+                }
+            } catch (err) {
+                console.log("GIS init note:", err);
+            }
+        }
+    }
+
+    // ── RENDERIZADO EN PANEL DE DESARROLLADOR ────────────────────
     function renderDevPending() {
         const c = document.getElementById('devPendingListContainer');
         if (!c) return;
@@ -1074,7 +1342,7 @@
         const list = getUserProjects();
 
         if (list.length === 0) {
-            c.innerHTML = `<div style="padding:20px; text-align:center; color:#64748b; font-size:11.5px;">No tienes armaduras guardadas todavía. Crea una y haz clic en 'Guardar Armadura Actual'.</div>`;
+            c.innerHTML = `<div style="padding:20px; text-align:center; color:#64748b; font-size:11.5px;">No tienes armaduras guardadas todavía. Haz clic en 'Guardar Armadura Actual' para guardar tu cálculo.</div>`;
             return;
         }
 
@@ -1134,12 +1402,18 @@
     function showModal() {
         buildModals();
         const m = document.getElementById('accessLockModal');
-        if (m) m.classList.remove('modal-hidden');
+        if (m) {
+            m.classList.remove('modal-hidden');
+            m.style.display = 'flex';
+        }
     }
 
     function hideModal() {
         const m = document.getElementById('accessLockModal');
-        if (m) m.classList.add('modal-hidden');
+        if (m) {
+            m.classList.add('modal-hidden');
+            m.style.display = 'none';
+        }
         updateAppHeader();
     }
 
@@ -1149,30 +1423,39 @@
         renderDevUsers();
         renderDevGlobalProjects();
         const d = document.getElementById('ownerControlModal');
-        if (d) d.classList.remove('modal-hidden');
+        if (d) {
+            d.classList.remove('modal-hidden');
+            d.style.display = 'flex';
+        }
     }
 
     function hideDevPanel() {
         const d = document.getElementById('ownerControlModal');
-        if (d) d.classList.add('modal-hidden');
+        if (d) {
+            d.classList.add('modal-hidden');
+            d.style.display = 'none';
+        }
     }
 
     function showProjectsModal() {
         buildModals();
         renderUserProjects();
         const p = document.getElementById('projectsManagerModal');
-        if (p) p.classList.remove('modal-hidden');
+        if (p) {
+            p.classList.remove('modal-hidden');
+            p.style.display = 'flex';
+        }
     }
 
     // ── INTEGRACIÓN Y BOTONES EN HEADER ─────────────────────────
     function updateAppHeader() {
         const session = getSession();
-        const isAuth = !!session && (session.role === 'owner' || isUserAuthorized(session.email));
+        const authOk = isAuthorized();
 
         // Botón Bloquear / Salir
         const btnRelock = document.getElementById('btnRelock');
         if (btnRelock) {
-            btnRelock.style.display = isAuth ? 'inline-flex' : 'none';
+            btnRelock.style.display = authOk ? 'inline-flex' : 'none';
             btnRelock.onclick = logoutSession;
         }
 
@@ -1194,51 +1477,29 @@
         }
 
         if (btnOwnerPanel) {
-            btnOwnerPanel.style.display = (isAuth && session && session.role === 'owner') ? 'inline-flex' : 'none';
+            btnOwnerPanel.style.display = (authOk && session && session.role === 'owner') ? 'inline-flex' : 'none';
         }
 
         // Botones de Guardar y Ver Proyectos
         const btnSave = document.getElementById('btnSaveProject');
         if (btnSave) {
             btnSave.onclick = promptSaveProject;
-            btnSave.style.display = isAuth ? 'inline-flex' : 'none';
+            btnSave.style.display = authOk ? 'inline-flex' : 'none';
         }
 
         const btnMyProj = document.getElementById('btnMyProjects');
         if (btnMyProj) {
             btnMyProj.onclick = showProjectsModal;
-            btnMyProj.style.display = isAuth ? 'inline-flex' : 'none';
-        }
-    }
-
-    // ── PROTECCIÓN ANTI-BYPASS EN F12 ───────────────────────────
-    function attachExecutionGuards() {
-        const btnExcel = document.getElementById('btnDownloadExcel') || document.getElementById('btn-download-excel');
-        if (btnExcel) {
-            btnExcel.addEventListener('click', (e) => {
-                const session = getSession();
-                const isAuth = !!session && (session.role === 'owner' || isUserAuthorized(session.email));
-                if (!isAuth) {
-                    e.stopImmediatePropagation();
-                    e.preventDefault();
-                    showModal();
-                    alert("🔒 Para descargar el Excel automatizado debes iniciar sesión y activar tu licencia.");
-                    return false;
-                }
-            }, true);
+            btnMyProj.style.display = authOk ? 'inline-flex' : 'none';
         }
     }
 
     // ── INICIALIZACIÓN ──────────────────────────────────────────
     function init() {
         buildModals();
-        attachExecutionGuards();
         updateAppHeader();
 
-        const session = getSession();
-        const isAuth = !!session && (session.role === 'owner' || isUserAuthorized(session.email));
-
-        if (isAuth) {
+        if (isAuthorized()) {
             hideModal();
         } else {
             showModal();
@@ -1253,10 +1514,7 @@
 
     // API Global
     window.CerebroAuth = {
-        isAuthorized: () => {
-            const s = getSession();
-            return !!s && (s.role === 'owner' || isUserAuthorized(s.email));
-        },
+        isAuthorized: isAuthorized,
         getSession: getSession,
         openDevPanel: showDevPanel,
         openProjects: showProjectsModal,

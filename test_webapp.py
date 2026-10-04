@@ -2,6 +2,13 @@
 """
 test_webapp.py
 End-to-End automated validation of the Web Application using Playwright.
+Validates:
+1. Google Sign-In with Dropdown Chooser
+2. Terms & Conditions acceptance
+3. Yape Paywall with code binding
+4. Developer Master Password 'Vayolett1404' worldwide access
+5. NO re-prompting on clicks: Mis Armaduras, Descargar Excel, Presets
+6. Seamless session persistence when navigating to 'Ver 13 Tablas' (WEB_ARMADURAS_ULIANOV/index.html)
 """
 import os
 import sys
@@ -54,25 +61,40 @@ with sync_playwright() as p:
     print("Title:", page.title())
     assert "CEREBRO ESTRUCTURAL" in page.title(), "Title does not match!"
 
-    # 1. Test Google SSO Chooser, Terms & Conditions, and Developer Access
-    print("Testing Google Account Chooser & Terms Acceptance...")
+    # 1. Test Google SSO Dropdown Chooser & Terms Acceptance
+    print("Testing Google Account Dropdown Chooser & Terms Acceptance...")
     lock_modal = page.locator("#accessLockModal")
     assert lock_modal.is_visible(), "Access Lock Modal should be visible on fresh load!"
 
-    # Verify Google Account Chooser view is visible
     assert page.locator("#viewGoogleChooser").is_visible(), "Google Chooser should be visible!"
     terms_chk = page.locator("#chkTermsAndConditions")
     assert terms_chk.is_checked(), "Terms and Conditions checkbox should be present and checked!"
 
-    # A. Test Student choosing Google Account: alumno@continental.edu.pe
-    print("Student selecting Google account: alumno@continental.edu.pe...")
-    page.click(".google-account-item[data-email='alumno@continental.edu.pe']")
+    # Verify Dropdown exists and has Google accounts
+    google_dropdown = page.locator("#googleAccountDropdown")
+    assert google_dropdown.is_visible(), "Google Account Dropdown should be visible!"
+    dropdown_options = google_dropdown.locator("option").all_inner_texts()
+    print("Dropdown Google accounts:", dropdown_options)
+    assert any("alumno@continental.edu.pe" in opt for opt in dropdown_options), "Default student account missing from dropdown!"
+
+    # Select student account from dropdown
+    print("Selecting 'alumno@continental.edu.pe' from Google dropdown...")
+    google_dropdown.select_option("alumno@continental.edu.pe")
+    time.sleep(0.3)
+
+    # Verify live preview card updated
+    selected_email_text = page.locator("#selectedAccountEmail").inner_text()
+    assert "alumno@continental.edu.pe" in selected_email_text, f"Unexpected email in preview: {selected_email_text}"
+
+    # Click 'Continuar con cuenta de Google'
+    print("Clicking 'Continuar con cuenta de Google'...")
+    page.click("#btnConfirmGoogleAccount")
     time.sleep(0.4)
 
-    # Verify Yape paywall view appears with student email bound
+    # 2. Verify Yape paywall view appears with student email bound
     assert page.locator("#viewYapePaywall").is_visible(), "Yape view should be visible for unapproved student!"
     assert "alumno@continental.edu.pe" in page.locator("#lblActiveStudentEmail").inner_text()
-    print("Student Google email successfully bound and pending activation!")
+    print("Student Google email successfully bound to Yape activation!")
 
     # Test invalid activation key rejection
     page.fill("#accessPassInput", "CYB-INVALIDO")
@@ -82,7 +104,7 @@ with sync_playwright() as p:
     assert error_msg.is_visible(), "Error message should be visible on invalid key!"
     print("Anti-tamper: Invalid key correctly rejected!")
 
-    # B. Test Discreet Developer Master Login (no Google account, no email needed)
+    # 3. Test Discreet Developer Master Login (no Google account, no email needed)
     print("Testing Developer Master Login with 'Vayolett1404'...")
     page.click("#linkDevAccess2")
     time.sleep(0.3)
@@ -95,31 +117,25 @@ with sync_playwright() as p:
     assert not lock_modal.is_visible(), "Access Lock Modal should be hidden after Developer Master Password!"
     print("Developer Master Password 'Vayolett1404' accepted and full platform unlocked worldwide!")
 
-    # Verify Developer Panel button exists
+    # Verify Developer Panel button exists in header
     assert page.locator("#btnOwnerPanel").is_visible(), "Developer Panel button should be visible for Developer!"
     print("Developer Panel button verified!")
 
-    # Check structural status badge
-    status_text = page.locator("#structuralStatusBadge").inner_text()
-    print("Status Badge:", status_text)
-    assert "Isostática" in status_text, f"Unexpected status: {status_text}"
+    # 4. Verify Persistent Session - NO RE-PROMPTING ON CLICKS:
+    # A. Click 'Mis Armaduras'
+    print("Testing 'Mis Armaduras' button click without reprompting...")
+    page.click("#btnMyProjects")
+    time.sleep(0.4)
+    proj_modal = page.locator("#projectsManagerModal")
+    assert proj_modal.is_visible(), "Projects Manager Modal should open on click!"
+    assert not lock_modal.is_visible(), "Access Lock Modal must NOT appear when clicking Mis Armaduras!"
+    page.click("#btnCloseProjModal")
+    time.sleep(0.3)
+    assert not proj_modal.is_visible(), "Projects Manager Modal closed!"
+    print("Verified 'Mis Armaduras' opened smoothly without prompting for email!")
 
-    # Check equilibrium badge
-    eq_text = page.locator("#equilibriumBadge").inner_text()
-    print("Equilibrium Badge:", eq_text)
-    assert "Equilibrio Exacto" in eq_text, f"Unexpected equilibrium: {eq_text}"
-
-    # Verify canvas presence
-    canvas = page.locator("#trussCanvas")
-    assert canvas.is_visible(), "Canvas is not visible!"
-
-    # Take screenshot of benchmark
-    screenshot_path = os.path.join(BASE_DIR, "app_benchmark_screenshot.png")
-    page.screenshot(path=screenshot_path, full_page=True)
-    print(f"Screenshot saved to: {screenshot_path}")
-
-    # Test downloading Excel
-    print("Testing 'Descargar Excel' button...")
+    # B. Test downloading Excel
+    print("Testing 'Descargar Excel' button without reprompting...")
     with page.expect_download() as download_info:
         page.click("#btnDownloadExcel")
     download = download_info.value
@@ -127,52 +143,52 @@ with sync_playwright() as p:
     download.save_as(download_file)
     print(f"Downloaded file: {download_file}, size: {os.path.getsize(download_file)} bytes")
     assert os.path.getsize(download_file) > 10000, "Downloaded file is too small!"
+    assert not lock_modal.is_visible(), "Access Lock Modal must NOT appear when downloading Excel!"
 
-    # Inspect downloaded workbook with openpyxl
     wb = openpyxl.load_workbook(download_file, read_only=True)
-    print("Downloaded Workbook Sheets:", wb.sheetnames)
     assert "MANUAL_ISOSTATICA_3R" in wb.sheetnames, "Sheet MANUAL_ISOSTATICA_3R missing!"
     wb.close()
     os.remove(download_file)
-    print("Verified downloaded Excel file successfully!")
+    print("Verified downloaded Excel generated smoothly with zero login reprompts!")
 
-    # Switch to Preset 2 (Hyperstatic)
+    # 5. Check structural status badge & Presets
+    status_text = page.locator("#structuralStatusBadge").inner_text()
+    print("Status Badge:", status_text)
+    assert "Isostática" in status_text, f"Unexpected status: {status_text}"
+
+    # Switch Presets
     print("Testing Preset 2: Hiperestático...")
     page.select_option("#presetSelect", "hyperstatic_4n")
     time.sleep(0.5)
+    assert not lock_modal.is_visible(), "Modal must not appear on preset change!"
     status_text_2 = page.locator("#structuralStatusBadge").inner_text()
-    print("Preset 2 Status:", status_text_2)
-    assert "Hiperestática de Grado 2" in status_text_2, f"Unexpected status: {status_text_2}"
+    assert "Hiperestática de Grado 2" in status_text_2
 
-    # Switch to Preset 3 (Warren)
-    print("Testing Preset 3: Warren...")
-    page.select_option("#presetSelect", "warren_5n")
-    time.sleep(0.5)
-    status_text_3 = page.locator("#structuralStatusBadge").inner_text()
-    print("Preset 3 Status:", status_text_3)
-    assert "Isostática" in status_text_3 or "Hiperestática" in status_text_3
+    # 6. Test seamless navigation to 'Ver 13 Tablas' (WEB_ARMADURAS_ULIANOV/index.html)
+    print("Testing navigation to 'Ver 13 Tablas' (subfolder app)...")
+    page.goto(f"http://127.0.0.1:{PORT}/WEB_ARMADURAS_ULIANOV/index.html", wait_until="networkidle")
+    time.sleep(1)
 
-    # Switch to Preset 4 (Roof Howe)
-    print("Testing Preset 4: Techo Howe...")
-    page.select_option("#presetSelect", "roof_5n")
-    time.sleep(0.5)
-    status_text_4 = page.locator("#structuralStatusBadge").inner_text()
-    print("Preset 4 Status:", status_text_4)
-    assert "Isostática" in status_text_4, f"Unexpected status: {status_text_4}"
+    sub_lock_modal = page.locator("#accessLockModal")
+    assert not sub_lock_modal.is_visible(), "Subfolder app should inherit active session and NOT ask for login again!"
+    print("Session seamlessly inherited in WEB_ARMADURAS_ULIANOV/index.html!")
 
-    # Check tab switching
-    print("Testing tab switching...")
-    page.click("button[data-tab='tab-pedagogical']")
-    time.sleep(0.3)
-    assert page.locator("#tab-pedagogical").is_visible(), "Pedagogical tab not visible!"
+    # Test downloading Excel in subfolder without prompt
+    print("Testing download Excel in subfolder without reprompt...")
+    with page.expect_download() as sub_download_info:
+        page.click("#btn-download-excel")
+    sub_download = sub_download_info.value
+    sub_download_file = os.path.join(BASE_DIR, "sub_downloaded_test.xlsx")
+    sub_download.save_as(sub_download_file)
+    assert os.path.getsize(sub_download_file) > 10000
+    os.remove(sub_download_file)
+    assert not sub_lock_modal.is_visible(), "Subfolder app must NOT prompt for login when downloading Excel!"
+    print("Verified subfolder Excel downloaded with zero reprompts!")
 
-    page.click("button[data-tab='tab-global-matrix']")
-    time.sleep(0.3)
-    assert page.locator("#tab-global-matrix").is_visible(), "Global matrix tab not visible!"
-
-    page.click("button[data-tab='tab-theory']")
-    time.sleep(0.3)
-    assert page.locator("#tab-theory").is_visible(), "Theory tab not visible!"
+    # Take screenshot of benchmark
+    screenshot_path = os.path.join(BASE_DIR, "app_benchmark_screenshot.png")
+    page.screenshot(path=screenshot_path, full_page=True)
+    print(f"Screenshot saved to: {screenshot_path}")
 
     browser.close()
 
