@@ -7,18 +7,38 @@
 
 (function (root, factory) {
     if (typeof define === 'function' && define.amd) {
-        define(['./assets/exceljs.min.js'], factory);
+        define(['./assets/exceljs.min.js', './truss-solver.js'], factory);
     } else if (typeof module === 'object' && module.exports) {
         const ExcelJS = require('./assets/exceljs.min.js');
-        module.exports = factory(ExcelJS);
+        let TrussSolver = null;
+        try { TrussSolver = require('./truss-solver.js'); } catch (e) {}
+        module.exports = factory(ExcelJS, TrussSolver);
     } else {
-        root.ExcelGenerator = factory(root.ExcelJS);
+        root.ExcelGenerator = factory(root.ExcelJS, root.TrussSolver);
     }
-}(typeof self !== 'undefined' ? self : this, function (ExcelJS) {
+}(typeof self !== 'undefined' ? self : this, function (ExcelJS, TrussSolver) {
     'use strict';
 
     if (!ExcelJS && typeof window !== 'undefined' && window.ExcelJS) {
         ExcelJS = window.ExcelJS;
+    }
+    if (!TrussSolver && typeof window !== 'undefined' && window.TrussSolver) {
+        TrussSolver = window.TrussSolver;
+    }
+
+    /**
+     * Normaliza y resuelve el tipo de apoyo con el parser oficial
+     */
+    function resolveSupport(supportStr) {
+        if (TrussSolver && typeof TrussSolver.parseSupportType === 'function') {
+            return TrussSolver.parseSupportType(supportStr);
+        }
+        if (!supportStr) return { rx: 0, ry: 0, code: 'LIBRE' };
+        const s = String(supportStr).trim().toUpperCase();
+        if (s.startsWith('FIJO') || s.startsWith('PIN') || s === 'ARTICULADO') return { rx: 1, ry: 1, code: 'FIJO' };
+        if (s.includes('MOVIL Y') || s.includes('MÓVIL Y') || s.includes('RODILLO Y') || s === 'MOVIL' || s === 'MÓVIL') return { rx: 0, ry: 1, code: 'MOVIL_Y' };
+        if (s.includes('MOVIL X') || s.includes('MÓVIL X') || s.includes('RODILLO X')) return { rx: 1, ry: 0, code: 'MOVIL_X' };
+        return { rx: 0, ry: 0, code: 'LIBRE' };
     }
 
     // Estilos oficiales de la Cátedra
@@ -157,7 +177,7 @@
     /**
      * Construye la hoja de cálculo completa con fórmulas dinámicas
      */
-    function buildDynamicWorksheet(wb, sheetName, nodesData, barsData, isIsostatic = true) {
+    function buildDynamicWorksheet(wb, sheetName, nodesData, barsData, isIsostatic = true, solverResult = null) {
         const ws = wb.addWorksheet(sheetName, {
             views: [{ showGridLines: true }]
         });
@@ -172,11 +192,102 @@
             ? "PLANTILLA MANUAL - CASO ISOSTÁTICO (HASTA 6 NODOS Y 8 BARRAS - CÁTEDRA ING. ULIANOV)"
             : "PLANTILLA MANUAL - CASO HIPERESTÁTICO (HASTA 6 NODOS Y 8 BARRAS - CÁTEDRA ING. ULIANOV)";
 
+        // Solución analítica exacta mediante TrussSolver para inyección libre de errores #VALOR
+        let solverRes = solverResult;
+        if (!solverRes && TrussSolver && typeof TrussSolver.solveTruss === 'function') {
+            try {
+                solverRes = TrussSolver.solveTruss(nodesData, barsData);
+            } catch (e) {
+                console.warn("Auto solve en excel-generator:", e);
+            }
+        }
+
         const dofsList = [];
         for (let i = 0; i < dofsTotal; i++) {
             const nId = Math.floor(i / 2) + 1;
             const dir = (i % 2 === 0) ? 'X' : 'Y';
             dofsList.push(`U${nId}${dir}`);
+        }
+
+        // Mapeo detallado de Grados de Libertad Activos y Restringidos
+        const activeFreeDofs = [];
+        const activeRestDofs = [];
+
+        for (let i = 0; i < dofsTotal; i++) {
+            const nId = Math.floor(i / 2) + 1;
+            const dir = (i % 2 === 0) ? 'X' : 'Y';
+            const nd = (nodesData || []).find(n => parseInt(n.id) === nId);
+            const isActive = nd && nd.x !== null && nd.x !== undefined && nd.x !== "" &&
+                                 nd.y !== null && nd.y !== undefined && nd.y !== "";
+            if (isActive) {
+                const supp = resolveSupport(nd.support);
+                const isRest = (dir === 'X') ? (supp.rx === 1) : (supp.ry === 1);
+                if (isRest) {
+                    activeRestDofs.push({ dofIndex: i, label: `U${nId}${dir}`, varC: `C${nId}${dir}`, varD: `D${nId}${dir}`, nId, dir });
+                } else {
+                    const loadVal = (dir === 'X') ? (parseFloat(nd.px) || 0) : (parseFloat(nd.py) || 0);
+                    activeFreeDofs.push({ dofIndex: i, label: `U${nId}${dir}`, varC: `C${nId}${dir}`, varD: `D${nId}${dir}`, nId, dir, loadVal });
+                }
+            }
+        }
+        const numActFree = activeFreeDofs.length;
+        const numActRest = activeRestDofs.length;
+
+        // Matrices numéricas pre-calculadas para inyección exacta y sin celdas vacías
+        const k11Mat = Array.from({ length: nFree }, () => new Array(nFree).fill(0));
+        const k11InvMat = Array.from({ length: nFree }, () => new Array(nFree).fill(0));
+        const cLoadVec = new Array(nFree).fill(0);
+        const dDispVec = new Array(nFree).fill(0);
+
+        for (let iF = 0; iF < nFree; iF++) {
+            if (iF < numActFree) {
+                cLoadVec[iF] = activeFreeDofs[iF].loadVal;
+                dDispVec[iF] = (solverRes && solverRes.D_libres && solverRes.D_libres[iF] !== undefined) ? solverRes.D_libres[iF] : 0;
+                for (let jF = 0; jF < nFree; jF++) {
+                    if (jF < numActFree) {
+                        k11Mat[iF][jF] = (solverRes && solverRes.K11 && solverRes.K11[iF]) ? (solverRes.K11[iF][jF] || 0) : 0;
+                        k11InvMat[iF][jF] = (solverRes && solverRes.K11_inv && solverRes.K11_inv[iF]) ? (solverRes.K11_inv[iF][jF] || 0) : 0;
+                    } else {
+                        k11Mat[iF][jF] = (iF === jF) ? 1.0 : 0.0;
+                        k11InvMat[iF][jF] = (iF === jF) ? 1.0 : 0.0;
+                    }
+                }
+            } else {
+                cLoadVec[iF] = 0.0;
+                dDispVec[iF] = 0.0;
+                for (let jF = 0; jF < nFree; jF++) {
+                    k11Mat[iF][jF] = (iF === jF) ? 1.0 : 0.0;
+                    k11InvMat[iF][jF] = (iF === jF) ? 1.0 : 0.0;
+                }
+            }
+        }
+
+        const k21Mat = Array.from({ length: nRest }, () => new Array(nFree).fill(0));
+        const rReacVec = new Array(nRest).fill(0);
+
+        for (let iR = 0; iR < nRest; iR++) {
+            if (iR < numActRest) {
+                rReacVec[iR] = (solverRes && solverRes.reactions && solverRes.reactions[iR]) ? solverRes.reactions[iR].value : 0;
+                for (let jF = 0; jF < nFree; jF++) {
+                    if (jF < numActFree) {
+                        k21Mat[iR][jF] = (solverRes && solverRes.K21 && solverRes.K21[iR]) ? (solverRes.K21[iR][jF] || 0) : 0;
+                    } else {
+                        k21Mat[iR][jF] = 0.0;
+                    }
+                }
+            } else {
+                rReacVec[iR] = 0.0;
+                for (let jF = 0; jF < nFree; jF++) {
+                    k21Mat[iR][jF] = 0.0;
+                }
+            }
+        }
+
+        const dTotalVec = new Array(dofsTotal).fill(0);
+        if (solverRes && solverRes.totalDisplacements) {
+            for (let i = 0; i < dofsTotal; i++) {
+                dTotalVec[i] = solverRes.totalDisplacements[i] || 0;
+            }
         }
 
         // Configuración de anchos de columna
@@ -350,15 +461,17 @@
             const r2 = t2DataStart + m - 1;
             const br = barsData[m - 1] || { id: m, start: null, end: null, a: 10.0, e: 2100000.0 };
             const barCol = BAR_PASTEL_PALETTE[(m - 1) % BAR_PASTEL_PALETTE.length];
+            const hasBar = br.start !== null && br.start !== undefined && br.start !== "" &&
+                           br.end !== null && br.end !== undefined && br.end !== "";
 
             ws.getCell(r2, 2).value = m;
-            ws.getCell(r2, 3).value = br.start !== null && br.start !== undefined ? br.start : "";
-            ws.getCell(r2, 6).value = br.end !== null && br.end !== undefined ? br.end : "";
+            ws.getCell(r2, 3).value = hasBar ? br.start : "";
+            ws.getCell(r2, 6).value = hasBar ? br.end : "";
 
-            ws.getCell(r2, 4).value = { formula: `IF(C${r2}="","", "U" & C${r2} & "X")` };
-            ws.getCell(r2, 5).value = { formula: `IF(C${r2}="","", "U" & C${r2} & "Y")` };
-            ws.getCell(r2, 7).value = { formula: `IF(F${r2}="","", "U" & F${r2} & "X")` };
-            ws.getCell(r2, 8).value = { formula: `IF(F${r2}="","", "U" & F${r2} & "Y")` };
+            ws.getCell(r2, 4).value = { formula: `IF(C${r2}="","", "U" & C${r2} & "X")`, result: hasBar ? `U${br.start}X` : "" };
+            ws.getCell(r2, 5).value = { formula: `IF(C${r2}="","", "U" & C${r2} & "Y")`, result: hasBar ? `U${br.start}Y` : "" };
+            ws.getCell(r2, 7).value = { formula: `IF(F${r2}="","", "U" & F${r2} & "X")`, result: hasBar ? `U${br.end}X` : "" };
+            ws.getCell(r2, 8).value = { formula: `IF(F${r2}="","", "U" & F${r2} & "Y")`, result: hasBar ? `U${br.end}Y` : "" };
 
             applyStyling(ws, r2, r2, 2, 2, { fill: barCol.bg, font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'center', vertical: 'middle' }, border: thinBorder });
             applyStyling(ws, r2, r2, 3, 3, { fill: COLORS.INPUT_BG, font: { name: 'Segoe UI', size: 9, bold: true, color: { argb: COLORS.TEXT_INPUT } }, align: { horizontal: 'center', vertical: 'middle' }, border: thinBorder });
@@ -374,32 +487,51 @@
             const r2 = t2DataStart + m - 1;
             const br = barsData[m - 1] || { id: m, start: null, end: null, a: 10.0, e: 2100000.0 };
             const barCol = BAR_PASTEL_PALETTE[(m - 1) % BAR_PASTEL_PALETTE.length];
+            const hasBar = br.start !== null && br.start !== undefined && br.start !== "" &&
+                           br.end !== null && br.end !== undefined && br.end !== "";
+
+            const sNode = hasBar ? nodesData.find(n => n && parseInt(n.id) === parseInt(br.start)) : null;
+            const eNode = hasBar ? nodesData.find(n => n && parseInt(n.id) === parseInt(br.end)) : null;
+            const x1 = (sNode && sNode.x !== null && sNode.x !== undefined && sNode.x !== "") ? parseFloat(sNode.x) : "";
+            const y1 = (sNode && sNode.y !== null && sNode.y !== undefined && sNode.y !== "") ? parseFloat(sNode.y) : "";
+            const x2 = (eNode && eNode.x !== null && eNode.x !== undefined && eNode.x !== "") ? parseFloat(eNode.x) : "";
+            const y2 = (eNode && eNode.y !== null && eNode.y !== undefined && eNode.y !== "") ? parseFloat(eNode.y) : "";
+
+            const mf = (solverRes && solverRes.memberForces) ? solverRes.memberForces.find(b => b.barId === m) : null;
+            const dx = mf ? (mf.dx !== undefined ? mf.dx : (x2 !== "" && x1 !== "" ? x2 - x1 : "")) : (x2 !== "" && x1 !== "" ? x2 - x1 : "");
+            const dy = mf ? (mf.dy !== undefined ? mf.dy : (y2 !== "" && y1 !== "" ? y2 - y1 : "")) : (y2 !== "" && y1 !== "" ? y2 - y1 : "");
+            const L = mf ? mf.L : (dx !== "" && dy !== "" ? Math.sqrt(dx * dx + dy * dy) : "");
+            const cx = mf ? mf.cx : (L && dx !== "" ? dx / L : "");
+            const cy = mf ? mf.cy : (L && dy !== "" ? dy / L : "");
+            const aVal = mf ? mf.a : (hasBar ? (parseFloat(br.a) || 10.0) : "");
+            const eVal = mf ? mf.e : (hasBar ? (parseFloat(br.e) || 2100000.0) : "");
+            const aelVal = mf ? mf.ael : (L && aVal && eVal ? (aVal * eVal) / L : "");
 
             ws.getCell(r1, 2).value = m;
             applyStyling(ws, r1, r1, 2, 2, { fill: barCol.bg, font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'center', vertical: 'middle' }, border: thinBorder });
 
-            ws.getCell(r1, 3).value = { formula: `IF(C${r2}="","", IFERROR(VLOOKUP(C${r2}, ${nodalTableRange}, 2, FALSE), ""))` };
-            ws.getCell(r1, 4).value = { formula: `IF(C${r2}="","", IFERROR(VLOOKUP(C${r2}, ${nodalTableRange}, 3, FALSE), ""))` };
-            ws.getCell(r1, 5).value = { formula: `IF(F${r2}="","", IFERROR(VLOOKUP(F${r2}, ${nodalTableRange}, 2, FALSE), ""))` };
-            ws.getCell(r1, 6).value = { formula: `IF(F${r2}="","", IFERROR(VLOOKUP(F${r2}, ${nodalTableRange}, 3, FALSE), ""))` };
+            ws.getCell(r1, 3).value = { formula: `IF(C${r2}="","", IFERROR(VLOOKUP(C${r2}, ${nodalTableRange}, 2, FALSE), ""))`, result: x1 };
+            ws.getCell(r1, 4).value = { formula: `IF(C${r2}="","", IFERROR(VLOOKUP(C${r2}, ${nodalTableRange}, 3, FALSE), ""))`, result: y1 };
+            ws.getCell(r1, 5).value = { formula: `IF(F${r2}="","", IFERROR(VLOOKUP(F${r2}, ${nodalTableRange}, 2, FALSE), ""))`, result: x2 };
+            ws.getCell(r1, 6).value = { formula: `IF(F${r2}="","", IFERROR(VLOOKUP(F${r2}, ${nodalTableRange}, 3, FALSE), ""))`, result: y2 };
             applyStyling(ws, r1, r1, 3, 6, { fill: COLORS.INPUT_BG, font: { name: 'Segoe UI', size: 9, bold: true, color: { argb: COLORS.TEXT_INPUT } }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '#,##0.00' });
 
-            ws.getCell(r1, 7).value = { formula: `IF(OR(C${r1}="",E${r1}=""), "", E${r1}-C${r1})` };
-            ws.getCell(r1, 8).value = { formula: `IF(OR(D${r1}="",F${r1}=""), "", F${r1}-D${r1})` };
-            ws.getCell(r1, 9).value = { formula: `IF(OR(G${r1}="",H${r1}=""), "", SQRT(G${r1}^2+H${r1}^2))` };
-            ws.getCell(r1, 10).value = { formula: `IF(OR(I${r1}="",I${r1}=0), "", G${r1}/I${r1})` };
-            ws.getCell(r1, 11).value = { formula: `IF(OR(I${r1}="",I${r1}=0), "", H${r1}/I${r1})` };
+            ws.getCell(r1, 7).value = { formula: `IF(OR(C${r1}="",E${r1}=""), "", E${r1}-C${r1})`, result: dx };
+            ws.getCell(r1, 8).value = { formula: `IF(OR(D${r1}="",F${r1}=""), "", F${r1}-D${r1})`, result: dy };
+            ws.getCell(r1, 9).value = { formula: `IF(OR(G${r1}="",H${r1}=""), "", SQRT(G${r1}^2+H${r1}^2))`, result: L };
+            ws.getCell(r1, 10).value = { formula: `IF(OR(I${r1}="",I${r1}=0), "", G${r1}/I${r1})`, result: cx };
+            ws.getCell(r1, 11).value = { formula: `IF(OR(I${r1}="",I${r1}=0), "", H${r1}/I${r1})`, result: cy };
 
             applyStyling(ws, r1, r1, 7, 8, { fill: COLORS.CARD_BG, font: { name: 'Segoe UI', size: 9 }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '#,##0.00' });
             applyStyling(ws, r1, r1, 9, 9, { fill: COLORS.CARD_BG, font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '#,##0.00' });
             applyStyling(ws, r1, r1, 10, 11, { fill: COLORS.CARD_BG, font: { name: 'Segoe UI', size: 9 }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '0.0000' });
 
-            ws.getCell(r1, 12).value = { formula: `IF(C${r2}="","", ${br.a || 10.0})` };
-            ws.getCell(r1, 13).value = { formula: `IF(C${r2}="","", ${br.e || 2100000.0})` };
+            ws.getCell(r1, 12).value = { formula: `IF(C${r2}="","", ${br.a || 10.0})`, result: aVal };
+            ws.getCell(r1, 13).value = { formula: `IF(C${r2}="","", ${br.e || 2100000.0})`, result: eVal };
             applyStyling(ws, r1, r1, 12, 12, { fill: COLORS.INPUT_BG, font: { name: 'Segoe UI', size: 9, bold: true, color: { argb: COLORS.TEXT_INPUT } }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '#,##0.00' });
             applyStyling(ws, r1, r1, 13, 13, { fill: COLORS.INPUT_BG, font: { name: 'Segoe UI', size: 9, bold: true, color: { argb: COLORS.TEXT_INPUT } }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '#,##0' });
 
-            ws.getCell(r1, 14).value = { formula: `IF(OR(I${r1}="",I${r1}=0,L${r1}="",M${r1}=""), 0, (L${r1}*M${r1})/I${r1})` };
+            ws.getCell(r1, 14).value = { formula: `IF(OR(I${r1}="",I${r1}=0,L${r1}="",M${r1}=""), 0, (L${r1}*M${r1})/I${r1})`, result: aelVal };
             applyStyling(ws, r1, r1, 14, 14, { fill: COLORS.CARD_BG, font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '#,##0.00' });
             ws.getRow(r1).height = 19;
         }
@@ -507,10 +639,12 @@
                     border: thinBorder
                 });
 
+                const expObj = (solverRes && solverRes.expandedMatrices) ? solverRes.expandedMatrices.find(e => e.barId === m) : null;
                 for (let iCol = 2; iCol < 2 + dofsTotal; iCol++) {
                     const colLet = getColLetter(iCol);
                     const formulaStr = `IFERROR(INDEX($B$${mat4x4Row}:$E$${mat4x4Row + 3}, MATCH($${lblColLet}${currExpR}, $B$${hdr4x4Row}:$E$${hdr4x4Row}, 0), MATCH(${colLet}$${hdrExpRow}, $B$${hdr4x4Row}:$E$${hdr4x4Row}, 0)), 0)`;
-                    ws.getCell(currExpR, iCol).value = { formula: formulaStr };
+                    const expVal = (expObj && expObj.matrix && expObj.matrix[iRow]) ? (expObj.matrix[iRow][iCol - 2] || 0) : 0;
+                    ws.getCell(currExpR, iCol).value = { formula: formulaStr, result: expVal };
                     applyStyling(ws, currExpR, currExpR, iCol, iCol, {
                         fill: COLORS.WHITE,
                         font: { name: 'Segoe UI', size: 9 },
@@ -565,7 +699,8 @@
             for (let iC = 2; iC < 2 + dofsTotal; iC++) {
                 const cLet = getColLetter(iC);
                 const sumParts = expMatrixStartRows.map(expR => `${cLet}${expR + iR}`);
-                ws.getCell(currKR, iC).value = { formula: sumParts.join("+") };
+                const karmVal = (solverRes && solverRes.Karmadura && solverRes.Karmadura[iR]) ? (solverRes.Karmadura[iR][iC - 2] || 0) : 0;
+                ws.getCell(currKR, iC).value = { formula: sumParts.join("+"), result: karmVal };
 
                 const nodeR = Math.floor(iR / 2);
                 const nodeC = Math.floor((iC - 2) / 2);
@@ -627,7 +762,14 @@
             const loadColIdx = isX ? 7 : 8;
             const cFormula = `IF(IFERROR(VLOOKUP(${nodeNum}, ${nodalTableRange}, 2, FALSE), "")="", 0, IF(VLOOKUP(${nodeNum}, ${nodalTableRange}, ${restColIdx}, FALSE)=1, B${r}, VLOOKUP(${nodeNum}, ${nodalTableRange}, ${loadColIdx}, FALSE)))`;
 
-            ws.getCell(r, 5).value = { formula: cFormula };
+            const freeDof = activeFreeDofs.find(d => d.dofIndex === idxD);
+            const restDof = activeRestDofs.find(d => d.dofIndex === idxD);
+            const cVal = restDof ? restDof.varC : (freeDof ? freeDof.loadVal : 0);
+            const dVal = freeDof ? freeDof.varD : 0;
+            const fVal = freeDof ? (activeFreeDofs.indexOf(freeDof) + 1) : "";
+            const gVal = restDof ? (activeRestDofs.indexOf(restDof) + 1) : "";
+
+            ws.getCell(r, 5).value = { formula: cFormula, result: cVal };
             applyStyling(ws, r, r, 5, 5, {
                 fill: COLORS.PEACH_BG,
                 font: { name: 'Segoe UI', size: 9, bold: true },
@@ -683,7 +825,13 @@
             const restColIdx = isX ? 5 : 6;
             const dFormula = `IF(IFERROR(VLOOKUP(${nodeNum}, ${nodalTableRange}, 2, FALSE), "")="", 0, IF(VLOOKUP(${nodeNum}, ${nodalTableRange}, ${restColIdx}, FALSE)=1, 0, B${r}))`;
 
-            ws.getCell(r, 5).value = { formula: dFormula };
+            const freeDof = activeFreeDofs.find(d => d.dofIndex === idxD);
+            const restDof = activeRestDofs.find(d => d.dofIndex === idxD);
+            const dVal = freeDof ? freeDof.varD : 0;
+            const fVal = freeDof ? (activeFreeDofs.indexOf(freeDof) + 1) : "";
+            const gVal = restDof ? (activeRestDofs.indexOf(restDof) + 1) : "";
+
+            ws.getCell(r, 5).value = { formula: dFormula, result: dVal };
             applyStyling(ws, r, r, 5, 5, {
                 fill: COLORS.PEACH_BG,
                 font: { name: 'Segoe UI', size: 9, bold: true },
@@ -693,11 +841,11 @@
 
             // Columnas Auxiliares F y G: Conteo dinámico de libres y restringidos
             if (idxD === 0) {
-                ws.getCell(r, 6).value = { formula: `IF(ISTEXT(E${r}), 1, "")` };
-                ws.getCell(r, 7).value = { formula: `IF(ISTEXT(E${srcCR}), 1, "")` };
+                ws.getCell(r, 6).value = { formula: `IF(ISTEXT(E${r}), 1, "")`, result: fVal };
+                ws.getCell(r, 7).value = { formula: `IF(ISTEXT(E${srcCR}), 1, "")`, result: gVal };
             } else {
-                ws.getCell(r, 6).value = { formula: `IF(ISTEXT(E${r}), MAX(F$${dispStartRow}:F${r - 1}) + 1, "")` };
-                ws.getCell(r, 7).value = { formula: `IF(ISTEXT(E${srcCR}), MAX(G$${dispStartRow}:G${r - 1}) + 1, "")` };
+                ws.getCell(r, 6).value = { formula: `IF(ISTEXT(E${r}), MAX(F$${dispStartRow}:F${r - 1}) + 1, "")`, result: fVal };
+                ws.getCell(r, 7).value = { formula: `IF(ISTEXT(E${srcCR}), MAX(G$${dispStartRow}:G${r - 1}) + 1, "")`, result: gVal };
             }
             applyStyling(ws, r, r, 6, 7, {
                 fill: COLORS.CARD_BG,
@@ -760,7 +908,12 @@
             const srcCargasR = cargasStartRow + idxD;
             const srcDispR = dispStartRow + idxD;
 
-            ws.getCell(r, 1).value = { formula: `E${srcCargasR}` };
+            const freeDof = activeFreeDofs.find(d => d.dofIndex === idxD);
+            const restDof = activeRestDofs.find(d => d.dofIndex === idxD);
+            const cVal = restDof ? restDof.varC : (freeDof ? freeDof.loadVal : 0);
+            const dVal = freeDof ? freeDof.varD : 0;
+
+            ws.getCell(r, 1).value = { formula: `E${srcCargasR}`, result: cVal };
             applyStyling(ws, r, r, 1, 1, {
                 fill: COLORS.WHITE,
                 font: { name: 'Segoe UI', size: 9, bold: true },
@@ -779,7 +932,8 @@
                 const cSrc = 2 + colK;
                 const srcLet = getColLetter(cSrc);
                 const srcRow = matKarmRow + idxD;
-                ws.getCell(r, cDest).value = { formula: `${srcLet}${srcRow}` };
+                const karmVal = (solverRes && solverRes.Karmadura && solverRes.Karmadura[idxD]) ? (solverRes.Karmadura[idxD][colK] || 0) : 0;
+                ws.getCell(r, cDest).value = { formula: `${srcLet}${srcRow}`, result: karmVal };
                 applyStyling(ws, r, r, cDest, cDest, {
                     fill: COLORS.WHITE,
                     font: { name: 'Segoe UI', size: 9 },
@@ -792,7 +946,7 @@
             ws.getCell(r, 3 + dofsTotal).value = "·";
             ws.getCell(r, 3 + dofsTotal).alignment = { horizontal: 'center', vertical: 'middle' };
 
-            ws.getCell(r, dispColIdx).value = { formula: `E${srcDispR}` };
+            ws.getCell(r, dispColIdx).value = { formula: `E${srcDispR}`, result: dVal };
             applyStyling(ws, r, r, dispColIdx, dispColIdx, {
                 fill: COLORS.WHITE,
                 font: { name: 'Segoe UI', size: 9, bold: true },
@@ -827,8 +981,10 @@
         for (let jF = 0; jF < nFree; jF++) {
             const cDest = 3 + jF;
             const k = jF + 1;
+            const uLbl = (jF < numActFree) ? activeFreeDofs[jF].label : "-";
             ws.getCell(k11ColDofsRow, cDest).value = {
-                formula: `IFERROR(INDEX(C$${dispStartRow}:C$${dispEndRow}, MATCH(${k}, F$${dispStartRow}:F$${dispEndRow}, 0)), "-")`
+                formula: `IFERROR(INDEX(C$${dispStartRow}:C$${dispEndRow}, MATCH(${k}, F$${dispStartRow}:F$${dispEndRow}, 0)), "-")`,
+                result: uLbl
             };
             applyStyling(ws, k11ColDofsRow, k11ColDofsRow, cDest, cDest, {
                 fill: COLORS.PROF_GREEN,
@@ -850,9 +1006,12 @@
         for (let iF = 0; iF < nFree; iF++) {
             const r = k11DataStart + iF;
             const k = iF + 1;
+            const uLbl = (iF < numActFree) ? activeFreeDofs[iF].label : "-";
+            const dLbl = (iF < numActFree) ? activeFreeDofs[iF].varD : "-";
 
             ws.getCell(r, k11HelperCol).value = {
-                formula: `IFERROR(INDEX(C$${dispStartRow}:C$${dispEndRow}, MATCH(${k}, F$${dispStartRow}:F$${dispEndRow}, 0)), "-")`
+                formula: `IFERROR(INDEX(C$${dispStartRow}:C$${dispEndRow}, MATCH(${k}, F$${dispStartRow}:F$${dispEndRow}, 0)), "-")`,
+                result: uLbl
             };
             applyStyling(ws, r, r, k11HelperCol, k11HelperCol, {
                 fill: COLORS.CARD_BG,
@@ -862,7 +1021,8 @@
             });
 
             ws.getCell(r, dLblCol).value = {
-                formula: `IFERROR(INDEX(B$${dispStartRow}:B$${dispEndRow}, MATCH(${k}, F$${dispStartRow}:F$${dispEndRow}, 0)), "-")`
+                formula: `IFERROR(INDEX(B$${dispStartRow}:B$${dispEndRow}, MATCH(${k}, F$${dispStartRow}:F$${dispEndRow}, 0)), "-")`,
+                result: dLbl
             };
             applyStyling(ws, r, r, dLblCol, dLblCol, {
                 fill: COLORS.PROF_GREEN,
@@ -872,7 +1032,8 @@
             });
 
             ws.getCell(r, 1).value = {
-                formula: `IF($${k11HelperColLet}${r}="-", 0, IFERROR(INDEX(E$${cargasStartRow}:E$${cargasEndRow}, MATCH($${k11HelperColLet}${r}, C$${cargasStartRow}:C$${cargasEndRow}, 0)), 0))`
+                formula: `IF($${k11HelperColLet}${r}="-", 0, IFERROR(INDEX(E$${cargasStartRow}:E$${cargasEndRow}, MATCH($${k11HelperColLet}${r}, C$${cargasStartRow}:C$${cargasEndRow}, 0)), 0))`,
+                result: cLoadVec[iF]
             };
             applyStyling(ws, r, r, 1, 1, {
                 fill: COLORS.PROF_GREEN,
@@ -899,7 +1060,7 @@
                     `${inactVal}, ` +
                     `IFERROR(INDEX($B$${matKarmRow}:${karmEndColLet}${matKarmEnd}, MATCH($${k11HelperColLet}${r}, $${karmLblColLet}$${matKarmRow}:$${karmLblColLet}$${matKarmEnd}, 0), MATCH(${colDestLet}$${k11ColDofsRow}, $B$${hdrKarmRow}:${karmEndColLet}$${hdrKarmRow}, 0)), 0)))`;
 
-                ws.getCell(r, cDest).value = { formula: formulaStr };
+                ws.getCell(r, cDest).value = { formula: formulaStr, result: k11Mat[iF][jF] };
                 applyStyling(ws, r, r, cDest, cDest, {
                     fill: COLORS.PROF_GREEN,
                     font: { name: 'Segoe UI', size: 9, bold: true },
@@ -959,8 +1120,9 @@
         for (let iF = 0; iF < nFree; iF++) {
             const r = invStartRow + iF;
             const dLblColLet = getColLetter(dLblCol);
+            const dLbl = (iF < numActFree) ? activeFreeDofs[iF].varD : "-";
 
-            ws.getCell(r, 1).value = { formula: `${dLblColLet}${k11DataStart + iF}` };
+            ws.getCell(r, 1).value = { formula: `${dLblColLet}${k11DataStart + iF}`, result: dLbl };
             applyStyling(ws, r, r, 1, 1, {
                 fill: COLORS.WHITE,
                 font: { name: 'Segoe UI', size: 9, bold: true },
@@ -973,7 +1135,7 @@
                 ws.getCell(r, 2).alignment = { horizontal: 'center', vertical: 'middle' };
             }
 
-            ws.getCell(r, cVecColIdx).value = { formula: `A${k11DataStart + iF}` };
+            ws.getCell(r, cVecColIdx).value = { formula: `A${k11DataStart + iF}`, result: cLoadVec[iF] };
             applyStyling(ws, r, r, cVecColIdx, cVecColIdx, {
                 fill: COLORS.WHITE,
                 font: { name: 'Segoe UI', size: 9, bold: true },
@@ -984,12 +1146,19 @@
             ws.getRow(r).height = 20;
         }
 
-        // Fórmulas MINVERSA en el bloque
+        // Fórmulas MINVERSA en el bloque con inyección completa para evitar celdas vacías
         ws.getCell(`C${invStartRow}`).value = {
             formula: `MINVERSE(C${k11DataStart}:${colK11End}${k11EndRow})`,
+            result: k11InvMat[0][0],
             shareType: 'array',
             ref: `C${invStartRow}:${colK11End}${invEndRow}`
         };
+        for (let iF = 0; iF < nFree; iF++) {
+            for (let jF = 0; jF < nFree; jF++) {
+                if (iF === 0 && jF === 0) continue;
+                ws.getCell(invStartRow + iF, 3 + jF).value = k11InvMat[iF][jF];
+            }
+        }
         applyStyling(ws, invStartRow, invEndRow, 3, 2 + nFree, {
             fill: COLORS.WHITE,
             font: { name: 'Segoe UI', size: 9 },
@@ -1023,7 +1192,8 @@
 
         for (let iF = 0; iF < nFree; iF++) {
             const r = duStartRow + iF;
-            ws.getCell(r, 1).value = { formula: `A${invStartRow + iF}` };
+            const dLbl = (iF < numActFree) ? activeFreeDofs[iF].varD : "-";
+            ws.getCell(r, 1).value = { formula: `A${invStartRow + iF}`, result: dLbl };
             applyStyling(ws, r, r, 1, 1, {
                 fill: COLORS.WHITE,
                 font: { name: 'Segoe UI', size: 9, bold: true },
@@ -1048,9 +1218,13 @@
 
         ws.getCell(`C${duStartRow}`).value = {
             formula: `MMULT(C${invStartRow}:${colK11End}${invEndRow}, ${cVecColLet}${invStartRow}:${cVecColLet}${invEndRow})`,
+            result: dDispVec[0],
             shareType: 'array',
             ref: `C${duStartRow}:C${duEndRow}`
         };
+        for (let iF = 1; iF < nFree; iF++) {
+            ws.getCell(duStartRow + iF, 3).value = dDispVec[iF];
+        }
         applyStyling(ws, duStartRow, duEndRow, 3, 3, {
             fill: COLORS.WHITE,
             font: { name: 'Segoe UI', size: 9, bold: true },
@@ -1096,9 +1270,12 @@
         for (let iR = 0; iR < nRest; iR++) {
             const r = k21DataStart + iR;
             const k = iR + 1;
+            const uLbl = (iR < numActRest) ? activeRestDofs[iR].label : "-";
+            const cLbl = (iR < numActRest) ? activeRestDofs[iR].varC : "-";
 
             ws.getCell(r, k21HelperCol).value = {
-                formula: `IFERROR(INDEX(C$${dispStartRow}:C$${dispEndRow}, MATCH(${k}, G$${dispStartRow}:G$${dispEndRow}, 0)), "-")`
+                formula: `IFERROR(INDEX(C$${dispStartRow}:C$${dispEndRow}, MATCH(${k}, G$${dispStartRow}:G$${dispEndRow}, 0)), "-")`,
+                result: uLbl
             };
             applyStyling(ws, r, r, k21HelperCol, k21HelperCol, {
                 fill: COLORS.CARD_BG,
@@ -1108,7 +1285,8 @@
             });
 
             ws.getCell(r, 1).value = {
-                formula: `IF($${k21HelperColLet}${r}="-", "-", IFERROR(INDEX(B$${cargasStartRow}:B$${cargasEndRow}, MATCH($${k21HelperColLet}${r}, C$${cargasStartRow}:C$${cargasEndRow}, 0)), "-"))`
+                formula: `IF($${k21HelperColLet}${r}="-", "-", IFERROR(INDEX(B$${cargasStartRow}:B$${cargasEndRow}, MATCH($${k21HelperColLet}${r}, C$${cargasStartRow}:C$${cargasEndRow}, 0)), "-"))`,
+                result: cLbl
             };
             applyStyling(ws, r, r, 1, 1, {
                 fill: COLORS.GRAY_REAC,
@@ -1128,7 +1306,7 @@
                 const formulaStr = `IF(OR($${k21HelperColLet}${r}="-", ${colDestLet}$${k11ColDofsRow}="-"), 0, ` +
                     `IFERROR(INDEX($B$${matKarmRow}:${karmEndColLet}${matKarmEnd}, MATCH($${k21HelperColLet}${r}, $${karmLblColLet}$${matKarmRow}:$${karmLblColLet}$${matKarmEnd}, 0), MATCH(${colDestLet}$${k11ColDofsRow}, $B$${hdrKarmRow}:${karmEndColLet}$${hdrKarmRow}, 0)), 0))`;
 
-                ws.getCell(r, cDest).value = { formula: formulaStr };
+                ws.getCell(r, cDest).value = { formula: formulaStr, result: k21Mat[iR][jF] };
                 applyStyling(ws, r, r, cDest, cDest, {
                     fill: COLORS.WHITE,
                     font: { name: 'Segoe UI', size: 9 },
@@ -1139,7 +1317,7 @@
             }
 
             if (iR < nFree) {
-                ws.getCell(r, duColDest).value = { formula: `C${duStartRow + iR}` };
+                ws.getCell(r, duColDest).value = { formula: `C${duStartRow + iR}`, result: dDispVec[iR] };
                 applyStyling(ws, r, r, duColDest, duColDest, {
                     fill: COLORS.WHITE,
                     font: { name: 'Segoe UI', size: 9 },
@@ -1154,7 +1332,7 @@
         if (nRest < nFree) {
             for (let extraI = nRest; extraI < nFree; extraI++) {
                 const r = k21DataStart + extraI;
-                ws.getCell(r, duColDest).value = { formula: `C${duStartRow + extraI}` };
+                ws.getCell(r, duColDest).value = { formula: `C${duStartRow + extraI}`, result: dDispVec[extraI] };
                 applyStyling(ws, r, r, duColDest, duColDest, {
                     fill: COLORS.WHITE,
                     font: { name: 'Segoe UI', size: 9 },
@@ -1172,7 +1350,8 @@
 
         for (let iR = 0; iR < nRest; iR++) {
             const r = reacResStart + iR;
-            ws.getCell(r, 1).value = { formula: `A${k21DataStart + iR}` };
+            const cLbl = (iR < numActRest) ? activeRestDofs[iR].varC : "-";
+            ws.getCell(r, 1).value = { formula: `A${k21DataStart + iR}`, result: cLbl };
             applyStyling(ws, r, r, 1, 1, {
                 fill: COLORS.WHITE,
                 font: { name: 'Segoe UI', size: 9, bold: true },
@@ -1197,9 +1376,13 @@
 
         ws.getCell(`C${reacResStart}`).value = {
             formula: `MMULT(C${k21DataStart}:${k21ColEnd}${k21EndRow}, ${duColDestLet}${k21DataStart}:${duColDestLet}${k21DataStart + nFree - 1})`,
+            result: rReacVec[0],
             shareType: 'array',
             ref: `C${reacResStart}:C${reacResEnd}`
         };
+        for (let iR = 1; iR < nRest; iR++) {
+            ws.getCell(reacResStart + iR, 3).value = rReacVec[iR];
+        }
         applyStyling(ws, reacResStart, reacResEnd, 3, 3, {
             fill: COLORS.WHITE,
             font: { name: 'Segoe UI', size: 9, bold: true },
@@ -1243,7 +1426,8 @@
             });
 
             ws.getCell(r, 4).value = {
-                formula: `IFERROR(INDEX(C$${duStartRow}:C$${duEndRow}, MATCH(A${r}, A$${duStartRow}:A$${duEndRow}, 0)), 0)`
+                formula: `IFERROR(INDEX(C$${duStartRow}:C$${duEndRow}, MATCH(A${r}, A$${duStartRow}:A$${duEndRow}, 0)), 0)`,
+                result: dTotalVec[idxD]
             };
             applyStyling(ws, r, r, 4, 4, {
                 fill: COLORS.WHITE,
@@ -1289,18 +1473,23 @@
             applyStyling(ws, rHdr2, rHdr2, 3, 6, { fill: COLORS.WHITE, font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'center', vertical: 'middle' } });
             ws.getRow(rHdr2).height = 16;
 
+            const mf = (solverRes && solverRes.memberForces) ? solverRes.memberForces.find(b => b.barId === m) : null;
+            const axialF = mf ? mf.axialForce : 0;
+            const barState = mf ? mf.state : (barsData[m - 1] && barsData[m - 1].start ? "BARRA DE FUERZA NULA" : "");
+            const dVec = mf ? mf.dVec : [0, 0, 0, 0];
+
             const r3 = fBarCurr + 2;
-            ws.getCell(r3, 1).value = { formula: `N${t1Row}` };
+            ws.getCell(r3, 1).value = { formula: `N${t1Row}`, result: mf ? mf.ael : 0 };
             applyStyling(ws, r3, r3, 1, 1, { fill: COLORS.WHITE, font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '#,##0.00' });
 
-            ws.getCell(r3, 3).value = { formula: `IF(J${t1Row}="","", -J${t1Row})` };
-            ws.getCell(r3, 4).value = { formula: `IF(K${t1Row}="","", -K${t1Row})` };
-            ws.getCell(r3, 5).value = { formula: `IF(J${t1Row}="","", J${t1Row})` };
-            ws.getCell(r3, 6).value = { formula: `IF(K${t1Row}="","", K${t1Row})` };
+            ws.getCell(r3, 3).value = { formula: `IF(J${t1Row}="","", -J${t1Row})`, result: mf ? -mf.cx : 0 };
+            ws.getCell(r3, 4).value = { formula: `IF(K${t1Row}="","", -K${t1Row})`, result: mf ? -mf.cy : 0 };
+            ws.getCell(r3, 5).value = { formula: `IF(J${t1Row}="","", J${t1Row})`, result: mf ? mf.cx : 0 };
+            ws.getCell(r3, 6).value = { formula: `IF(K${t1Row}="","", K${t1Row})`, result: mf ? mf.cy : 0 };
             applyStyling(ws, r3, r3, 3, 6, { fill: COLORS.WHITE, font: { name: 'Segoe UI', size: 9 }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '0.0000' });
 
             ws.getCell(r3, 8).value = { formula: `IF(C${t2Row}="","", "D" & C${t2Row} & "X")` };
-            ws.getCell(r3, 7).value = { formula: `IF(H${r3}="","", IFERROR(VLOOKUP(H${r3}, A$${dtotStartRow}:D$${dtotEndRow}, 4, FALSE), 0))` };
+            ws.getCell(r3, 7).value = { formula: `IF(H${r3}="","", IFERROR(VLOOKUP(H${r3}, A$${dtotStartRow}:D$${dtotEndRow}, 4, FALSE), 0))`, result: dVec[0] };
             applyStyling(ws, r3, r3, 7, 7, { fill: COLORS.WHITE, font: { name: 'Segoe UI', size: 9 }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '0.00000000' });
             applyStyling(ws, r3, r3, 8, 8, { fill: COLORS.WHITE, font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'center', vertical: 'middle' }, border: thinBorder });
             ws.getRow(r3).height = 20;
@@ -1310,26 +1499,27 @@
             applyStyling(ws, r4, r4, 1, 1, { font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'center', vertical: 'middle' } });
 
             ws.getCell(r4, 2).value = {
-                formula: `IF(OR(A${r3}=0, C${t2Row}=""), 0, (MMULT(C${r3}:F${r3}, G${r3}:G${r3 + 3})*A${r3}))`
+                formula: `IF(OR(A${r3}=0, C${t2Row}=""), 0, (MMULT(C${r3}:F${r3}, G${r3}:G${r3 + 3})*A${r3}))`,
+                result: axialF
             };
             applyStyling(ws, r4, r4, 2, 2, { fill: COLORS.YELLOW_BANNER, font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '#,##0.000' });
 
             ws.getCell(r4, 8).value = { formula: `IF(C${t2Row}="","", "D" & C${t2Row} & "Y")` };
-            ws.getCell(r4, 7).value = { formula: `IF(H${r4}="","", IFERROR(VLOOKUP(H${r4}, A$${dtotStartRow}:D$${dtotEndRow}, 4, FALSE), 0))` };
+            ws.getCell(r4, 7).value = { formula: `IF(H${r4}="","", IFERROR(VLOOKUP(H${r4}, A$${dtotStartRow}:D$${dtotEndRow}, 4, FALSE), 0))`, result: dVec[1] };
             applyStyling(ws, r4, r4, 7, 7, { fill: COLORS.WHITE, font: { name: 'Segoe UI', size: 9 }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '0.00000000' });
             applyStyling(ws, r4, r4, 8, 8, { fill: COLORS.WHITE, font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'center', vertical: 'middle' }, border: thinBorder });
             ws.getRow(r4).height = 20;
 
             const r5 = fBarCurr + 4;
             ws.getCell(r5, 8).value = { formula: `IF(F${t2Row}="","", "D" & F${t2Row} & "X")` };
-            ws.getCell(r5, 7).value = { formula: `IF(H${r5}="","", IFERROR(VLOOKUP(H${r5}, A$${dtotStartRow}:D$${dtotEndRow}, 4, FALSE), 0))` };
+            ws.getCell(r5, 7).value = { formula: `IF(H${r5}="","", IFERROR(VLOOKUP(H${r5}, A$${dtotStartRow}:D$${dtotEndRow}, 4, FALSE), 0))`, result: dVec[2] };
             applyStyling(ws, r5, r5, 7, 7, { fill: COLORS.WHITE, font: { name: 'Segoe UI', size: 9 }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '0.00000000' });
             applyStyling(ws, r5, r5, 8, 8, { fill: COLORS.WHITE, font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'center', vertical: 'middle' }, border: thinBorder });
             ws.getRow(r5).height = 20;
 
             const r6 = fBarCurr + 5;
             ws.getCell(r6, 8).value = { formula: `IF(F${t2Row}="","", "D" & F${t2Row} & "Y")` };
-            ws.getCell(r6, 7).value = { formula: `IF(H${r6}="","", IFERROR(VLOOKUP(H${r6}, A$${dtotStartRow}:D$${dtotEndRow}, 4, FALSE), 0))` };
+            ws.getCell(r6, 7).value = { formula: `IF(H${r6}="","", IFERROR(VLOOKUP(H${r6}, A$${dtotStartRow}:D$${dtotEndRow}, 4, FALSE), 0))`, result: dVec[3] };
             applyStyling(ws, r6, r6, 7, 7, { fill: COLORS.WHITE, font: { name: 'Segoe UI', size: 9 }, align: { horizontal: 'right', vertical: 'middle' }, border: thinBorder, numFmt: '0.00000000' });
             applyStyling(ws, r6, r6, 8, 8, { fill: COLORS.WHITE, font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'center', vertical: 'middle' }, border: thinBorder });
             ws.getRow(r6).height = 20;
@@ -1340,7 +1530,8 @@
 
             ws.mergeCells(r7, 3, r7, 6);
             ws.getCell(r7, 3).value = {
-                formula: `IF(C${t2Row}="","", IF(B${r4}>0.001,"BARRA A TRACCIÓN (+)",IF(B${r4}<-0.001,"BARRA A COMPRESIÓN (-)","BARRA DE FUERZA NULA")))`
+                formula: `IF(C${t2Row}="","", IF(B${r4}>0.001,"BARRA A TRACCIÓN (+)",IF(B${r4}<-0.001,"BARRA A COMPRESIÓN (-)","BARRA DE FUERZA NULA")))`,
+                result: barState
             };
             applyStyling(ws, r7, r7, 3, 6, {
                 fill: COLORS.PROF_GREEN,
@@ -1402,14 +1593,22 @@
             const t2Row = t2DataStart + (m - 1);
             const [r4Res, r7Res] = barForceResultRows[m];
             const barCol = BAR_PASTEL_PALETTE[(m - 1) % BAR_PASTEL_PALETTE.length];
+            const br = barsData[m - 1];
+            const hasBar = br && br.start !== null && br.start !== undefined && br.start !== "" &&
+                           br.end !== null && br.end !== undefined && br.end !== "";
+            const mf = (solverRes && solverRes.memberForces) ? solverRes.memberForces.find(b => b.barId === m) : null;
+            const axialF = mf ? mf.axialForce : 0;
+            const barState = mf ? mf.state : (hasBar ? "BARRA DE FUERZA NULA" : "");
+            const LVal = mf ? mf.L : "";
+            const aVal = mf ? mf.a : (hasBar ? (parseFloat(br.a) || 10.0) : "");
 
-            ws.getCell(r, 2).value = { formula: `IF(C${t2Row}="","", ${m})` };
-            ws.getCell(r, 3).value = { formula: `IF(C${t2Row}="","", C${t2Row})` };
-            ws.getCell(r, 4).value = { formula: `IF(F${t2Row}="","", F${t2Row})` };
-            ws.getCell(r, 5).value = { formula: `IF(I${t1Row}="","", I${t1Row})` };
-            ws.getCell(r, 6).value = { formula: `IF(C${t2Row}="","", L${t1Row})` };
-            ws.getCell(r, 7).value = { formula: `IF(C${t2Row}="","", B${r4Res})` };
-            ws.getCell(r, 8).value = { formula: `IF(C${t2Row}="","", C${r7Res})` };
+            ws.getCell(r, 2).value = { formula: `IF(C${t2Row}="","", ${m})`, result: hasBar ? m : "" };
+            ws.getCell(r, 3).value = { formula: `IF(C${t2Row}="","", C${t2Row})`, result: hasBar ? br.start : "" };
+            ws.getCell(r, 4).value = { formula: `IF(F${t2Row}="","", F${t2Row})`, result: hasBar ? br.end : "" };
+            ws.getCell(r, 5).value = { formula: `IF(I${t1Row}="","", I${t1Row})`, result: hasBar ? LVal : "" };
+            ws.getCell(r, 6).value = { formula: `IF(C${t2Row}="","", L${t1Row})`, result: hasBar ? aVal : "" };
+            ws.getCell(r, 7).value = { formula: `IF(C${t2Row}="","", B${r4Res})`, result: hasBar ? axialF : 0 };
+            ws.getCell(r, 8).value = { formula: `IF(C${t2Row}="","", C${r7Res})`, result: hasBar ? barState : "" };
 
             applyStyling(ws, r, r, 2, 2, { fill: barCol.bg, font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'center', vertical: 'middle' }, border: thinBorder });
             applyStyling(ws, r, r, 3, 4, { fill: COLORS.CARD_BG, font: { name: 'Segoe UI', size: 9, bold: true }, align: { horizontal: 'center', vertical: 'middle' }, border: thinBorder });
@@ -1439,7 +1638,7 @@
      * Genera un libro Excel completo con las hojas Isostática e Hiperestática
      * y retorna el buffer listo para descargar o guardar en disco.
      */
-    async function generateTrussWorkbook(nodesData, barsData, isIsostatic = true) {
+    async function generateTrussWorkbook(nodesData, barsData, isIsostatic = true, solverResult = null) {
         if (!ExcelJS) {
             throw new Error("La biblioteca ExcelJS no está cargada.");
         }
@@ -1450,11 +1649,15 @@
         wb.created = new Date();
         wb.modified = new Date();
 
+        // Parche 3.0: Forzar recálculo completo de fórmulas al abrir el libro en Excel
+        wb.calcProperties.fullCalcOnLoad = true;
+        wb.calcProperties.forceFullCalculation = true;
+
         const sheetName = isIsostatic ? "MANUAL_ISOSTATICA_3R" : "MANUAL_HIPERESTATICA_4R";
-        buildDynamicWorksheet(wb, sheetName, nodesData, barsData, isIsostatic);
+        buildDynamicWorksheet(wb, sheetName, nodesData, barsData, isIsostatic, solverResult);
 
         const altSheetName = isIsostatic ? "MANUAL_HIPERESTATICA_4R" : "MANUAL_ISOSTATICA_3R";
-        buildDynamicWorksheet(wb, altSheetName, nodesData, barsData, !isIsostatic);
+        buildDynamicWorksheet(wb, altSheetName, nodesData, barsData, !isIsostatic, solverResult);
 
         return wb;
     }
@@ -1462,8 +1665,8 @@
     /**
      * Dispara la descarga directa en el navegador cliente
      */
-    async function downloadTrussExcel(nodesData, barsData, isIsostatic = true, filename = null) {
-        const wb = await generateTrussWorkbook(nodesData, barsData, isIsostatic);
+    async function downloadTrussExcel(nodesData, barsData, isIsostatic = true, filename = null, solverResult = null) {
+        const wb = await generateTrussWorkbook(nodesData, barsData, isIsostatic, solverResult);
         const buffer = await wb.xlsx.writeBuffer();
 
         const defaultFilename = `Armadura_Estructural_${isIsostatic ? 'Isostatica' : 'Hiperestatica'}_Automatizada.xlsx`;
