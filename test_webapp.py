@@ -366,7 +366,110 @@ with sync_playwright() as p:
     assert not sub_lock_modal.is_visible(), "Subfolder app must NOT prompt for login when downloading Excel!"
     print("Verified subfolder Excel downloaded with zero reprompts and verified protection!")
 
-    # Take screenshot of benchmark
+    # 10. Test Truss Evaluation, Diagnostic Badges ('Sirve o No Sirve') & Cross-Device Magic URL
+    print("Testing Step 10: Truss Evaluation, Diagnostic Badges & Sharing...")
+    page.goto(f"http://127.0.0.1:{PORT}/index.html", wait_until="networkidle")
+    time.sleep(1)
+
+    # Set developer session
+    page.evaluate("""() => {
+        localStorage.setItem('cerebro_auth_session_v21', JSON.stringify({
+            role: 'owner',
+            name: 'Ing. Ulianov Cuba Valencia (Desarrollador)'
+        }));
+        location.reload();
+    }""")
+    page.wait_for_load_state("networkidle")
+    time.sleep(1)
+
+    # Developer opens panel and goes to Tab 4 (Armaduras & Evaluador)
+    page.click("#btnOwnerPanel")
+    time.sleep(0.4)
+    page.click("button.dev-tab-btn[data-tab='tabDevProjects']")
+    time.sleep(0.4)
+    assert page.locator("#tabDevProjects").is_visible(), "Tab 4 must be visible!"
+
+    # Click '+ Cargar Ejemplos de Prueba'
+    print("Developer clicks '+ Cargar Ejemplos de Prueba' to evaluate student truss stability...")
+    page.click("#btnDevLoadDemoTrusses")
+    time.sleep(0.5)
+
+    projects_list_text = page.locator("#devGlobalProjectsList").inner_text()
+    assert "Caso Alumno 1: Isostática 3N" in projects_list_text
+    assert "Caso Alumno 2: Incompleta (Mecanismo Inestable)" in projects_list_text
+    assert "Caso Yoder: Warren 5N" in projects_list_text
+
+    # Verify Diagnostic Badges accurately flag 'Sirve' vs 'No Sirve'
+    assert "🟢 SIRVE (ESTABLE)" in projects_list_text, "Expected stable badge for solvable truss!"
+    assert "🔴 NO SIRVE (INESTABLE)" in projects_list_text, "Expected unstable badge for incomplete mechanism!"
+    print("VERIFIED: Developer Panel accurately evaluates and badges trusses: 'SIRVE' vs 'NO SIRVE'!")
+
+    # Developer clicks '⚡ Cargar en Pantalla' on stable truss
+    print("Developer clicks '⚡ Cargar en Pantalla' on Caso Alumno 1...")
+    page.click("button.btn-dev-load-proj[data-id='demo_iso_3n']")
+    time.sleep(0.5)
+    assert not page.locator("#ownerControlModal").is_visible(), "Dev modal should close after loading!"
+
+    # Verify floating evaluation banner appears
+    banner = page.locator("#trussEvaluationBanner")
+    assert banner.is_visible(), "Floating evaluation banner should appear on screen!"
+    banner_text = banner.inner_text()
+    assert "Caso Alumno 1" in banner_text
+    assert "SIRVE (ESTABLE)" in banner_text
+    print("VERIFIED: Floating evaluation banner displayed successfully with structural diagnosis!")
+
+    # Test loading a truss via Magic URL Hash (#armadura=...)
+    print("Testing Magic URL Hash loading (#armadura=...)...")
+    share_url = page.evaluate("""() => {
+        const demoProj = window.CerebroAuth.getSession();
+        const testTruss = {
+            id: 'test_shared_truss_1',
+            name: 'Armadura Compartida Alumno Remoto',
+            authorEmail: 'alumno.remoto@continental.edu.pe',
+            createdAt: new Date().toLocaleString(),
+            nodes: [
+                { id: 1, x: 0, y: 0, support: 'Fijo', px: 0, py: 0 },
+                { id: 2, x: 500, y: 0, support: 'Móvil Y', px: 0, py: 0 },
+                { id: 3, x: 250, y: 300, support: 'Libre', px: 2000, py: -3000 }
+            ],
+            bars: [
+                { id: 1, start: 1, end: 3, a: 10, e: 2100000 },
+                { id: 2, start: 2, end: 3, a: 10, e: 2100000 },
+                { id: 3, start: 1, end: 2, a: 10, e: 2100000 }
+            ]
+        };
+        return window.CerebroAuth.generateTrussShareUrl(testTruss);
+    }""")
+    print(f"Generated Magic URL: {share_url[:80]}...")
+    page.goto(share_url, wait_until="networkidle")
+    time.sleep(1)
+
+    banner_shared = page.locator("#trussEvaluationBanner")
+    assert banner_shared.is_visible(), "Banner must show when opening #armadura=... URL!"
+    assert "Armadura Compartida Alumno Remoto" in banner_shared.inner_text()
+    assert "alumno.remoto@continental.edu.pe" in banner_shared.inner_text()
+    assert "SIRVE (ESTABLE)" in banner_shared.inner_text()
+    print("VERIFIED: 1-Click Magic URL (#armadura=...) automatically loads, solves, and evaluates student truss!")
+
+    # Test 'Mis Armaduras' tabbed modal with Importer / Evaluator tab
+    print("Testing 'Mis Armaduras' modal with Importer / Evaluator tab...")
+    page.click("#btnMyProjects")
+    time.sleep(0.4)
+    assert page.locator("#projectsManagerModal").is_visible()
+
+    # Switch to Importer tab
+    page.click("#tabBtnImportProj")
+    time.sleep(0.3)
+    assert page.locator("#viewImportProjectsTab").is_visible()
+
+    # Paste Magic URL or code
+    page.fill("#inputImportTrussCode", share_url)
+    page.click("#btnExecuteTrussImport")
+    time.sleep(0.5)
+    assert not page.locator("#projectsManagerModal").is_visible(), "Modal should close after importing!"
+    print("VERIFIED: Importer / Evaluator tab in modal successfully processed input!")
+
+    # Take screenshot of final benchmark
     screenshot_path = os.path.join(BASE_DIR, "app_benchmark_screenshot.png")
     page.screenshot(path=screenshot_path, full_page=True)
     print(f"Screenshot saved to: {screenshot_path}")

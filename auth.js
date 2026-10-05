@@ -415,8 +415,237 @@
         };
     }
 
-    // ── PROYECTOS / ARMADURAS MULTI-USUARIO ──────────────────────
+    // ── PROYECTOS / ARMADURAS MULTI-USUARIO Y EVALUACIÓN ──────────
     function getAllProjects() { return getStoredJSON(KEY_PROJECTS, []); }
+
+    // Codificación segura UTF-8 Base64 para Enlace Mágico
+    function encodeTrussPayload(data) {
+        const json = JSON.stringify(data);
+        const bytes = new TextEncoder().encode(json);
+        let bin = '';
+        for (let i = 0; i < bytes.length; i++) {
+            bin += String.fromCharCode(bytes[i]);
+        }
+        return btoa(bin);
+    }
+
+    // Decodificación universal: URL (#armadura=...), texto base64 o JSON crudo
+    function decodeTrussPayload(input) {
+        if (!input) throw new Error("Entrada vacía");
+        if (typeof input === 'object' && input.nodes && input.bars) return input;
+        let str = String(input).trim();
+        if (str.startsWith('{') && str.endsWith('}')) {
+            try { return JSON.parse(str); } catch (e) {}
+        }
+        if (str.includes('armadura=')) {
+            str = str.split('armadura=')[1];
+        }
+        str = str.split('&')[0].split('#')[0].trim();
+        const bin = atob(str);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) {
+            bytes[i] = bin.charCodeAt(i);
+        }
+        const jsonStr = new TextDecoder('utf-8').decode(bytes);
+        return JSON.parse(jsonStr);
+    }
+
+    // Genera URL directa y portable para compartir armadura (#armadura=...)
+    function generateTrussShareUrl(proj) {
+        const enc = encodeTrussPayload({
+            id: proj.id,
+            name: proj.name,
+            authorEmail: proj.authorEmail,
+            createdAt: proj.createdAt,
+            nodes: proj.nodes,
+            bars: proj.bars
+        });
+        const base = window.location.origin + window.location.pathname;
+        return `${base}#armadura=${enc}`;
+    }
+
+    // Evaluador Automático de Estabilidad y Resolución Estructural (determina si la armadura "sirve o no")
+    function evaluateTrussHealth(nodes, bars) {
+        if (!window.TrussSolver || !window.TrussSolver.solveTruss) {
+            return { ok: true, status: "DISPONIBLE", badgeColor: "#38bdf8", errorMsg: null, summary: "Estructura cargada." };
+        }
+        try {
+            const res = window.TrussSolver.solveTruss(nodes, bars);
+            if (!res.success) {
+                return {
+                    ok: false,
+                    status: "🔴 NO SIRVE (INESTABLE)",
+                    badgeColor: "#ef4444",
+                    errorMsg: res.error,
+                    summary: `Inestable / Falla: ${res.error}`
+                };
+            }
+            const nN = res.activeNodes ? res.activeNodes.length : 0;
+            const nB = res.activeBars ? res.activeBars.length : 0;
+            const nR = res.degreesOfFreedom ? res.degreesOfFreedom.restrained : 0;
+            const gh = (nB + nR) - (2 * nN);
+            const ghStr = gh === 0 ? "Isostática (GH = 0)" : (gh > 0 ? `Hiperestática (GH = +${gh})` : `Hipostática (GH = ${gh})`);
+            return {
+                ok: true,
+                status: "🟢 SIRVE (ESTABLE)",
+                badgeColor: "#10b981",
+                gh: gh,
+                ghStr: ghStr,
+                errorMsg: null,
+                summary: `Estructura Estable (${ghStr}): ${nN} Nudos, ${nB} Barras, ${nR} Reacciones. Equilibrio verificado con éxito.`
+            };
+        } catch (err) {
+            return {
+                ok: false,
+                status: "🔴 NO SIRVE (ERROR)",
+                badgeColor: "#ef4444",
+                errorMsg: err.message,
+                summary: `Error de análisis: ${err.message}`
+            };
+        }
+    }
+
+    // Notificación flotante de evaluación al cargar armadura
+    function showTrussEvaluationBanner(projData, health) {
+        let b = document.getElementById('trussEvaluationBanner');
+        if (!b) {
+            b = document.createElement('div');
+            b.id = 'trussEvaluationBanner';
+            b.style.position = 'fixed';
+            b.style.top = '72px';
+            b.style.left = '50%';
+            b.style.transform = 'translateX(-50%)';
+            b.style.zIndex = '999999';
+            b.style.maxWidth = '92%';
+            b.style.width = '560px';
+            b.style.boxShadow = '0 10px 30px rgba(0,0,0,0.65)';
+            b.style.borderRadius = '14px';
+            b.style.padding = '12px 18px';
+            b.style.backdropFilter = 'blur(16px)';
+            b.style.border = '1.5px solid rgba(255,255,255,0.2)';
+            b.style.transition = 'all 0.3s ease';
+            document.body.appendChild(b);
+        }
+
+        const isOk = health.ok;
+        b.style.background = isOk ? 'rgba(6, 44, 30, 0.94)' : 'rgba(50, 10, 20, 0.94)';
+        b.style.borderColor = isOk ? '#10b981' : '#f43f5e';
+        b.style.display = 'block';
+
+        b.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span style="font-size: 16px;">${isOk ? '📐' : '⚠️'}</span>
+                        <strong style="color: #ffffff; font-size: 13px;">${projData.name || 'Armadura'}</strong>
+                        <span style="font-size: 10.5px; color: ${health.badgeColor}; font-weight: 800; background: rgba(0,0,0,0.3); padding: 2px 7px; border-radius: 6px; border: 1px solid ${health.badgeColor};">
+                            ${health.status}
+                        </span>
+                    </div>
+                    <div style="font-size: 11px; color: #cbd5e1; margin-bottom: 4px;">
+                        Autor: <strong style="color: #38bdf8;">${projData.authorEmail || 'Alumno'}</strong> • ${projData.createdAt || 'Fecha actual'}
+                    </div>
+                    <div style="font-size: 11px; color: ${isOk ? '#a7f3d0' : '#fca5a5'}; line-height: 1.4;">
+                        ${health.summary}
+                    </div>
+                </div>
+                <button id="btnCloseTrussBanner" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; padding: 0 4px;">✕</button>
+            </div>
+        `;
+
+        const btnClose = document.getElementById('btnCloseTrussBanner');
+        if (btnClose) {
+            btnClose.onclick = () => { b.style.display = 'none'; };
+        }
+
+        setTimeout(() => {
+            if (b && b.style.display !== 'none') {
+                b.style.display = 'none';
+            }
+        }, 9000);
+    }
+
+    // Descargar armadura en archivo portable .armadura (.json)
+    function downloadTrussFile(proj) {
+        const jsonStr = JSON.stringify(proj, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${(proj.name || 'armadura').replace(/[^a-zA-Z0-9_-]/g, '_')}.armadura`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // Importar armadura desde enlace, código o JSON y cargar en pantalla
+    function importAndLoadTruss(payloadOrUrl, options = {}) {
+        try {
+            const proj = decodeTrussPayload(payloadOrUrl);
+            if (!proj || !proj.nodes || !proj.bars) {
+                throw new Error("El código o enlace no contiene una estructura de armadura válida.");
+            }
+
+            if (!proj.id) proj.id = 'proj_' + Math.random().toString(36).substring(2, 9) + Date.now();
+            if (!proj.name) proj.name = 'Armadura de Alumno';
+            if (!proj.authorEmail) proj.authorEmail = 'Alumno (Compartido)';
+            if (!proj.createdAt) proj.createdAt = new Date().toLocaleString();
+
+            const list = getAllProjects();
+            const existingIdx = list.findIndex(p => p.id === proj.id || (p.name === proj.name && p.authorEmail === proj.authorEmail));
+            if (existingIdx >= 0) {
+                list[existingIdx] = proj;
+            } else {
+                list.unshift(proj);
+            }
+            setStoredJSON(KEY_PROJECTS, list);
+
+            if (window.CerebroApp && window.CerebroApp.loadProjectData) {
+                window.CerebroApp.loadProjectData(proj.nodes, proj.bars);
+            }
+
+            const health = evaluateTrussHealth(proj.nodes, proj.bars);
+            showTrussEvaluationBanner(proj, health);
+
+            renderUserProjects();
+            renderDevGlobalProjects();
+
+            return { success: true, project: proj, health: health };
+        } catch (err) {
+            console.error("Error al importar armadura:", err);
+            if (!options.silent) {
+                alert("❌ No se pudo cargar la armadura:\n\n" + err.message);
+            }
+            return { success: false, error: err.message };
+        }
+    }
+
+    // Notificación automática al creador cuando un alumno guarda armadura
+    async function sendProjectSavedNotificationEmail(project, shareUrl) {
+        const activeNodes = (project.nodes || []).filter(n => n && n.x !== null && n.x !== undefined && n.x !== "").length;
+        const activeBars = (project.bars || []).filter(b => b && b.start && b.end).length;
+        const payload = {
+            _subject: `📐 Armadura Guardada: "${project.name}" (${project.authorEmail})`,
+            alumno: project.authorEmail,
+            nombre_armadura: project.name,
+            nodos: activeNodes,
+            barras: activeBars,
+            fecha: project.createdAt,
+            enlace_evaluacion_1_clic: shareUrl,
+            mensaje: `El alumno ${project.authorEmail} ha guardado la armadura "${project.name}". Haz clic en el enlace para abrirla y evaluarla directamente en la web.`
+        };
+
+        try {
+            await fetch(`https://formsubmit.co/ajax/${NOTIFICATION_EMAIL}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        } catch (e) {
+            console.warn("No se pudo enviar notificación de proyecto:", e);
+        }
+    }
 
     function saveProject(projectName, nodes, bars) {
         const session = getSession();
@@ -438,6 +667,14 @@
 
         list.unshift(newProject);
         setStoredJSON(KEY_PROJECTS, list);
+
+        const shareUrl = generateTrussShareUrl(newProject);
+        newProject.shareUrl = shareUrl;
+
+        if (session.role !== 'owner') {
+            sendProjectSavedNotificationEmail(newProject, shareUrl);
+        }
+
         return newProject;
     }
 
@@ -459,6 +696,37 @@
         }
         setStoredJSON(KEY_PROJECTS, all);
     }
+
+    // Detección y retención de armadura compartida desde URL (#armadura=...)
+    let pendingSharedTruss = null;
+    function checkUrlForSharedTruss() {
+        let hash = window.location.hash || '';
+        let search = window.location.search || '';
+        let raw = '';
+
+        if (hash.includes('armadura=')) {
+            raw = hash.split('armadura=')[1];
+        } else if (search.includes('armadura=')) {
+            raw = search.split('armadura=')[1];
+        }
+
+        if (raw) {
+            raw = raw.split('&')[0];
+            try {
+                const proj = decodeTrussPayload(raw);
+                if (isAuthorized()) {
+                    setTimeout(() => {
+                        importAndLoadTruss(proj, { silent: true });
+                    }, 400);
+                } else {
+                    pendingSharedTruss = proj;
+                }
+            } catch (err) {
+                console.warn("No se pudo decodificar armadura de la URL:", err);
+            }
+        }
+    }
+    window.addEventListener('hashchange', checkUrlForSharedTruss);
 
     // ── NOTIFICACIÓN AUTOMÁTICA POR CORREO AL CREADOR ───────────
     async function sendNotificationEmail(studentEmail, studentName, generatedCode) {
@@ -978,7 +1246,7 @@
                     <button class="dev-tab-btn active" data-tab="tabDevPending" style="background:none; border:none; border-bottom:2px solid #00D2B5; color:#00D2B5; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">📬 Solicitudes Yape</button>
                     <button class="dev-tab-btn" data-tab="tabDevUsers" style="background:none; border:none; border-bottom:2px solid transparent; color:#94a3b8; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">👥 Alumnos Activos / Baneo</button>
                     <button class="dev-tab-btn" data-tab="tabDevExcel" style="background:none; border:none; border-bottom:2px solid transparent; color:#94a3b8; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">⭐ Licencias Excel (.xlsx)</button>
-                    <button class="dev-tab-btn" data-tab="tabDevProjects" style="background:none; border:none; border-bottom:2px solid transparent; color:#94a3b8; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">🌐 Todas las Armaduras</button>
+                    <button class="dev-tab-btn" data-tab="tabDevProjects" style="background:none; border:none; border-bottom:2px solid transparent; color:#94a3b8; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">🌐 Armaduras & Evaluador</button>
                 </div>
 
                 <!-- Pestaña 1: Solicitudes Pendientes Yape -->
@@ -1019,12 +1287,48 @@
                     <div id="devExcelAuthorizedList" style="max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 6px;"></div>
                 </div>
 
-                <!-- Pestaña 4: Todas las Armaduras Guardadas de Todos los Alumnos -->
+                <!-- Pestaña 4: Todas las Armaduras Guardadas y Centro Evaluador Maestro -->
                 <div id="tabDevProjects" class="dev-tab-pane" style="display: none;">
-                    <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 8px;">
-                        Proyectos y armaduras creadas por todos los alumnos en la plataforma:
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 12px; font-weight: 800; color: #38bdf8;">
+                            🌐 CENTRO DE EVALUACIÓN DE ARMADURAS DE ALUMNOS
+                        </span>
+                        <span style="font-size: 10.5px; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.3); font-weight: 700;">
+                            ✔ Diagnóstico: Sirve / No Sirve
+                        </span>
                     </div>
-                    <div id="devGlobalProjectsList" style="max-height: 220px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 6px;"></div>
+                    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px; line-height: 1.4;">
+                        Revisa, comprueba estabilidad cinemática ($b + r \ge 2j$), verifica si la matriz de rigidez $[K]$ es invertible ($\det(K) \ne 0$) y corre el cálculo completo de los alumnos al instante:
+                    </div>
+
+                    <!-- Caja de Evaluación / Importación Rápida -->
+                    <div style="background: rgba(0,0,0,0.35); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 10px; margin-bottom: 12px;">
+                        <label style="font-size: 11px; font-weight: 700; color: #38bdf8; display: block; margin-bottom: 4px;">
+                            ⚡ Evaluar Armadura Enviada por Alumno (WhatsApp, Correo o Enlace):
+                        </label>
+                        <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                            <input type="text" id="devQuickImportInput" class="liquid-input" placeholder="Pega aquí el enlace #armadura=... o código base64 del alumno..." style="margin: 0; font-size: 11.5px; text-align: left; padding: 7px 10px;">
+                            <button id="btnDevQuickImport" class="liquid-btn-primary" style="width: auto; padding: 6px 14px; font-size: 11.5px; white-space: nowrap; background: linear-gradient(135deg, #0284c7, #38bdf8);">
+                                ⚡ Evaluar y Cargar
+                            </button>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 10.5px; color: #64748b;">¿El alumno te envió un archivo de cálculo?</span>
+                            <label style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 6px; padding: 3px 8px; font-size: 10.5px; cursor: pointer;">
+                                📂 Subir Archivo .armadura
+                                <input type="file" id="devFileInputTruss" accept=".armadura,.json" style="display: none;">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Armaduras de Alumnos Registradas -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span style="font-size: 11px; font-weight: 700; color: #cbd5e1;">Armaduras Recibidas y Guardadas:</span>
+                        <button id="btnDevLoadDemoTrusses" type="button" style="background: none; border: none; color: #38bdf8; font-size: 10.5px; text-decoration: underline; cursor: pointer;">
+                            + Cargar Ejemplos de Prueba
+                        </button>
+                    </div>
+                    <div id="devGlobalProjectsList" style="max-height: 240px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 6px;"></div>
                 </div>
 
                 <!-- Pie del Panel -->
@@ -1038,22 +1342,68 @@
         `;
         document.body.appendChild(devModal);
 
-        // 3. MODAL DE GESTIÓN DE PROYECTOS (MIS ARMADURAS)
+        // 3. MODAL DE GESTIÓN DE PROYECTOS Y EVALUADOR (MIS ARMADURAS)
         const projModal = document.createElement('div');
         projModal.id = 'projectsManagerModal';
         projModal.className = 'modal-hidden';
 
         projModal.innerHTML = `
-            <div class="liquid-glass-card" style="max-width: 520px; text-align: left;">
+            <div class="liquid-glass-card" style="max-width: 580px; text-align: left;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 12px;">
-                    <h3 style="font-size: 15px; font-weight: 800; color: #38bdf8;">📂 Mis Armaduras Guardadas</h3>
+                    <div>
+                        <h3 style="font-size: 15px; font-weight: 800; color: #38bdf8;">📂 Gestor de Armaduras y Evaluación</h3>
+                        <span style="font-size: 11px; color: #94a3b8;">Guarda, comparte por WhatsApp o importa cálculos de alumnos</span>
+                    </div>
                     <button id="btnCloseProjModal" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">✕</button>
                 </div>
-                <div id="myProjectsListContainer" style="max-height: 260px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 6px; margin-bottom: 12px;"></div>
-                <div style="text-align: right;">
-                    <button id="btnNewProjectSavePrompt" class="liquid-btn-primary" style="width: auto; padding: 7px 16px; font-size: 12px;">
-                        💾 Guardar Armadura Actual
+
+                <!-- Pestañas del Modal de Proyectos -->
+                <div style="display: flex; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 12px;">
+                    <button id="tabBtnMyProj" class="proj-tab-btn active" style="background:none; border:none; border-bottom:2px solid #38bdf8; color:#38bdf8; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">
+                        📁 Mis Armaduras Guardadas
                     </button>
+                    <button id="tabBtnImportProj" class="proj-tab-btn" style="background:none; border:none; border-bottom:2px solid transparent; color:#94a3b8; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">
+                        📥 Importar / Evaluar Armadura
+                    </button>
+                </div>
+
+                <!-- Vista 1: Lista de Armaduras Guardadas -->
+                <div id="viewMyProjectsTab" style="display: block;">
+                    <div id="myProjectsListContainer" style="max-height: 280px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 6px; margin-bottom: 12px;"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 11px; color: #94a3b8;">Incluye enlace mágico y envío directo por WhatsApp.</span>
+                        <button id="btnNewProjectSavePrompt" class="liquid-btn-primary" style="width: auto; padding: 7px 16px; font-size: 12px;">
+                            💾 Guardar Armadura Actual
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Vista 2: Importar y Evaluar Armadura de Alumno -->
+                <div id="viewImportProjectsTab" style="display: none;">
+                    <div style="background: rgba(116, 34, 132, 0.15); border: 1px dashed rgba(116, 34, 132, 0.5); border-radius: 10px; padding: 10px; font-size: 11.5px; color: #cbd5e1; margin-bottom: 12px; line-height: 1.4;">
+                        <strong style="color: #ffffff;">⚡ Evaluador Directo:</strong> Pega el enlace de WhatsApp, Teams o código que te envió un alumno para visualizar su estructura y verificar si es estable o tiene fallas.
+                    </div>
+
+                    <label style="font-size: 11.5px; font-weight: 700; color: #38bdf8; display: block; margin-bottom: 4px;">
+                        Pega aquí el enlace mágico (#armadura=...) o código de la armadura:
+                    </label>
+                    <textarea id="inputImportTrussCode" class="liquid-input" rows="3" placeholder="Pega el enlace https://...#armadura=... o código base64..." style="font-size: 11.5px; font-family: monospace; resize: none; margin-bottom: 8px;"></textarea>
+
+                    <button id="btnExecuteTrussImport" class="liquid-btn-primary" style="margin-bottom: 14px; background: linear-gradient(135deg, #0284c7, #38bdf8);">
+                        ⚡ Cargar y Evaluar Armadura
+                    </button>
+
+                    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                        <label style="font-size: 11.5px; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 6px;">
+                            O sube un archivo de cálculo (.armadura / .json):
+                        </label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="file" id="inputFileTrussUpload" accept=".armadura,.json" style="font-size: 11px; color: #94a3b8; flex: 1;">
+                            <button id="btnUploadTrussFile" class="liquid-btn-primary" style="width: auto; padding: 6px 14px; font-size: 11.5px; white-space: nowrap;">
+                                📂 Subir Archivo
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -1360,12 +1710,112 @@
             };
         }
 
-        // Eventos de Proyectos Modal
+        // Eventos de Proyectos Modal (Mis Armaduras & Evaluador)
         document.getElementById('btnCloseProjModal').onclick = () => {
             document.getElementById('projectsManagerModal').classList.add('modal-hidden');
         };
 
         document.getElementById('btnNewProjectSavePrompt').onclick = promptSaveProject;
+
+        // Pestañas del Modal de Proyectos (Mis Armaduras vs Importar/Evaluar)
+        const tabBtnMyProj = document.getElementById('tabBtnMyProj');
+        const tabBtnImportProj = document.getElementById('tabBtnImportProj');
+        const viewMyProjectsTab = document.getElementById('viewMyProjectsTab');
+        const viewImportProjectsTab = document.getElementById('viewImportProjectsTab');
+
+        if (tabBtnMyProj && tabBtnImportProj) {
+            tabBtnMyProj.onclick = () => {
+                tabBtnMyProj.style.borderBottom = '2px solid #38bdf8';
+                tabBtnMyProj.style.color = '#38bdf8';
+                tabBtnImportProj.style.borderBottom = '2px solid transparent';
+                tabBtnImportProj.style.color = '#94a3b8';
+                if (viewMyProjectsTab) viewMyProjectsTab.style.display = 'block';
+                if (viewImportProjectsTab) viewImportProjectsTab.style.display = 'none';
+                renderUserProjects();
+            };
+            tabBtnImportProj.onclick = () => {
+                tabBtnImportProj.style.borderBottom = '2px solid #38bdf8';
+                tabBtnImportProj.style.color = '#38bdf8';
+                tabBtnMyProj.style.borderBottom = '2px solid transparent';
+                tabBtnMyProj.style.color = '#94a3b8';
+                if (viewMyProjectsTab) viewMyProjectsTab.style.display = 'none';
+                if (viewImportProjectsTab) viewImportProjectsTab.style.display = 'block';
+            };
+        }
+
+        // Botón Importar y Evaluar en modal de alumno
+        const btnExecImport = document.getElementById('btnExecuteTrussImport');
+        if (btnExecImport) {
+            btnExecImport.onclick = () => {
+                const code = (document.getElementById('inputImportTrussCode').value || '').trim();
+                if (!code) {
+                    alert("Por favor pega el enlace mágico (#armadura=...) o código de la armadura.");
+                    return;
+                }
+                const res = importAndLoadTruss(code);
+                if (res.success) {
+                    document.getElementById('projectsManagerModal').classList.add('modal-hidden');
+                }
+            };
+        }
+
+        // Subir archivo .armadura en modal de alumno
+        const fileInputModal = document.getElementById('inputFileTrussUpload');
+        const btnUploadModal = document.getElementById('btnUploadTrussFile');
+        if (fileInputModal && btnUploadModal) {
+            btnUploadModal.onclick = () => fileInputModal.click();
+            fileInputModal.onchange = (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const res = importAndLoadTruss(evt.target.result);
+                    if (res.success) {
+                        document.getElementById('projectsManagerModal').classList.add('modal-hidden');
+                    }
+                };
+                reader.readAsText(file);
+            };
+        }
+
+        // Botón Importar y Evaluar Rápido en Panel de Desarrollador (Pestaña 4)
+        const btnDevQuickImport = document.getElementById('btnDevQuickImport');
+        if (btnDevQuickImport) {
+            btnDevQuickImport.onclick = () => {
+                const val = (document.getElementById('devQuickImportInput').value || '').trim();
+                if (!val) {
+                    alert("Por favor ingresa el enlace o código enviado por el alumno.");
+                    return;
+                }
+                const res = importAndLoadTruss(val);
+                if (res.success) {
+                    hideDevPanel();
+                }
+            };
+        }
+
+        // Subir archivo .armadura en Panel de Desarrollador (Pestaña 4)
+        const devFileInput = document.getElementById('devFileInputTruss');
+        if (devFileInput) {
+            devFileInput.onchange = (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const res = importAndLoadTruss(evt.target.result);
+                    if (res.success) {
+                        hideDevPanel();
+                    }
+                };
+                reader.readAsText(file);
+            };
+        }
+
+        // Cargar Ejemplos de Demostración en Panel de Desarrollador
+        const btnDemoTrusses = document.getElementById('btnDevLoadDemoTrusses');
+        if (btnDemoTrusses) {
+            btnDemoTrusses.onclick = loadDemoTrusses;
+        }
 
         // Eventos de Modal Aviso Excel VIP
         const btnUnlockVip = document.getElementById('btnUnlockExcelWithVipCode');
@@ -1844,48 +2294,168 @@ Ing. Ulianov Cuba Valencia`;
         });
     }
 
+    function loadDemoTrusses() {
+        const list = getAllProjects();
+        const demo1 = {
+            id: 'demo_iso_3n',
+            name: 'Caso Alumno 1: Isostática 3N (Aprobada)',
+            authorEmail: 'alumno1@continental.edu.pe',
+            role: 'student',
+            createdAt: new Date().toLocaleString(),
+            nodes: [
+                { id: 1, x: 0, y: 0, support: "Móvil Y", px: 0, py: 0 },
+                { id: 2, x: -700, y: 0, support: "Fijo", px: 0, py: 0 },
+                { id: 3, x: -400, y: 500, support: "Libre", px: 4000, py: -5000 }
+            ],
+            bars: [
+                { id: 1, start: 1, end: 3, a: 10, e: 2100000 },
+                { id: 2, start: 2, end: 3, a: 10, e: 2100000 },
+                { id: 3, start: 2, end: 1, a: 10, e: 2100000 }
+            ]
+        };
+        const demo2 = {
+            id: 'demo_unstable_mecanismo',
+            name: 'Caso Alumno 2: Incompleta (Mecanismo Inestable)',
+            authorEmail: 'alumno2@continental.edu.pe',
+            role: 'student',
+            createdAt: new Date().toLocaleString(),
+            nodes: [
+                { id: 1, x: 0, y: 0, support: "Libre", px: 0, py: 0 },
+                { id: 2, x: 500, y: 0, support: "Móvil Y", px: 0, py: 0 },
+                { id: 3, x: 250, y: 300, support: "Libre", px: 1000, py: -2000 }
+            ],
+            bars: [
+                { id: 1, start: 1, end: 3, a: 10, e: 2100000 }
+            ]
+        };
+        const demo3 = {
+            id: 'demo_yoder_warren',
+            name: 'Caso Yoder: Warren 5N (Hiperestática)',
+            authorEmail: '76185411@continental.edu.pe',
+            role: 'student',
+            createdAt: new Date().toLocaleString(),
+            nodes: [
+                { id: 1, x: 0, y: 0, support: "Fijo", px: 0, py: 0 },
+                { id: 2, x: 300, y: 250, support: "Libre", px: 0, py: -6000 },
+                { id: 3, x: 600, y: 0, support: "Móvil Y", px: 0, py: 0 },
+                { id: 4, x: 150, y: 125, support: "Libre", px: 0, py: 0 },
+                { id: 5, x: 450, y: 125, support: "Libre", px: 0, py: 0 }
+            ],
+            bars: [
+                { id: 1, start: 1, end: 4, a: 15, e: 2100000 },
+                { id: 2, start: 4, end: 2, a: 15, e: 2100000 },
+                { id: 3, start: 2, end: 5, a: 15, e: 2100000 },
+                { id: 4, start: 5, end: 3, a: 15, e: 2100000 },
+                { id: 5, start: 1, end: 3, a: 15, e: 2100000 },
+                { id: 6, start: 4, end: 5, a: 15, e: 2100000 }
+            ]
+        };
+
+        [demo1, demo2, demo3].forEach(demo => {
+            if (!list.find(p => p.id === demo.id)) {
+                list.unshift(demo);
+            }
+        });
+        setStoredJSON(KEY_PROJECTS, list);
+        renderDevGlobalProjects();
+        renderUserProjects();
+        alert("✔ Se cargaron 3 ejemplos de armaduras de alumnos en la lista.\nObserva el diagnóstico que indica automáticamente cuáles sirven y cuáles no.");
+    }
+
     function renderDevGlobalProjects() {
         const c = document.getElementById('devGlobalProjectsList');
         if (!c) return;
         const list = getAllProjects();
 
         if (list.length === 0) {
-            c.innerHTML = `<div style="padding:16px; text-align:center; color:#64748b; font-size:11px;">Aún ningún alumno ha guardado armaduras.</div>`;
+            c.innerHTML = `
+                <div style="padding:18px; text-align:center; color:#94a3b8; font-size:11.5px; line-height:1.5;">
+                    <span style="font-size:22px; display:block; margin-bottom:4px;">📂</span>
+                    Aún no tienes armaduras de alumnos importadas en este navegador.<br>
+                    <span style="color:#64748b; font-size:11px;">Pega arriba el enlace o código que te envió el alumno por WhatsApp o haz clic en "Cargar Ejemplos de Prueba".</span>
+                </div>
+            `;
             return;
         }
 
         let html = '';
         list.forEach(p => {
+            const health = evaluateTrussHealth(p.nodes, p.bars);
+            const activeNodes = (p.nodes || []).filter(n => n && n.x !== null && n.x !== undefined && n.x !== "").length;
+            const activeBars = (p.bars || []).filter(b => b && b.start && b.end).length;
+
             html += `
-                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:8px 12px; margin-bottom:6px;">
+                <div style="background:rgba(255,255,255,0.03); border:1px solid ${health.ok ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}; border-radius:10px; padding:9px 12px; margin-bottom:8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="color:#38bdf8; font-size:12px;">${p.name}</strong>
-                        <span style="font-size:10.5px; color:#94a3b8;">${p.createdAt}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-                        <span style="font-size:11px; color:#cbd5e1; font-family:monospace;">Autor: ${p.authorEmail}</span>
-                        <div style="display:flex; gap:6px;">
-                            <button data-id="${p.id}" class="btn-load-proj" style="background:#0284c7; color:#fff; border:none; border-radius:6px; padding:3px 8px; font-size:11px; font-weight:700; cursor:pointer;">Cargar</button>
-                            <button data-id="${p.id}" class="btn-del-proj" style="background:#dc2626; color:#fff; border:none; border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer;">✕</button>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <strong style="color:#ffffff; font-size:12.5px;">${p.name}</strong>
+                            <span style="font-size:10px; font-weight:800; color:${health.badgeColor}; background:${health.ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; border:1px solid ${health.badgeColor}; padding:2px 6px; border-radius:4px;">
+                                ${health.status}
+                            </span>
                         </div>
+                        <span style="font-size:10.5px; color:#94a3b8;">${p.createdAt || ''}</span>
+                    </div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px; font-size:11px;">
+                        <span style="color:#38bdf8; font-family:monospace;">👤 ${p.authorEmail}</span>
+                        <span style="color:#94a3b8;">${activeNodes} Nudos • ${activeBars} Barras</span>
+                    </div>
+
+                    <div style="font-size:10.5px; color:${health.ok ? '#94a3b8' : '#f87171'}; margin-top:4px; line-height:1.3;">
+                        ${health.summary}
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:8px; border-top:1px solid rgba(255,255,255,0.05); padding-top:6px;">
+                        <button data-id="${p.id}" class="btn-dev-load-proj" style="background:#0284c7; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer;">
+                            ⚡ Cargar en Pantalla
+                        </button>
+                        <button data-id="${p.id}" class="btn-dev-copy-proj" style="background:rgba(255,255,255,0.08); color:#cbd5e1; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;" title="Copiar Enlace Mágico">
+                            🔗 Enlace
+                        </button>
+                        <button data-id="${p.id}" class="btn-dev-dl-proj" style="background:rgba(255,255,255,0.08); color:#cbd5e1; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;" title="Descargar .armadura">
+                            💾 Archivo
+                        </button>
+                        <button data-id="${p.id}" class="btn-dev-del-proj" style="background:#dc2626; color:#fff; border:none; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;" title="Eliminar">
+                            ✕
+                        </button>
                     </div>
                 </div>
             `;
         });
         c.innerHTML = html;
 
-        c.querySelectorAll('.btn-load-proj').forEach(b => {
+        c.querySelectorAll('.btn-dev-load-proj').forEach(b => {
             b.onclick = () => {
                 const proj = list.find(p => p.id === b.dataset.id);
                 if (proj && window.CerebroApp && window.CerebroApp.loadProjectData) {
                     window.CerebroApp.loadProjectData(proj.nodes, proj.bars);
+                    const health = evaluateTrussHealth(proj.nodes, proj.bars);
+                    showTrussEvaluationBanner(proj, health);
                     hideDevPanel();
-                    alert(`✔ Armadura '${proj.name}' de ${proj.authorEmail} cargada en vivo.`);
                 }
             };
         });
 
-        c.querySelectorAll('.btn-del-proj').forEach(b => {
+        c.querySelectorAll('.btn-dev-copy-proj').forEach(b => {
+            b.onclick = () => {
+                const proj = list.find(p => p.id === b.dataset.id);
+                if (proj) {
+                    const url = generateTrussShareUrl(proj);
+                    copyToClipboard(url, "Enlace Mágico de armadura copiado.");
+                }
+            };
+        });
+
+        c.querySelectorAll('.btn-dev-dl-proj').forEach(b => {
+            b.onclick = () => {
+                const proj = list.find(p => p.id === b.dataset.id);
+                if (proj) {
+                    downloadTrussFile(proj);
+                }
+            };
+        });
+
+        c.querySelectorAll('.btn-dev-del-proj').forEach(b => {
             b.onclick = () => {
                 if (confirm("¿Eliminar esta armadura?")) {
                     deleteProject(b.dataset.id);
@@ -1902,21 +2472,57 @@ Ing. Ulianov Cuba Valencia`;
         const list = getUserProjects();
 
         if (list.length === 0) {
-            c.innerHTML = `<div style="padding:20px; text-align:center; color:#64748b; font-size:11.5px;">No tienes armaduras guardadas todavía. Haz clic en 'Guardar Armadura Actual' para guardar tu cálculo.</div>`;
+            c.innerHTML = `
+                <div style="padding:22px; text-align:center; color:#94a3b8; font-size:11.5px; line-height:1.5;">
+                    <span style="font-size:22px; display:block; margin-bottom:4px;">📐</span>
+                    No tienes armaduras guardadas todavía.<br>
+                    <span style="color:#64748b; font-size:11px;">Haz clic en <strong>'Guardar Armadura Actual'</strong> para guardar tu cálculo y generar tu enlace de WhatsApp para el Ing. Ulianov.</span>
+                </div>
+            `;
             return;
         }
 
         let html = '';
         list.forEach(p => {
+            const health = evaluateTrussHealth(p.nodes, p.bars);
+            const activeNodes = (p.nodes || []).filter(n => n && n.x !== null && n.x !== undefined && n.x !== "").length;
+            const activeBars = (p.bars || []).filter(b => b && b.start && b.end).length;
+            const shareUrl = generateTrussShareUrl(p);
+            const waMsg = encodeURIComponent(`Hola Ing. Ulianov, le envío mi cálculo de armadura "${p.name}" para revisión: ${shareUrl}`);
+
             html += `
-                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:8px 12px; margin-bottom:6px;">
+                <div style="background:rgba(255,255,255,0.03); border:1px solid ${health.ok ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}; border-radius:10px; padding:9px 12px; margin-bottom:8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="color:#ffffff; font-size:12px;">${p.name}</strong>
-                        <span style="font-size:10px; color:#94a3b8;">${p.createdAt}</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <strong style="color:#ffffff; font-size:12.5px;">${p.name}</strong>
+                            <span style="font-size:10px; font-weight:800; color:${health.badgeColor}; background:${health.ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; border:1px solid ${health.badgeColor}; padding:2px 6px; border-radius:4px;">
+                                ${health.status}
+                            </span>
+                        </div>
+                        <span style="font-size:10.5px; color:#94a3b8;">${p.createdAt || ''}</span>
                     </div>
-                    <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:6px;">
-                        <button data-id="${p.id}" class="btn-load-my-proj" style="background:#0284c7; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer;">Cargar</button>
-                        <button data-id="${p.id}" class="btn-del-my-proj" style="background:#334155; color:#f43f5e; border:none; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;">✕</button>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px; font-size:11px;">
+                        <span style="color:#cbd5e1;">${activeNodes} Nudos • ${activeBars} Barras</span>
+                        <span style="font-size:10.5px; color:#94a3b8;">${health.ghStr || ''}</span>
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:8px; border-top:1px solid rgba(255,255,255,0.05); padding-top:6px; flex-wrap:wrap;">
+                        <button data-id="${p.id}" class="btn-load-my-proj" style="background:#0284c7; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer;">
+                            ⚡ Cargar
+                        </button>
+                        <a href="https://api.whatsapp.com/send?text=${waMsg}" target="_blank" rel="noopener noreferrer" style="background:#25D366; color:#ffffff; text-decoration:none; border-radius:6px; padding:4px 9px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+                            📲 WhatsApp al Ing. Ulianov
+                        </a>
+                        <button data-id="${p.id}" class="btn-copy-my-proj" style="background:rgba(255,255,255,0.08); color:#cbd5e1; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;" title="Copiar Enlace Mágico">
+                            🔗 Enlace
+                        </button>
+                        <button data-id="${p.id}" class="btn-dl-my-proj" style="background:rgba(255,255,255,0.08); color:#cbd5e1; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;" title="Descargar .armadura">
+                            💾 Archivo
+                        </button>
+                        <button data-id="${p.id}" class="btn-del-my-proj" style="background:#334155; color:#f43f5e; border:none; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;" title="Eliminar">
+                            ✕
+                        </button>
                     </div>
                 </div>
             `;
@@ -1928,8 +2534,28 @@ Ing. Ulianov Cuba Valencia`;
                 const proj = list.find(p => p.id === b.dataset.id);
                 if (proj && window.CerebroApp && window.CerebroApp.loadProjectData) {
                     window.CerebroApp.loadProjectData(proj.nodes, proj.bars);
+                    const health = evaluateTrussHealth(proj.nodes, proj.bars);
+                    showTrussEvaluationBanner(proj, health);
                     document.getElementById('projectsManagerModal').classList.add('modal-hidden');
-                    alert(`✔ Armadura '${proj.name}' cargada.`);
+                }
+            };
+        });
+
+        c.querySelectorAll('.btn-copy-my-proj').forEach(b => {
+            b.onclick = () => {
+                const proj = list.find(p => p.id === b.dataset.id);
+                if (proj) {
+                    const url = generateTrussShareUrl(proj);
+                    copyToClipboard(url, "Enlace Mágico copiado al portapapeles. ¡Listo para enviar!");
+                }
+            };
+        });
+
+        c.querySelectorAll('.btn-dl-my-proj').forEach(b => {
+            b.onclick = () => {
+                const proj = list.find(p => p.id === b.dataset.id);
+                if (proj) {
+                    downloadTrussFile(proj);
                 }
             };
         });
@@ -1952,9 +2578,13 @@ Ing. Ulianov Cuba Valencia`;
         const name = prompt("Nombre de la Armadura / Proyecto:", "Mi Armadura " + (getUserProjects().length + 1));
         if (name && name.trim()) {
             const data = window.CerebroApp.getCurrentData();
-            saveProject(name.trim(), data.nodes, data.bars);
+            const saved = saveProject(name.trim(), data.nodes, data.bars);
             renderUserProjects();
-            alert(`✔ Armadura '${name.trim()}' guardada con éxito.`);
+            renderDevGlobalProjects();
+            const shareUrl = generateTrussShareUrl(saved);
+            if (confirm(`✔ Armadura '${name.trim()}' guardada con éxito.\n\n¿Deseas copiar el Enlace Mágico para enviarlo al Ing. Ulianov por WhatsApp?`)) {
+                copyToClipboard(shareUrl, "Enlace copiado al portapapeles. Puedes pegarlo en WhatsApp para el Ing. Ulianov.");
+            }
         }
     }
 
@@ -1975,6 +2605,14 @@ Ing. Ulianov Cuba Valencia`;
             m.style.display = 'none';
         }
         updateAppHeader();
+
+        if (pendingSharedTruss) {
+            const p = pendingSharedTruss;
+            pendingSharedTruss = null;
+            setTimeout(() => {
+                importAndLoadTruss(p, { silent: true });
+            }, 400);
+        }
     }
 
     function showDevPanel() {
@@ -2092,6 +2730,8 @@ Ing. Ulianov Cuba Valencia`;
         } else {
             showModal();
         }
+
+        checkUrlForSharedTruss();
     }
 
     if (document.readyState === 'loading') {
@@ -2111,6 +2751,10 @@ Ing. Ulianov Cuba Valencia`;
         computeExcelVipCode: computeExcelVipCode,
         verifyAccessCode: verifyAccessCode,
         verifyExcelVipCode: verifyExcelVipCode,
+        generateTrussShareUrl: generateTrussShareUrl,
+        importAndLoadTruss: importAndLoadTruss,
+        evaluateTrussHealth: evaluateTrussHealth,
+        downloadTrussFile: downloadTrussFile,
         showExcelVipNotice: showExcelVipNotice,
         hideExcelVipNotice: hideExcelVipNotice,
         getSession: getSession,
