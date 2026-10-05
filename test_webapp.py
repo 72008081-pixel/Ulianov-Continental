@@ -48,7 +48,7 @@ console_errors = []
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
-    context = browser.new_context(viewport={'width': 1366, 'height': 850})
+    context = browser.new_context(viewport={'width': 1366, 'height': 850}, permissions=['clipboard-read', 'clipboard-write'])
     page = context.new_page()
 
     page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
@@ -117,12 +117,31 @@ with sync_playwright() as p:
     assert page.locator("#btnOwnerPanel").is_visible(), "Developer Panel button should be visible for Developer!"
     print("Developer Panel button verified!")
 
-    # 4. Verify Developer Panel - Approve student Yape
-    print("Developer approving student Yape in Panel...")
+    # 4. Verify Developer Panel - Live Key Finder & Approve student Yape
+    print("Developer opening Panel and testing Live Key Finder for Yoder...")
     page.click("#btnOwnerPanel")
     time.sleep(0.4)
     dev_modal = page.locator("#ownerControlModal")
     assert dev_modal.is_visible(), "Developer modal should be visible!"
+
+    # Verify Live Key Finder & Generator for Yoder (76185411@continental.edu.pe)
+    print("Testing Developer Live Key Finder for Yoder: 76185411@continental.edu.pe...")
+    page.fill("#devKeyFinderInput", "76185411@continental.edu.pe")
+    time.sleep(0.3)
+    results_text = page.locator("#devKeyFinderResults").inner_text()
+    assert "CYB-4A9E-FB71" in results_text, f"Expected access code CYB-4A9E-FB71 in results, got: {results_text}"
+    assert "VIP-8F2C-253A" in results_text, f"Expected VIP code VIP-8F2C-253A in results, got: {results_text}"
+    print("VERIFIED: Developer Key Finder correctly derived CYB-4A9E-FB71 & VIP-8F2C-253A!")
+
+    # Test copy buttons in Key Finder
+    page.click("button.btn-copy-calc-key")
+    time.sleep(0.2)
+    page.click("button.btn-copy-calc-vip")
+    time.sleep(0.2)
+    page.click("button.btn-copy-calc-wa")
+    time.sleep(0.2)
+    print("VERIFIED: Copy buttons in Key Finder executed with success!")
+
     approve_btn = page.locator("button.btn-approve-pending[data-email='alumno@continental.edu.pe']")
     assert approve_btn.is_visible(), "Student pending approval button should be visible!"
     approve_btn.click()
@@ -281,6 +300,47 @@ with sync_playwright() as p:
     assert not lock_modal.is_visible(), "Modal must not appear on preset change!"
     status_text_2 = page.locator("#structuralStatusBadge").inner_text()
     assert "Hiperestática de Grado 2" in status_text_2
+
+    # 8b. Test Remote Student (Yoder: 76185411@continental.edu.pe) real login, activation, and VIP redemption
+    print("Testing Remote Student (Yoder: 76185411@continental.edu.pe) activation with CYB-4A9E-FB71...")
+    page.evaluate("""() => {
+        localStorage.clear();
+        location.reload();
+    }""")
+    page.wait_for_load_state("networkidle")
+    time.sleep(1)
+
+    assert page.locator("#accessLockModal").is_visible(), "Modal must appear for fresh student session!"
+    page.fill("#userGoogleEmailInput", "76185411@continental.edu.pe")
+    page.click("#btnConfirmGoogleAccount")
+    time.sleep(0.4)
+    assert page.locator("#viewYapePaywall").is_visible()
+    assert "76185411@continental.edu.pe" in page.locator("#lblActiveStudentEmail").inner_text()
+
+    # Enter Yoder's deterministic access code computed by developer
+    page.fill("#accessPassInput", "CYB-4A9E-FB71")
+    page.click("#btnUnlockAccess")
+    time.sleep(0.5)
+    assert not page.locator("#accessLockModal").is_visible(), "Yoder's account must unlock with CYB-4A9E-FB71!"
+    print("VERIFIED: Yoder successfully unlocked platform with CYB-4A9E-FB71!")
+
+    # Student downloads PDF and gets VIP modal
+    print("Testing Yoder downloading PDF and redeeming VIP Excel code...")
+    with page.expect_download() as dl_yoder_pdf:
+        page.click("#btnDownloadExcel")
+    dl_pdf = dl_yoder_pdf.value
+    assert dl_pdf.suggested_filename.endswith(".pdf")
+    time.sleep(2.6)
+    vip_modal = page.locator("#modalExcelVipNotice")
+    assert vip_modal.is_visible()
+
+    # Yoder enters VIP code
+    page.fill("#inputExcelVipCode", "VIP-8F2C-253A")
+    with page.expect_download() as dl_yoder_vip:
+        page.click("#btnUnlockExcelWithVipCode")
+    dl_vip = dl_yoder_vip.value
+    assert dl_vip.suggested_filename.endswith(".xlsx"), f"Expected .xlsx on VIP unlock, got {dl_vip.suggested_filename}"
+    print("VERIFIED: Yoder redeemed VIP-8F2C-253A and downloaded native Excel with protected formulas!")
 
     # 9. Test seamless navigation to 'Ver 13 Tablas' (WEB_ARMADURAS_ULIANOV/index.html)
     print("Testing navigation to 'Ver 13 Tablas' (subfolder app)...")

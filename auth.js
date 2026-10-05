@@ -94,30 +94,101 @@
         return result;
     }
 
-    // Generar código aleatorio seguro para verificación Yape
-    function generateRandomAccessCode(email) {
-        const clean = (email || '').trim().toLowerCase();
-        const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-        const hash = sha256(clean + CRYPTO_SALT + rand).substring(0, 4).toUpperCase();
-        return `CYB-${rand}-${hash}`;
+    // ── CÁLCULO CRIPTOGRÁFICO DETERMINISTA DE CLAVES EN LÍNEA ───
+    // Permite que el creador conozca la contraseña exacta de CUALQUIER correo
+    // desde cualquier parte del mundo sin depender de base de datos compartida.
+    function computeAccessCode(email) {
+        if (!email) return '';
+        const clean = email.trim().toLowerCase();
+        const hash = sha256(clean + CRYPTO_SALT + '_ACCESS_KEY').toUpperCase();
+        return `CYB-${hash.substring(0, 4)}-${hash.substring(4, 8)}`;
     }
 
-    // Comprobar clave para un usuario
+    function computeExcelVipCode(email) {
+        if (!email) return '';
+        const clean = email.trim().toLowerCase();
+        const hash = sha256(clean + CRYPTO_SALT + '_VIP_EXCEL').toUpperCase();
+        return `VIP-${hash.substring(0, 4)}-${hash.substring(4, 8)}`;
+    }
+
+    // Generar código para verificación Yape (100% determinista y predecible por el creador)
+    function generateRandomAccessCode(email) {
+        return computeAccessCode(email);
+    }
+
+    // Comprobar clave de acceso para un usuario
     function verifyAccessCode(email, code) {
-        if (!email || !code) return false;
-        const cleanEmail = email.trim().toLowerCase();
+        if (!code) return false;
         const cleanCode = code.trim().toUpperCase();
 
+        // 1. Clave maestra de desarrollador / dueño (Vayolett1404)
         if (MASTER_PASSWORDS.includes(cleanCode)) return true;
 
+        const cleanEmail = (email || '').trim().toLowerCase();
+        if (!cleanEmail) return false;
+
+        // 2. Clave criptográfica determinista vinculada a este correo (CYB-XXXX-XXXX)
+        const expectedCode = computeAccessCode(cleanEmail);
+        if (cleanCode === expectedCode) return true;
+
+        // 3. Clave directa ULI de respaldo
+        const directKey = 'ULI-' + sha256(cleanEmail + CRYPTO_SALT).substring(0, 8).toUpperCase();
+        if (cleanCode === directKey) return true;
+
+        // 4. Claves registradas en solicitudes pendientes locales
         const pending = getPendingRequests();
         const found = pending.find(p => p.email === cleanEmail && p.code === cleanCode);
         if (found) return true;
 
-        const directKey = 'ULI-' + sha256(cleanEmail + CRYPTO_SALT).substring(0, 8).toUpperCase();
-        if (cleanCode === directKey) return true;
+        return false;
+    }
+
+    // Comprobar clave VIP de Excel para un usuario
+    function verifyExcelVipCode(email, code) {
+        if (!code) return false;
+        const cleanCode = code.trim().toUpperCase();
+
+        if (MASTER_PASSWORDS.includes(cleanCode)) return true;
+
+        const cleanEmail = (email || (getSession() ? getSession().email : '') || '').trim().toLowerCase();
+        if (!cleanEmail) return false;
+
+        const expectedVip = computeExcelVipCode(cleanEmail);
+        if (cleanCode === expectedVip) return true;
 
         return false;
+    }
+
+    // ── COPIADO SEGURO AL PORTAPAPELES CON FALLBACK ──────────────
+    function copyToClipboard(text, successMessage) {
+        if (!text) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                if (successMessage) alert(successMessage);
+            }).catch(() => {
+                fallbackCopyText(text, successMessage);
+            });
+        } else {
+            fallbackCopyText(text, successMessage);
+        }
+    }
+
+    function fallbackCopyText(text, successMessage) {
+        try {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (successMessage) alert(successMessage);
+        } catch (e) {
+            if (successMessage) alert(successMessage);
+        }
     }
 
     // ── GESTIÓN DE ALMACENAMIENTO JSON ───────────────────────────
@@ -812,16 +883,20 @@
                         <div id="lblActiveStudentEmail" style="font-size: 13px; font-family: monospace; font-weight: 700; color: #38bdf8; margin-top: 3px; word-break: break-all;"></div>
                     </div>
 
-                    <div style="background: rgba(116, 34, 132, 0.15); border: 1px dashed rgba(116, 34, 132, 0.6); border-radius: 12px; padding: 10px 12px; font-size: 11.5px; text-align: left; color: #cbd5e1; line-height: 1.5; margin-bottom: 14px;">
-                        <strong>Pasos para recibir tu clave:</strong>
-                        <ol style="margin-left: 16px; margin-top: 4px;">
-                            <li>Yapea <strong>S/ 5.00</strong> a Ulianov Cuba Valencia.</li>
-                            <li>El sistema ya notificó tu solicitud por correo. Envía tu comprobante de Yape indicando tu correo.</li>
-                            <li>El creador te brindará tu <strong>código de acceso aleatorio</strong> e intransferible.</li>
+                    <div style="background: rgba(116, 34, 132, 0.15); border: 1px dashed rgba(116, 34, 132, 0.6); border-radius: 12px; padding: 12px; font-size: 11.5px; text-align: left; color: #cbd5e1; line-height: 1.5; margin-bottom: 12px;">
+                        <strong style="color: #ffffff;">Pasos para activar tu cuenta de por vida:</strong>
+                        <ol style="margin-left: 16px; margin-top: 4px; padding-left: 0;">
+                            <li>Yapea <strong>S/ 5.00</strong> al creador <strong>Ulianov Cuba Valencia</strong>.</li>
+                            <li>Envía tu captura de pago por WhatsApp o Google Meet indicando tu correo vinculado.</li>
+                            <li>El Ing. Ulianov verificará tu comprobante y te brindará tu <strong>Código de Acceso (CYB-XXXX-XXXX)</strong>.</li>
                         </ol>
                     </div>
 
-                    <input type="text" id="accessPassInput" class="liquid-input" placeholder="Código de Acceso (Ej. CYB-XXXX-XXXX)" autocomplete="off">
+                    <a id="btnYapeWhatsAppLink" href="https://api.whatsapp.com/send?text=Hola%20Ing.%20Ulianov,%20he%20realizado%20mi%20pago%20de%20Yape%20de%20S/%205.00%20para%20activar%20mi%20cuenta" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: #ffffff; text-decoration: none; font-size: 12px; font-weight: 800; padding: 10px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);">
+                        <span>📲 Enviar Comprobante por WhatsApp a Ulianov</span>
+                    </a>
+
+                    <input type="text" id="accessPassInput" class="liquid-input" placeholder="Ingresa tu código (Ej. CYB-XXXX-XXXX)" autocomplete="off" style="text-align: center; font-family: monospace; font-size: 14.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
                     <button id="btnUnlockAccess" class="liquid-btn-primary">
                         🔓 Activar Licencia Permanente
                     </button>
@@ -875,6 +950,29 @@
                     <button id="btnCloseDevPanel" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">✕</button>
                 </div>
 
+                <!-- ══ GENERADOR Y CONSULTOR MAESTRO DE CLAVES EN VIVO ══ -->
+                <div style="background: rgba(116, 34, 132, 0.2); border: 1.5px solid rgba(0, 210, 181, 0.5); border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="font-size: 12px; font-weight: 800; color: #00D2B5; display: flex; align-items: center; gap: 6px;">
+                            <span>🔑</span> GENERADOR Y CONSULTOR DE CONTRASEÑAS EN LÍNEA
+                        </span>
+                        <span style="font-size: 10px; color: #cbd5e1; background: rgba(0,0,0,0.4); padding: 2px 7px; border-radius: 6px; font-family: monospace;">SHA-256 Activo</span>
+                    </div>
+                    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;">
+                        Escribe o busca el correo de cualquier alumno (ej: <strong>76185411@continental.edu.pe</strong>) para ver y copiar sus contraseñas al instante:
+                    </div>
+                    <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                        <input type="text" id="devKeyFinderInput" class="liquid-input" placeholder="Escribe el correo aquí (ej: 76185411@continental.edu.pe)..." style="margin: 0; font-size: 12px; text-align: left; padding: 8px 12px;">
+                        <button id="btnDevKeyFinderClear" type="button" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 10px; padding: 8px 12px; font-size: 11px; cursor: pointer; white-space: nowrap;">
+                            Limpiar
+                        </button>
+                    </div>
+
+                    <!-- Tarjeta con Resultados de Claves en Tiempo Real -->
+                    <div id="devKeyFinderResults" style="background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px;">
+                    </div>
+                </div>
+
                 <!-- Pestañas del Panel de Desarrollador -->
                 <div style="display: flex; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 12px; overflow-x: auto;">
                     <button class="dev-tab-btn active" data-tab="tabDevPending" style="background:none; border:none; border-bottom:2px solid #00D2B5; color:#00D2B5; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">📬 Solicitudes Yape</button>
@@ -893,12 +991,13 @@
 
                 <!-- Pestaña 2: Alumnos Activos y Baneo -->
                 <div id="tabDevUsers" class="dev-tab-pane" style="display: none;">
-                    <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                    <div style="display: flex; gap: 6px; margin-bottom: 4px;">
                         <input type="email" id="devQuickAuthorizeInput" class="liquid-input" placeholder="Activar correo directamente..." style="margin: 0; font-size: 11.5px; text-align: left;">
                         <button id="btnDevQuickAuthorize" class="liquid-btn-primary" style="width: auto; padding: 6px 14px; font-size: 11.5px; white-space: nowrap;">
                             Autorizar
                         </button>
                     </div>
+                    <div id="devQuickAuthHint" style="font-size: 11px; color: #38bdf8; margin-bottom: 8px; font-family: monospace; display: none;"></div>
                     <div id="devAuthorizedUsersList" style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 6px;"></div>
                 </div>
 
@@ -907,12 +1006,13 @@
                     <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 8px;">
                         Control de Fórmulas VIP: Por defecto los alumnos descargan el informe en PDF no editable. Aquí puedes autorizar la descarga de la plantilla Excel (.xlsx) con fórmulas dinámicas tras verificar su pago adicional.
                     </div>
-                    <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+                    <div style="display: flex; gap: 6px; margin-bottom: 4px;">
                         <input type="email" id="devQuickExcelAuthInput" class="liquid-input" placeholder="Habilitar permiso Excel a correo..." style="margin: 0; font-size: 11.5px; text-align: left;">
                         <button id="btnDevQuickExcelAuth" class="liquid-btn-primary" style="width: auto; padding: 6px 14px; font-size: 11.5px; white-space: nowrap; background: linear-gradient(135deg, #059669, #10b981);">
                             ⭐ Conceder Excel
                         </button>
                     </div>
+                    <div id="devQuickExcelHint" style="font-size: 11px; color: #10b981; margin-bottom: 8px; font-family: monospace; display: none;"></div>
                     <div style="font-size: 11px; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">📬 Solicitudes de Alumnos para Plantilla Excel:</div>
                     <div id="devExcelRequestsContainer" style="max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 6px; margin-bottom: 10px;"></div>
                     <div style="font-size: 11px; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">👥 Alumnos con Permiso VIP de Excel (.xlsx) Activo:</div>
@@ -977,6 +1077,18 @@
                     <strong style="color: #f8fafc;">Plantilla Maestra en Excel (.xlsx) Protegida:</strong><br>
                     El archivo Excel original con fórmulas matriciales dinámicas completas (<code style="color:#38bdf8;">=MINVERSE</code>, <code style="color:#34d399;">=MMULT</code>) y tablas pedagógicas automatizadas es de propiedad intelectual del <strong>Ing. Ulianov Cuba Valencia</strong>.<br><br>
                     Para obtener el archivo Excel (.xlsx) editable, solicita tu <strong>Licencia VIP</strong> al creador con un aporte adicional.
+                </div>
+                <div style="background: rgba(0,0,0,0.35); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; text-align: left;">
+                    <label style="font-size: 11px; font-weight: 700; color: #38bdf8; display: block; margin-bottom: 4px;">
+                        ¿Ya adquiriste tu Código VIP de Excel con el Ing. Ulianov?
+                    </label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="text" id="inputExcelVipCode" class="liquid-input" placeholder="Código VIP (VIP-XXXX-XXXX)" style="margin: 0; font-size: 12px; text-align: center; text-transform: uppercase; font-family: monospace;">
+                        <button id="btnUnlockExcelWithVipCode" class="liquid-btn-primary" style="width: auto; padding: 6px 14px; font-size: 11.5px; white-space: nowrap; background: linear-gradient(135deg, #059669, #10b981);">
+                            🔓 Canjear VIP
+                        </button>
+                    </div>
+                    <div id="vipCodeErrorMsg" style="display:none; color:#f43f5e; font-size:10.5px; font-weight:700; margin-top:4px;"></div>
                 </div>
                 <div style="display: flex; gap: 8px; justify-content: center;">
                     <button id="btnRequestExcelVip" class="liquid-btn-primary" style="background: linear-gradient(135deg, #059669, #10b981); font-size: 12px; padding: 10px 16px;">
@@ -1081,6 +1193,13 @@
 
             const lblEmail = document.getElementById('lblActiveStudentEmail');
             if (lblEmail) lblEmail.textContent = cleanEmail;
+
+            const waLink = document.getElementById('btnYapeWhatsAppLink');
+            if (waLink) {
+                const textMsg = encodeURIComponent(`Hola Ing. Ulianov Cuba Valencia, he realizado mi pago de Yape (S/ 5.00) para activar mi cuenta: ${cleanEmail}. Por favor indícame mi código de acceso.`);
+                waLink.href = `https://api.whatsapp.com/send?text=${textMsg}`;
+            }
+
             switchView('yape');
             document.getElementById('accessPassInput').focus();
         }
@@ -1109,6 +1228,7 @@
                 authorizeUser(currentSelectedAccount.email);
                 saveSession({ role: 'student', email: currentSelectedAccount.email, name: currentSelectedAccount.name });
                 hideModal();
+                updateAppHeader();
                 alert(`🎉 ¡Licencia activada con éxito para ${currentSelectedAccount.email}!\nAcceso permanente desbloqueado.`);
             } else {
                 errEl.innerHTML = `❌ Código incorrecto para <strong>${currentSelectedAccount.email}</strong>.<br>El creador te brindará tu código en cuanto verifique tu Yape de S/ 5.00.`;
@@ -1163,15 +1283,65 @@
             };
         });
 
+        // Consultor Maestro de Claves en Vivo
+        const devKeyInput = document.getElementById('devKeyFinderInput');
+        if (devKeyInput) {
+            devKeyInput.addEventListener('input', () => {
+                updateDevKeyFinder(devKeyInput.value);
+            });
+        }
+        const btnClearKey = document.getElementById('btnDevKeyFinderClear');
+        if (btnClearKey) {
+            btnClearKey.onclick = () => {
+                if (devKeyInput) devKeyInput.value = '';
+                updateDevKeyFinder('');
+            };
+        }
+
+        // Hint dinámico al escribir correo en Autorización Rápida
+        const devQuickAuthInput = document.getElementById('devQuickAuthorizeInput');
+        if (devQuickAuthInput) {
+            devQuickAuthInput.addEventListener('input', () => {
+                const em = (devQuickAuthInput.value || '').trim().toLowerCase();
+                const hint = document.getElementById('devQuickAuthHint');
+                if (!hint) return;
+                if (em && em.includes('@')) {
+                    hint.style.display = 'block';
+                    hint.innerHTML = `🔑 Clave asignada: <strong style="color:#00D2B5;">${computeAccessCode(em)}</strong> | VIP: <strong style="color:#38bdf8;">${computeExcelVipCode(em)}</strong>`;
+                } else {
+                    hint.style.display = 'none';
+                }
+            });
+        }
+
         // Autorizar rápido alumno en panel
         document.getElementById('btnDevQuickAuthorize').onclick = () => {
             const em = (document.getElementById('devQuickAuthorizeInput').value || '').trim();
             if (em) {
                 authorizeUser(em);
                 renderDevUsers();
-                alert(`✔ Alumno ${em} autorizado con éxito.`);
+                updateDevKeyFinder(em);
+                const code = computeAccessCode(em);
+                const vip = computeExcelVipCode(em);
+                alert(`✔ Alumno ${em} autorizado con éxito.\n\n🔑 SU CLAVE DE ACCESO ES:\n${code}\n\n⭐ SU CLAVE VIP EXCEL ES:\n${vip}\n\n(Puedes copiar y enviarle esta clave por WhatsApp o Meet para que active su plataforma).`);
             }
         };
+
+        // Hint dinámico al escribir correo en Autorización VIP Excel
+        const devQuickExcelInput = document.getElementById('devQuickExcelAuthInput');
+        if (devQuickExcelInput) {
+            devQuickExcelInput.addEventListener('input', () => {
+                const em = (devQuickExcelInput.value || '').trim().toLowerCase();
+                const hint = document.getElementById('devQuickExcelHint');
+                if (!hint) return;
+                if (em && em.includes('@')) {
+                    hint.style.display = 'block';
+                    hint.innerHTML = `⭐ Clave VIP asignada: <strong style="color:#10b981;">${computeExcelVipCode(em)}</strong>`;
+                } else {
+                    hint.style.display = 'none';
+                }
+            });
+        }
 
         // Autorizar permiso Excel VIP rápido en panel
         const btnQuickExcel = document.getElementById('btnDevQuickExcelAuth');
@@ -1182,7 +1352,10 @@
                     grantExcelPermission(em);
                     renderDevExcelAuthorized();
                     renderDevExcelRequests();
-                    alert(`✔ Permiso VIP de descarga Excel (.xlsx) concedido a ${em}.`);
+                    renderDevUsers();
+                    updateDevKeyFinder(em);
+                    const vip = computeExcelVipCode(em);
+                    alert(`✔ Permiso VIP de descarga Excel (.xlsx) concedido a ${em}.\n\n⭐ SU CÓDIGO VIP ES:\n${vip}`);
                 }
             };
         }
@@ -1195,6 +1368,31 @@
         document.getElementById('btnNewProjectSavePrompt').onclick = promptSaveProject;
 
         // Eventos de Modal Aviso Excel VIP
+        const btnUnlockVip = document.getElementById('btnUnlockExcelWithVipCode');
+        if (btnUnlockVip) {
+            btnUnlockVip.onclick = () => {
+                const code = (document.getElementById('inputExcelVipCode').value || '').trim();
+                const session = getSession();
+                const targetEmail = session ? session.email : (currentSelectedAccount ? currentSelectedAccount.email : '');
+                const errVip = document.getElementById('vipCodeErrorMsg');
+
+                if (verifyExcelVipCode(targetEmail, code)) {
+                    grantExcelPermission(targetEmail);
+                    hideExcelVipNotice();
+                    const btnDl = document.getElementById('btnDownloadExcel');
+                    if (btnDl) {
+                        btnDl.disabled = false;
+                        btnDl.click();
+                    }
+                } else {
+                    if (errVip) {
+                        errVip.textContent = '❌ Código VIP no válido para este correo. Solicítalo al Ing. Ulianov Cuba.';
+                        errVip.style.display = 'block';
+                    }
+                }
+            };
+        }
+
         const btnReqExcel = document.getElementById('btnRequestExcelVip');
         if (btnReqExcel) {
             btnReqExcel.onclick = () => {
@@ -1299,6 +1497,138 @@
         }
     }
 
+    // ── CONSULTOR Y GENERADOR MAESTRO DE CLAVES EN VIVO ────────
+    function updateDevKeyFinder(query) {
+        const resultsEl = document.getElementById('devKeyFinderResults');
+        if (!resultsEl) return;
+
+        const inputEl = document.getElementById('devKeyFinderInput');
+        const email = (query !== undefined ? query : (inputEl ? inputEl.value : '')).trim();
+
+        if (!email) {
+            const recent = getStoredGoogleAccounts();
+            let quickHtml = '';
+            if (recent.length > 0) {
+                quickHtml = '<div style="margin-top:6px; display:flex; gap:6px; justify-content:center; flex-wrap:wrap;"><span style="font-size:10px; color:#94a3b8;">Recientes:</span>' +
+                    recent.slice(0, 3).map(a => `<button type="button" class="btn-quick-key-suggest" data-email="${a.email}" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:99px; padding:2px 8px; font-size:10px; color:#38bdf8; cursor:pointer;">${a.email}</button>`).join('') +
+                    '</div>';
+            } else {
+                quickHtml = '<div style="margin-top:6px; display:flex; gap:6px; justify-content:center; flex-wrap:wrap;"><span style="font-size:10px; color:#94a3b8;">Prueba rápida (Google Meet):</span><button type="button" class="btn-quick-key-suggest" data-email="76185411@continental.edu.pe" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:99px; padding:2px 8px; font-size:10px; color:#38bdf8; cursor:pointer;">76185411@continental.edu.pe (Yoder)</button></div>';
+            }
+
+            resultsEl.innerHTML = `
+                <div style="text-align:center; padding:10px 8px; color:#94a3b8; font-size:11.5px; line-height:1.5;">
+                    💡 Escribe o pega cualquier correo para calcular al instante su <strong>Código de Acceso</strong> y su <strong>Código VIP Excel</strong>.
+                    ${quickHtml}
+                </div>
+            `;
+
+            resultsEl.querySelectorAll('.btn-quick-key-suggest').forEach(b => {
+                b.onclick = () => {
+                    if (inputEl) inputEl.value = b.dataset.email;
+                    updateDevKeyFinder(b.dataset.email);
+                };
+            });
+            return;
+        }
+
+        const cleanEmail = email.toLowerCase().trim();
+        const accessKey = computeAccessCode(cleanEmail);
+        const vipKey = computeExcelVipCode(cleanEmail);
+        const isAuth = isUserAuthorized(cleanEmail);
+        const hasVip = hasExcelPermission(cleanEmail);
+
+        resultsEl.innerHTML = `
+            <div style="text-align:left;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:6px;">
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:70%;">
+                        <span style="font-size:12px; font-weight:800; color:#ffffff; font-family:monospace;">${cleanEmail}</span>
+                    </div>
+                    <div style="display:flex; gap:4px; flex-shrink:0;">
+                        <span style="font-size:10px; padding:1px 6px; border-radius:99px; background:${isAuth ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)'}; color:${isAuth ? '#10b981' : '#f59e0b'}; font-weight:700;">
+                            ${isAuth ? '✔ Plataforma Activa' : '⏳ Sin Activar'}
+                        </span>
+                        <span style="font-size:10px; padding:1px 6px; border-radius:99px; background:${hasVip ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.1)'}; color:${hasVip ? '#10b981' : '#94a3b8'}; font-weight:700;">
+                            ${hasVip ? '⭐ VIP Excel' : '📄 Solo PDF'}
+                        </span>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <!-- Tarjeta Clave Plataforma -->
+                    <div style="background:rgba(0,210,181,0.08); border:1px solid rgba(0,210,181,0.35); border-radius:8px; padding:8px; text-align:center;">
+                        <div style="font-size:10px; color:#94a3b8; font-weight:700; margin-bottom:2px;">🔑 Clave Plataforma (Yape S/ 5)</div>
+                        <div style="font-family:monospace; font-size:15px; font-weight:900; color:#00D2B5; letter-spacing:1px; margin-bottom:4px;">
+                            ${accessKey}
+                        </div>
+                        <button type="button" class="btn-copy-calc-key" style="background:#00D2B5; color:#0f172a; border:none; border-radius:6px; padding:3px 10px; font-size:10.5px; font-weight:800; cursor:pointer; width:100%;">
+                            📋 Copiar Clave
+                        </button>
+                    </div>
+
+                    <!-- Tarjeta Clave VIP Excel -->
+                    <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.35); border-radius:8px; padding:8px; text-align:center;">
+                        <div style="font-size:10px; color:#94a3b8; font-weight:700; margin-bottom:2px;">⭐ Clave VIP Excel (.xlsx)</div>
+                        <div style="font-family:monospace; font-size:15px; font-weight:900; color:#38bdf8; letter-spacing:1px; margin-bottom:4px;">
+                            ${vipKey}
+                        </div>
+                        <button type="button" class="btn-copy-calc-vip" style="background:#0284c7; color:#ffffff; border:none; border-radius:6px; padding:3px 10px; font-size:10.5px; font-weight:800; cursor:pointer; width:100%;">
+                            📋 Copiar VIP
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Botón Copiar Mensaje Formateado para WhatsApp / Meet -->
+                <button type="button" class="btn-copy-calc-wa" style="width:100%; background:#25D366; color:#ffffff; border:none; border-radius:8px; padding:7px 10px; font-size:11px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:6px; box-shadow:0 2px 8px rgba(37,211,102,0.25);">
+                    <span>📲 Copiar Mensaje para WhatsApp / Google Meet</span>
+                </button>
+
+                <!-- Acciones Directas en este Navegador -->
+                <div style="display:flex; gap:6px;">
+                    <button type="button" class="btn-calc-direct-auth" style="flex:1; background:${isAuth ? '#334155' : 'linear-gradient(135deg, #742284, #9333ea)'}; color:#fff; border:none; border-radius:6px; padding:4px 8px; font-size:10.5px; font-weight:700; cursor:pointer;">
+                        ${isAuth ? '✔ Autorizado en este Navegador' : '⚡ Autorizar en este Navegador'}
+                    </button>
+                    <button type="button" class="btn-calc-direct-vip" style="flex:1; background:${hasVip ? '#334155' : 'linear-gradient(135deg, #059669, #10b981)'}; color:#fff; border:none; border-radius:6px; padding:4px 8px; font-size:10.5px; font-weight:700; cursor:pointer;">
+                        ${hasVip ? '✔ VIP Concedido' : '⭐ Conceder VIP Excel'}
+                    </button>
+                </div>
+            </div>
+        `;
+
+        resultsEl.querySelector('.btn-copy-calc-key').onclick = () => {
+            copyToClipboard(accessKey, `✔ Clave de acceso copiada:\n${accessKey}`);
+        };
+
+        resultsEl.querySelector('.btn-copy-calc-vip').onclick = () => {
+            copyToClipboard(vipKey, `✔ Clave VIP de Excel copiada:\n${vipKey}`);
+        };
+
+        resultsEl.querySelector('.btn-copy-calc-wa').onclick = () => {
+            const waMsg = `Hola! Tu código de acceso personal para CEREBRO ESTRUCTURAL v2.1 es:
+🔑 CÓDIGO: ${accessKey}
+(Vinculado a tu correo: ${cleanEmail})
+
+Ingrésalo en la pantalla de Yape para activar tu licencia permanente y acceder a todas las funciones.
+Ing. Ulianov Cuba Valencia`;
+            copyToClipboard(waMsg, `✔ Mensaje listo para WhatsApp / Meet copiado al portapapeles:\n\n${waMsg}`);
+        };
+
+        resultsEl.querySelector('.btn-calc-direct-auth').onclick = () => {
+            authorizeUser(cleanEmail);
+            renderDevUsers();
+            updateDevKeyFinder(cleanEmail);
+            alert(`✔ Alumno ${cleanEmail} autorizado con éxito en este navegador.`);
+        };
+
+        resultsEl.querySelector('.btn-calc-direct-vip').onclick = () => {
+            grantExcelPermission(cleanEmail);
+            renderDevExcelAuthorized();
+            renderDevUsers();
+            updateDevKeyFinder(cleanEmail);
+            alert(`✔ Licencia VIP Excel concedida a ${cleanEmail}.`);
+        };
+    }
+
     // ── RENDERIZADO EN PANEL DE DESARROLLADOR ────────────────────
     function renderDevPending() {
         const c = document.getElementById('devPendingListContainer');
@@ -1306,12 +1636,20 @@
         const list = getPendingRequests();
 
         if (list.length === 0) {
-            c.innerHTML = `<div style="padding:16px; text-align:center; color:#64748b; font-size:11px;">No hay solicitudes pendientes en este momento.</div>`;
+            c.innerHTML = `
+                <div style="padding:16px; text-align:center; color:#94a3b8; font-size:11.5px; line-height:1.6;">
+                    <div style="font-size:24px; margin-bottom:4px;">🌐</div>
+                    <strong style="color:#ffffff;">Activación en Línea para Compañeros en Remoto:</strong><br>
+                    Cuando un compañero en Google Meet ingrese su correo en su propia laptop,<br>
+                    <strong>escribe su correo en el Generador de Claves de arriba</strong> (ej: <code style="color:#00D2B5;">76185411@continental.edu.pe</code>), copia su código y envíaselo por chat o WhatsApp. ¡Se activará de inmediato en su máquina!
+                </div>
+            `;
             return;
         }
 
         let html = '';
         list.forEach(item => {
+            const code = computeAccessCode(item.email);
             html += `
                 <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:10px; margin-bottom:6px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1320,10 +1658,10 @@
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
                         <span style="font-family:monospace; font-weight:800; color:#00D2B5; font-size:14px; background:rgba(0,210,181,0.1); padding:2px 8px; border-radius:6px; border:1px solid rgba(0,210,181,0.3);">
-                            ${item.code}
+                            ${code}
                         </span>
                         <div style="display:flex; gap:6px;">
-                            <button data-code="${item.code}" class="btn-copy-code" style="background:#334155; color:#fff; border:none; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;">📋 Copiar</button>
+                            <button data-code="${code}" class="btn-copy-code" style="background:#334155; color:#fff; border:none; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;">📋 Copiar</button>
                             <button data-email="${item.email}" class="btn-approve-pending" style="background:#10b981; color:#fff; border:none; border-radius:6px; padding:4px 8px; font-size:11px; font-weight:700; cursor:pointer;">✔ Aprobar Yape</button>
                         </div>
                     </div>
@@ -1334,8 +1672,7 @@
 
         c.querySelectorAll('.btn-copy-code').forEach(b => {
             b.onclick = () => {
-                navigator.clipboard.writeText(b.dataset.code);
-                alert(`Código ${b.dataset.code} copiado al portapapeles.`);
+                copyToClipboard(b.dataset.code, `Código ${b.dataset.code} copiado al portapapeles.`);
             };
         });
 
@@ -1345,6 +1682,7 @@
                 authorizeUser(em);
                 renderDevPending();
                 renderDevUsers();
+                updateDevKeyFinder(em);
                 alert(`✔ Alumno ${em} aprobado y activado permanentemente.`);
             };
         });
@@ -1356,26 +1694,56 @@
         const list = getAuthorizedUsers();
 
         if (list.length === 0) {
-            c.innerHTML = `<div style="padding:16px; text-align:center; color:#64748b; font-size:11px;">No hay alumnos registrados aún.</div>`;
+            c.innerHTML = `<div style="padding:16px; text-align:center; color:#64748b; font-size:11px;">No hay alumnos registrados aún en este navegador. Escribe el correo arriba para autorizarlo.</div>`;
             return;
         }
 
         let html = '';
         list.forEach(email => {
             const hasVip = hasExcelPermission(email);
+            const accessKey = computeAccessCode(email);
+            const vipKey = computeExcelVipCode(email);
             html += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:11.5px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-bottom:1px solid rgba(255,255,255,0.06); font-size:11.5px;">
                     <div>
-                        <span style="color:#e2e8f0; font-family:monospace;">🟢 ${email}</span>
-                        ${hasVip ? '<span style="font-size:10px; color:#10b981; background:rgba(16,185,129,0.15); padding:1px 6px; border-radius:99px; margin-left:6px;">⭐ Excel VIP</span>' : '<span style="font-size:10px; color:#94a3b8; background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:99px; margin-left:6px;">📄 Solo PDF</span>'}
+                        <div style="color:#e2e8f0; font-family:monospace; font-weight:700;">🟢 ${email}</div>
+                        <div style="display:flex; gap:6px; align-items:center; margin-top:3px; flex-wrap:wrap;">
+                            <span style="font-size:10.5px; color:#00D2B5; font-family:monospace; background:rgba(0,210,181,0.12); padding:1px 6px; border-radius:4px; border:1px solid rgba(0,210,181,0.25);">
+                                🔑 ${accessKey}
+                            </span>
+                            <button data-code="${accessKey}" class="btn-copy-user-code" style="background:#334155; color:#cbd5e1; border:none; border-radius:4px; padding:1px 6px; font-size:10px; cursor:pointer;" title="Copiar código de acceso">📋 Copiar</button>
+                            ${hasVip ? 
+                                `<span style="font-size:10px; color:#10b981; background:rgba(16,185,129,0.15); padding:1px 6px; border-radius:4px; font-family:monospace;">⭐ VIP: ${vipKey}</span>` : 
+                                `<span style="font-size:10px; color:#94a3b8; background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:4px;">📄 Solo PDF</span>`
+                            }
+                        </div>
                     </div>
-                    <button data-email="${email}" class="btn-ban-user" style="background:#dc2626; color:#fff; border:none; border-radius:6px; padding:3px 8px; font-size:10.5px; font-weight:700; cursor:pointer;" title="Bloquear y desconectar inmediatamente">
-                        🚫 Banear
-                    </button>
+                    <div style="display:flex; gap:6px;">
+                        <button data-email="${email}" class="btn-inspect-user" style="background:#6366f1; color:#fff; border:none; border-radius:6px; padding:3px 8px; font-size:10.5px; font-weight:700; cursor:pointer;" title="Cargar en el Generador">🔍 Ver Claves</button>
+                        <button data-email="${email}" class="btn-ban-user" style="background:#dc2626; color:#fff; border:none; border-radius:6px; padding:3px 8px; font-size:10.5px; font-weight:700; cursor:pointer;" title="Bloquear y desconectar inmediatamente">🚫 Banear</button>
+                    </div>
                 </div>
             `;
         });
         c.innerHTML = html;
+
+        c.querySelectorAll('.btn-copy-user-code').forEach(b => {
+            b.onclick = () => {
+                copyToClipboard(b.dataset.code, `Código ${b.dataset.code} copiado al portapapeles.`);
+            };
+        });
+
+        c.querySelectorAll('.btn-inspect-user').forEach(b => {
+            b.onclick = () => {
+                const em = b.dataset.email;
+                const input = document.getElementById('devKeyFinderInput');
+                if (input) {
+                    input.value = em;
+                    updateDevKeyFinder(em);
+                    input.scrollIntoView({ behavior: 'smooth' });
+                }
+            };
+        });
 
         c.querySelectorAll('.btn-ban-user').forEach(b => {
             b.onclick = () => {
@@ -1384,6 +1752,7 @@
                     banUser(em);
                     renderDevUsers();
                     renderDevExcelAuthorized();
+                    updateDevKeyFinder();
                 }
             };
         });
@@ -1422,6 +1791,7 @@
                 renderDevExcelRequests();
                 renderDevExcelAuthorized();
                 renderDevUsers();
+                updateDevKeyFinder(em);
                 alert(`✔ Permiso de descarga de plantilla Excel (.xlsx) concedido a ${em}.`);
             };
         });
@@ -1439,9 +1809,14 @@
 
         let html = '';
         list.forEach(email => {
+            const vipKey = computeExcelVipCode(email);
             html += `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:11px;">
-                    <span style="color:#38bdf8; font-family:monospace;">⭐ ${email}</span>
+                    <div>
+                        <span style="color:#38bdf8; font-family:monospace; font-weight:700;">⭐ ${email}</span>
+                        <span style="color:#10b981; font-family:monospace; font-size:10px; margin-left:6px; background:rgba(16,185,129,0.1); padding:1px 5px; border-radius:4px;">${vipKey}</span>
+                        <button data-code="${vipKey}" class="btn-copy-vip-item" style="background:#334155; color:#cbd5e1; border:none; border-radius:4px; padding:1px 5px; font-size:9.5px; cursor:pointer; margin-left:4px;">Copiar</button>
+                    </div>
                     <button data-email="${email}" class="btn-revoke-excel-vip" style="background:#dc2626; color:#fff; border:none; border-radius:6px; padding:2px 6px; font-size:10px; cursor:pointer;" title="Revocar a Solo PDF">
                         ✕ Quitar
                     </button>
@@ -1450,6 +1825,12 @@
         });
         c.innerHTML = html;
 
+        c.querySelectorAll('.btn-copy-vip-item').forEach(b => {
+            b.onclick = () => {
+                copyToClipboard(b.dataset.code, `Código VIP ${b.dataset.code} copiado al portapapeles.`);
+            };
+        });
+
         c.querySelectorAll('.btn-revoke-excel-vip').forEach(b => {
             b.onclick = () => {
                 const em = b.dataset.email;
@@ -1457,6 +1838,7 @@
                     revokeExcelPermission(em);
                     renderDevExcelAuthorized();
                     renderDevUsers();
+                    updateDevKeyFinder();
                 }
             };
         });
@@ -1597,6 +1979,7 @@
 
     function showDevPanel() {
         buildModals();
+        updateDevKeyFinder();
         renderDevPending();
         renderDevUsers();
         renderDevExcelRequests();
@@ -1724,6 +2107,10 @@
         grantExcelPermission: grantExcelPermission,
         revokeExcelPermission: revokeExcelPermission,
         requestExcelPermission: requestExcelPermission,
+        computeAccessCode: computeAccessCode,
+        computeExcelVipCode: computeExcelVipCode,
+        verifyAccessCode: verifyAccessCode,
+        verifyExcelVipCode: verifyExcelVipCode,
         showExcelVipNotice: showExcelVipNotice,
         hideExcelVipNotice: hideExcelVipNotice,
         getSession: getSession,
