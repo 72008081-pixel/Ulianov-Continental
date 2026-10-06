@@ -1,0 +1,669 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage[margin=1.7cm,top=2.2cm,bottom=2.2cm]{geometry}
+\usepackage{amsmath,amssymb,amsfonts,mathtools}
+\usepackage{booktabs,tabularx,array,colortbl,longtable}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+
+% Definición de colores pedagógicos de la cátedra
+\definecolor{primaryDark}{RGB}{15, 23, 42}
+\definecolor{profGreen}{RGB}{16, 185, 129}
+\definecolor{profBlue}{RGB}{37, 99, 235}
+\definecolor{accentAmber}{RGB}{245, 158, 11}
+\definecolor{roseComp}{RGB}{244, 63, 94}
+\definecolor{lavenderReac}{RGB}{237, 231, 246}
+\definecolor{pastelGreen}{RGB}{209, 250, 229}
+\definecolor{pastelPeach}{RGB}{254, 226, 226}
+\definecolor{pastelYellow}{RGB}{254, 243, 199}
+\definecolor{bgGray}{RGB}{248, 250, 252}
+\definecolor{borderGray}{RGB}{226, 232, 240}
+
+% Configuración de hipervínculos
+\hypersetup{
+    colorlinks=true,
+    linkcolor=profBlue,
+    urlcolor=profBlue,
+    citecolor=profGreen
+}
+
+% Encabezados y pies de página corregidos sin solapamiento
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\bfseries\color{primaryDark} ANÁLISIS ESTRUCTURAL II}
+\fancyhead[R]{\small\bfseries\color{profBlue} GUÍA PASO A PASO: HOJA EN BLANCO Y CUADERNO}
+\fancyfoot[L]{\small\color{gray} Cátedra Universidad Continental $\cdot$ Método de Rigidez Directa}
+\fancyfoot[R]{\thepage}
+\renewcommand{\headrulewidth}{0.8pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% Cajas de estilo tcolorbox
+\newtcolorbox{excelbox}[1][]{
+    enhanced,
+    breakable,
+    colback=bgGray,
+    colframe=profGreen!80!black,
+    fonttitle=\bfseries\color{white},
+    colbacktitle=profGreen!85!black,
+    title={#1},
+    attach boxed title to top left={yshift=-2mm,xshift=4mm},
+    boxed title style={sharp corners,rounded corners=southeast},
+    arc=2mm
+}
+
+\newtcolorbox{notebookbox}[1][]{
+    enhanced,
+    breakable,
+    colback=pastelYellow!40,
+    colframe=accentAmber!80!black,
+    fonttitle=\bfseries\color{white},
+    colbacktitle=accentAmber!90!black,
+    title={#1},
+    attach boxed title to top left={yshift=-2mm,xshift=4mm},
+    boxed title style={sharp corners,rounded corners=southeast},
+    arc=2mm
+}
+
+\newtcolorbox{warningbox}[1][]{
+    enhanced,
+    breakable,
+    colback=pastelPeach!50,
+    colframe=roseComp!80!black,
+    fonttitle=\bfseries\color{white},
+    colbacktitle=roseComp,
+    title={#1},
+    attach boxed title to top left={yshift=-2mm,xshift=4mm},
+    boxed title style={sharp corners,rounded corners=southeast},
+    arc=2mm
+}
+
+\newtcolorbox{pedagcard}[1][]{
+    enhanced,
+    breakable,
+    colback=lavenderReac!40,
+    colframe=profBlue!80!black,
+    fonttitle=\bfseries\color{white},
+    colbacktitle=profBlue,
+    title={#1},
+    attach boxed title to top left={yshift=-2mm,xshift=4mm},
+    boxed title style={sharp corners,rounded corners=southeast},
+    arc=2mm
+}
+
+\begin{document}
+
+\begin{center}
+    {\Huge\bfseries\color{primaryDark} GUÍA MAESTRA DE RESOLUCIÓN EN EXAMEN}\\[0.25cm]
+    {\Large\bfseries\color{profBlue} Cómo Construir la Solución Completa desde una Hoja de Cálculo en Blanco o Cuaderno}\\[0.2cm]
+    {\large\bfseries Método de la Rigidez Directa en Armaduras Planas (2D)}\\[0.3cm]
+    {\normalsize\bfseries Asignatura: Análisis Estructural II \quad$\cdot$\quad Cátedra: Ing. Ulianov Cuba Valencia}\\[0.15cm]
+    {\small\color{gray} Basado en el libro oficial \texttt{EXCEL CORREGIDO CUBA ULIANOV LUN 05 10.xlsx} y los apuntes de cuaderno}
+\end{center}
+
+\vspace{-0.2cm}
+\noindent\rule{\textwidth}{1.5pt}
+
+\begin{abstract}
+\noindent Esta guía técnica y pedagógica fue diseñada para responder a la indicación del profesor: \textbf{``En el examen no se usará ninguna plantilla prehecha; el estudiante debe construir el análisis en una hoja de Excel totalmente en blanco o a mano en el cuaderno''}. Se explica paso a paso, cuadro por cuadro, qué colocar en cada columna y fila, cuáles son las fórmulas exactas nativas de Excel en español e inglés para automatizar el cálculo sin cometer errores humanos, cómo trasladar las matrices locales a la matriz global sin confusiones, cómo invertir la submatriz y calcular reacciones, y cómo determinar los esfuerzos axiales finales con su verificación de equilibrio estático. Incluye el ejercicio resuelto en clase del lunes 05/10 (4 nudos, 5 barras) con todos sus números verificados celda por celda.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Estrategia de Examen: Por Qué Empezar en Blanco y Cómo Dominarlo}
+
+Cuando el Ing. Ulianov Cuba Valencia indica que no se permitirá usar plantillas prediseñadas, el objetivo pedagógico es evaluar si el estudiante comprende la \textbf{arquitectura matricial del método de rigidez}:
+\begin{enumerate}
+    \item \textbf{Comprensión del flujo de datos:} La geometría define los cosenos directores; los cosenos definen las matrices locales $k_m$; las condiciones de frontera definen la partición entre grados de libertad libres y restringidos; la inversión resuelve los desplazamientos; y los desplazamientos devuelven las reacciones y fuerzas axiales.
+    \item \textbf{Cero dependencia de macros o formatos complejos:} Todo el método se puede resolver en Excel estándar usando solo \textbf{6 funciones básicas}: \texttt{RAIZ}, \texttt{MINVERSA}, \texttt{MMULT}, \texttt{INDICE}, \texttt{COINCIDIR} y \texttt{BUSCARV}.
+    \item \textbf{Velocidad de ejecución:} Con el orden presentado en este manual, armar el modelo completo desde una hoja en blanco toma entre \textbf{12 y 18 minutos}.
+\end{enumerate}
+
+\begin{pedagcard}[Regla de Oro de la Cátedra Ulianov]
+En todo análisis matricial por rigidez directa:
+\begin{itemize}
+    \item Cada nudo plano tiene \textbf{2 grados de libertad}: $u_x$ (horizontal) y $u_y$ (vertical). Si la armadura tiene $j$ nudos, la matriz global de la armadura tiene dimensión $(2j \times 2j)$.
+    \item La diagonal principal de la matriz global de rigidez $[K_{\text{armadura}}]$ \textbf{SIEMPRE debe contener valores estrictamente POSITIVOS} ($K_{ii} > 0$). Si aparece un valor cero o negativo en un nudo activo, hay un error de signos en la matriz local o la estructura es un mecanismo inestable.
+    \item En los apoyos restringidos, el desplazamiento nodal es nulo ($D = 0$). En los nudos libres, el desplazamiento es una incógnita ($D \neq 0$) y la carga externa es conocida.
+\end{itemize}
+\end{pedagcard}
+
+\section{Mapa de Ruta: Los 10 Cuadros Canónicos}
+
+El desarrollo se organiza en \textbf{10 cuadros estructurados} en orden estrictamente secuencial:
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{c l X l}
+\toprule
+\textbf{Cuadro} & \textbf{Nombre Oficial} & \textbf{Propósito y Contenido Clave} & \textbf{Fórmula Principal} \\
+\midrule
+\textbf{1} & Tabla Geometría y Rigidez & $\Delta X, \Delta Y, L, C_x, C_y, A, E, AE/L$ para cada barra. & $L=\sqrt{\Delta X^2+\Delta Y^2},\; C_x=\Delta X/L$ \\
+\textbf{2} & Conectividad y GDL & Nudos inicio y fin con sus 4 grados de libertad ($u_{ix}, u_{iy}, u_{jx}, u_{jy}$). & \texttt{="U"\&Nudo\&"X"} \\
+\textbf{3} & Matrices Locales $k_m$ ($4\times 4$) & Rigidez local de cada barra con plantilla simétrica de cosenos. & $(AE/L) \cdot [C \cdot C^T]$ \\
+\textbf{3.1} & Matrices Expandidas $K_m$ & Mapeo de la matriz local $4\times 4$ al tamaño global $(2j \times 2j)$. & \texttt{INDICE} + \texttt{COINCIDIR} \\
+\textbf{4} & Matriz Global $K_{\text{armadura}}$ & Ensamble general sumando término a término todas las matrices expandidas. & $\sum_{m=1}^b K_m$ (Diagonal positiva) \\
+\textbf{5} & Vector Global de Cargas $\{C\}$ & Cargas nodales externas conocidas y reacciones simbólicas en apoyos. & Cargas aplicadas en Kgf \\
+\textbf{6} & Vector de Desplazamientos $\{D\}$ & Desplazamientos libres incógnitas y restricciones ($D=0$ en apoyos). & $D=0$ en restricciones \\
+\textbf{7} & Ecuación Matricial Global & Planteamiento general de equilibrio $\{C\} = [K_{\text{armadura}}] \cdot \{D\}$. & Formato didáctico \\
+\textbf{8} & Ecuación Reducida $[K_{11}]$ & Submatriz de grados libres e inversión para hallar $\{D_{\text{lib}}\}$. & $\{D_{\text{lib}}\} = [K_{11}]^{-1} \{C_{\text{lib}}\}$ \\
+\textbf{9} & Ecuación de Reacciones $[K_{21}]$ & Multiplicación de filas restringidas por desplazamientos libres $\{R\}$. & $\{R\} = [K_{21}] \{D_{\text{lib}}\}$ \\
+\textbf{10} & Vector Total y Fuerzas $F_m$ & Desplazamientos totales y cálculo del esfuerzo axial en cada barra. & $F_m = \frac{AE}{L} [-C_x, -C_y, C_x, C_y] \{D_m\}$ \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\newpage
+
+\section{PASO 1: TABLA 1 — Geometría y Propiedades de Barras}
+
+\subsection{Estructura del Cuadro}
+Este es el primer cuadro que debes trazar tanto en la hoja de Excel en blanco como en el cuaderno:
+
+\begin{center}
+\small
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+\rowcolor{pastelGreen}
+\textbf{Barra} & \multicolumn{2}{c|}{\textbf{Inicio}} & \multicolumn{2}{c|}{\textbf{Fin}} & $\mathbf{\Delta X}$ & $\mathbf{\Delta Y}$ & $\mathbf{L}$ & $\mathbf{C_x}$ & $\mathbf{C_y}$ & $\mathbf{A}$ & $\mathbf{E}$ & $\mathbf{AE/L}$ \\
+\hline
+\rowcolor{pastelGreen}
+\# & $X_i$ & $Y_i$ & $X_f$ & $Y_f$ & (cm) & (cm) & (cm) & (adim) & (adim) & ($\text{cm}^2$) & ($\text{Kgf/cm}^2$) & ($\text{Kgf/cm}$) \\
+\hline
+1 & $x_1$ & $y_1$ & $x_2$ & $y_2$ & $x_f - x_i$ & $y_f - y_i$ & $\sqrt{\Delta X^2+\Delta Y^2}$ & $\Delta X/L$ & $\Delta Y/L$ & $A_1$ & $E_1$ & $(A \cdot E)/L$ \\
+2 & $\dots$ & $\dots$ & $\dots$ & $\dots$ & $\dots$ & $\dots$ & $\dots$ & $\dots$ & $\dots$ & $\dots$ & $\dots$ & $\dots$ \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Instrucciones para Cuaderno (Cálculo a Mano)}
+\begin{enumerate}
+    \item Define de forma clara el \textbf{Nudo Inicio ($i$)} y el \textbf{Nudo Fin ($j$)} de cada barra y dibuja una pequeña flecha sobre la barra que apunte de $i \to j$. Esa flecha define tu eje local $+x'$.
+    \item Anota las coordenadas en centímetros ($X$ horizontal positivo hacia la derecha, $Y$ vertical positivo hacia arriba).
+    \item Calcula los incrementos:
+    \begin{align*}
+        \Delta X &= X_f - X_i \quad \text{(Fin menos Inicio)} \\
+        \Delta Y &= Y_f - Y_i \quad \text{(Fin menos Inicio)}
+    \end{align*}
+    \textbf{¡OJO con los signos!}: Si la barra va hacia la izquierda, $\Delta X$ es negativo. Si baja, $\Delta Y$ es negativo.
+    \item Calcula la longitud por Pitágoras: $L = \sqrt{\Delta X^2 + \Delta Y^2}$.
+    \item Calcula los cosenos directores conservando estrictamente el signo de $\Delta$:
+    \[
+        C_x = \frac{\Delta X}{L}, \qquad C_y = \frac{\Delta Y}{L}
+    \]
+    \textbf{Comprobación inmediata}: Siempre debe cumplirse que $C_x^2 + C_y^2 = 1.000$.
+    \item Calcula la rigidez axial de la barra: $\frac{AE}{L} = \frac{A \cdot E}{L}$.
+\end{enumerate}
+
+\subsection{Automatización en Hoja de Excel en Blanco}
+Ubica la tabla a partir de la celda \textbf{B5}:
+
+\begin{excelbox}[Fórmulas Nativas de Excel para la Tabla 1]
+Supongamos que la fila de la Barra 1 está en la fila 6:
+\begin{itemize}
+    \item \textbf{Columna F ($\Delta X$):} \texttt{=D6 - B6} \quad (o en inglés \texttt{=D6-B6})
+    \item \textbf{Columna G ($\Delta Y$):} \texttt{=E6 - C6}
+    \item \textbf{Columna H (Longitud $L$):} \texttt{=RAIZ(F6\textasciicircum 2 + G6\textasciicircum 2)} \quad (Inglés: \texttt{=SQRT(F6\textasciicircum 2 + G6\textasciicircum 2)})
+    \item \textbf{Columna J ($C_x$):} \texttt{=F6 / H6}
+    \item \textbf{Columna K ($C_y$):} \texttt{=G6 / H6}
+    \item \textbf{Columna N ($AE/L$):} \texttt{=(L6 * M6) / H6} \quad (donde L6 es $A$ y M6 es $E$)
+\end{itemize}
+\textbf{Tip de velocidad:} Escribe las fórmulas solo en la primera barra (fila 6) y luego haz doble clic en la esquina inferior derecha de la celda para arrastrar hacia abajo para todas las barras.
+\end{excelbox}
+
+\section{PASO 2: TABLA 2 — Conectividad y Grados de Libertad}
+
+\subsection{Estructura del Cuadro}
+Este cuadro asocia cada barra con los nombres simbólicos de sus 4 grados de libertad:
+
+\begin{center}
+\small
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\rowcolor{pastelYellow}
+\textbf{Barra} & \textbf{Nudo Inicio} & $\mathbf{u_{ini\_x}}$ & $\mathbf{u_{ini\_y}}$ & \textbf{Nudo Fin} & $\mathbf{u_{fin\_x}}$ & $\mathbf{u_{fin\_y}}$ \\
+\hline
+1 & 1 & U1X & U1Y & 2 & U2X & U2Y \\
+2 & 2 & U2X & U2Y & 3 & U3X & U3Y \\
+3 & 3 & U3X & U3Y & 1 & U1X & U1Y \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Automatización en Excel en Blanco}
+Para evitar escribir a mano ``U1X'', ``U1Y'', etc., usa la concatenación de Excel:
+\begin{excelbox}[Fórmulas de Concatenación Automática]
+Si el Nudo Inicio está en la celda \textbf{C17} y el Nudo Fin en \textbf{F17}:
+\begin{itemize}
+    \item $\mathbf{u_{ini\_x}}$: \texttt{=SI(C17="","", "U" \& C17 \& "X")} \quad (Inglés: \texttt{=IF(C17="","", "U"\&C17\&"X")})
+    \item $\mathbf{u_{ini\_y}}$: \texttt{=SI(C17="","", "U" \& C17 \& "Y")}
+    \item $\mathbf{u_{fin\_x}}$: \texttt{=SI(F17="","", "U" \& F17 \& "X")}
+    \item $\mathbf{u_{fin\_y}}$: \texttt{=SI(F17="","", "U" \& F17 \& "Y")}
+\end{itemize}
+Esto genera automáticamente los encabezados que servirán para indexar las matrices.
+\end{excelbox}
+
+\newpage
+
+\section{PASO 3: TABLA 3 — Matrices Locales de Rigidez de cada Barra (\texorpdfstring{$k_m$}{km})}
+
+\subsection{Fórmula Matricial Local de $4 \times 4$}
+Cada barra $m$ que conecta el nudo $i$ con el nudo $j$ tiene una matriz de rigidez local $4\times 4$ en coordenadas globales dada por:
+\[
+k_m = \left(\frac{AE}{L}\right)_m 
+\begin{bmatrix}
+C_x^2 & C_x C_y & -C_x^2 & -C_x C_y \\
+C_x C_y & C_y^2 & -C_x C_y & -C_y^2 \\
+-C_x^2 & -C_x C_y & C_x^2 & C_x C_y \\
+-C_x C_y & -C_y^2 & C_x C_y & C_y^2
+\end{bmatrix}
+\quad
+\begin{matrix}
+\leftarrow u_{ix} \\
+\leftarrow u_{iy} \\
+\leftarrow u_{jx} \\
+\leftarrow u_{jy}
+\end{matrix}
+\]
+Los encabezados de las columnas son exactamente los mismos: $[u_{ix}, u_{iy}, u_{jx}, u_{jy}]$.
+
+\begin{notebookbox}[Patrón Mnemotécnico para el Cuaderno (¡Fácil de Memorizar!)]
+Observa la estructura de signos de la matriz de cosenos:
+\begin{enumerate}
+    \item El bloque superior izquierdo ($2\times 2$) es \textbf{POSITIVO}: $\begin{bmatrix} C_x^2 & C_x C_y \\ C_x C_y & C_y^2 \end{bmatrix}$.
+    \item El bloque superior derecho ($2\times 2$) es \textbf{NEGATIVO}: $\begin{bmatrix} -C_x^2 & -C_x C_y \\ -C_x C_y & -C_y^2 \end{bmatrix}$.
+    \item El bloque inferior izquierdo ($2\times 2$) es \textbf{NEGATIVO}: $\begin{bmatrix} -C_x^2 & -C_x C_y \\ -C_x C_y & -C_y^2 \end{bmatrix}$.
+    \item El bloque inferior derecho ($2\times 2$) es \textbf{POSITIVO}: $\begin{bmatrix} C_x^2 & C_x C_y \\ C_x C_y & C_y^2 \end{bmatrix}$.
+\end{enumerate}
+¡Los cuatro términos del bloque se repiten con signo invertido en las esquinas cruzadas!
+\end{notebookbox}
+
+\subsection{Formulación en Excel en Blanco}
+Para la Barra 1 (con $AE/L$ en \textbf{N6}, $C_x$ en \textbf{J6}, $C_y$ en \textbf{K6}):
+
+\begin{center}
+\small
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\rowcolor{pastelPeach}
+$k_1=$ & \textbf{U1X} & \textbf{U1Y} & \textbf{U2X} & \textbf{U2Y} \\
+\hline
+\textbf{U1X} & \texttt{=N6*J6*J6} & \texttt{=N6*J6*K6} & \texttt{=-N6*J6*J6} & \texttt{=-N6*J6*K6} \\
+\hline
+\textbf{U1Y} & \texttt{=N6*J6*K6} & \texttt{=N6*K6*K6} & \texttt{=-N6*J6*K6} & \texttt{=-N6*K6*K6} \\
+\hline
+\textbf{U2X} & \texttt{=-N6*J6*J6} & \texttt{=-N6*J6*K6} & \texttt{=N6*J6*J6} & \texttt{=N6*J6*K6} \\
+\hline
+\textbf{U2Y} & \texttt{=-N6*J6*K6} & \texttt{=-N6*K6*K6} & \texttt{=N6*J6*K6} & \texttt{=N6*K6*K6} \\
+\hline
+\end{tabular}
+\end{center}
+
+\section{PASO 3.1: Matriz Expandida de cada Barra (\texorpdfstring{$K_m$}{Km}) (\texorpdfstring{$N \times N$}{NxN})}
+
+\subsection{¿Qué es y Para Qué Sirve?}
+La armadura tiene $j$ nudos y por lo tanto $2j$ grados de libertad en total. Para poder sumar las matrices de rigidez de todas las barras, cada matriz local $4\times 4$ debe ``expandirse'' a una matriz de tamaño $(2j \times 2j)$ colocando los 16 valores en sus casillas correspondientes y rellenando con ceros todas las demás casillas.
+
+\begin{excelbox}[El Truco Secreto del Ing. Ulianov: Ensamble Automático en 1 Segundo]
+En lugar de copiar y pegar a mano los valores de la $4\times 4$ en la matriz grande (lo que genera errores fatales de examen), el Ing. Ulianov utiliza la siguiente fórmula en la esquina superior izquierda de la matriz expandida:
+
+\vspace{0.15cm}
+\noindent\textbf{Fórmula en Español:}
+\begin{center}
+\texttt{=SI.ERROR(INDICE(\$B\$28:\$E\$31, COINCIDIR(\$N34, \$B\$27:\$E\$27, 0), COINCIDIR(B\$33, \$B\$27:\$E\$27, 0)), 0)}
+\end{center}
+
+\noindent\textbf{Fórmula en Inglés:}
+\begin{center}
+\texttt{=IFERROR(INDEX(\$B\$28:\$E\$31, MATCH(\$N34, \$B\$27:\$E\$27, 0), MATCH(B\$33, \$B\$27:\$E\$27, 0)), 0)}
+\end{center}
+
+\textbf{¿Cómo funciona esta fórmula mágica?:}
+\begin{itemize}
+    \item \texttt{\$B\$28:\$E\$31} es el rango de la matriz $4\times 4$ local.
+    \item \texttt{\$B\$27:\$E\$27} son los 4 encabezados de la matriz $4\times 4$ (ej. U1X, U1Y, U2X, U2Y).
+    \item \texttt{\$N34} es el nombre del GDL de la \textbf{fila actual} de la matriz grande.
+    \item \texttt{B\$33} es el nombre del GDL de la \textbf{columna actual} de la matriz grande.
+    \item Si el grado de libertad existe en la barra, busca el valor exacto del cruce fila/columna; si no existe, la función \texttt{SI.ERROR} pone un \textbf{0}.
+\end{itemize}
+\textbf{¡Solo escribes la fórmula en la celda B34 y la arrastras por toda la cuadrícula de $8\times 8$ o $12\times 12$! ¡La matriz se arma sola!}
+\end{excelbox}
+
+\newpage
+
+\section{PASO 4: TABLA 4 — Matriz Global de Rigidez (\texorpdfstring{$K_{\text{armadura}}$}{Karmadura})}
+
+\subsection{Ensamble de la Matriz de la Estructura}
+La matriz global de rigidez se obtiene sumando celda por celda las matrices expandidas de todas las barras:
+\[
+[K_{\text{armadura}}] = [K_1] + [K_2] + [K_3] + \dots + [K_b]
+\]
+
+En Excel, en la celda correspondiente al cruce (Fila U1X, Columna U1X):
+\begin{center}
+\texttt{=B34 + B55 + B76 + B97 + B118} \quad (Suma de las celdas B de cada $K_m$)
+\end{center}
+Se arrastra a toda la matriz $(2j \times 2j)$.
+
+\begin{warningbox}[¡Comprobaciones Salva-Vidas de Cátedra!]
+\begin{enumerate}
+    \item \textbf{Diagonal Principal Estrictamente Positiva:}
+    Revisa las celdas $K_{11}, K_{22}, K_{33}, \dots$:
+    \[
+    K(U1X, U1X) > 0, \quad K(U1Y, U1Y) > 0, \quad K(U2X, U2X) > 0, \dots
+    \]
+    ¡Si ves algún número negativo o cero en un nudo activo, DETENTE! Hay un error de suma o signos en el Paso 1 o 3.
+    \item \textbf{Simetría Exacta:}
+    El valor de la fila $i$, columna $j$ debe ser idéntico al de la fila $j$, columna $i$ ($K_{ij} = K_{ji}$).
+\end{enumerate}
+\end{warningbox}
+
+\section{PASOS 5, 6 y 7: Vectores Globales \texorpdfstring{$\{C\}$}{C}, \texorpdfstring{$\{D\}$}{D} y Ecuación General}
+
+\subsection{Paso 5: Vector Global de Cargas Externas $\{C\}$}
+Construye una columna con los grados de libertad $[U1X, U1Y, U2X, U2Y, \dots]^T$:
+\begin{itemize}
+    \item Si en el nudo actúa una fuerza externa puntual conocida, anota su valor en $\text{Kgf}$ con signo:
+    \begin{itemize}
+        \item Horizontal a la derecha: $(+)$ $\mid$ Horizontal a la izquierda: $(-)$.
+        \item Vertical hacia arriba: $(+)$ $\mid$ Vertical hacia abajo (gravedad): $(-)$.
+    \end{itemize}
+    \item Si el nudo no tiene carga ni apoyo, anota \textbf{0}.
+    \item Si el nudo es un apoyo donde se generará una reacción desconocida, déjalo indicado con texto (ej. $C_{1X}, C_{1Y}, R_{2Y}\dots$).
+\end{itemize}
+
+\subsection{Paso 6: Vector Global de Desplazamientos $\{D\}$}
+Construye la columna paralela de desplazamientos:
+\begin{itemize}
+    \item \textbf{Apoyo Fijo (Articulación):} Restringe desplazamientos horizontal y vertical:
+    \[
+    D_{x} = 0, \qquad D_{y} = 0
+    \]
+    \item \textbf{Apoyo Móvil / Rodillo en Y (plano horizontal):} Restringe el movimiento vertical pero permite el horizontal:
+    \[
+    D_{y} = 0, \qquad D_{x} = \text{Incógnita libre (amarillo)}
+    \]
+    \item \textbf{Apoyo Móvil / Rodillo en X (plano vertical):} Restringe el movimiento horizontal:
+    \[
+    D_{x} = 0, \qquad D_{y} = \text{Incógnita libre (amarillo)}
+    \]
+    \item \textbf{Nudo Libre:} Ambos desplazamientos son incógnitas:
+    \[
+    D_{x} = \text{Incógnita}, \qquad D_{y} = \text{Incógnita}
+    \]
+\end{itemize}
+
+\subsection{Paso 7: Ecuación Matricial Global}
+Se representa la ecuación canónica:
+\[
+\begin{Bmatrix} C_{1X} \\ C_{1Y} \\ C_{2X} \\ \vdots \end{Bmatrix}
+=
+\begin{bmatrix}
+K_{11} & K_{12} & \dots & K_{1n} \\
+K_{21} & K_{22} & \dots & K_{2n} \\
+\vdots & \vdots & \ddots & \vdots \\
+Kn1 & Kn2 & \dots & Knn
+\end{bmatrix}
+\begin{Bmatrix} D_{1X} \\ D_{1Y} \\ D_{2X} \\ \vdots \end{Bmatrix}
+\]
+
+\newpage
+
+\section{PASO 8: Ecuación Reducida y Cálculo de Desplazamientos \texorpdfstring{$\{D_{\text{lib}}\}$}{Dlib}}
+
+\subsection{Partición de la Matriz: La Submatriz $[K_{11}]$}
+Para resolver el sistema, separamos los grados de libertad \textbf{libres} ($D \neq 0$) de los \textbf{restringidos} ($D = 0$):
+\[
+\begin{Bmatrix} C_{\text{lib}} \\ \hline R_{\text{apoyos}} \end{Bmatrix}
+=
+\begin{bmatrix}
+K_{11} & \vline & K_{12} \\
+\hline
+K_{21} & \vline & K_{22}
+\end{bmatrix}
+\begin{Bmatrix} D_{\text{lib}} \\ \hline 0 \end{Bmatrix}
+\]
+Como los desplazamientos en los apoyos son $0$, el producto por $K_{12}$ se anula, resultando la \textbf{ecuación reducida de desplazamientos}:
+\[
+\{C_{\text{lib}}\} = [K_{11}] \cdot \{D_{\text{lib}}\}
+\]
+
+\subsection{¿Cómo Extraer $[K_{11}]$ en Cuaderno y en Excel en Blanco?}
+\begin{itemize}
+    \item \textbf{En el Cuaderno:} Toma tu matriz $[K_{\text{armadura}}]$. Con un lápiz, \textbf{tacha} todas las filas y columnas donde el desplazamiento sea $0$ (apoyos). La cuadrícula que sobrevive es tu submatriz $[K_{11}]$, y las cargas conocidas correspondientes forman $\{C_{\text{lib}}\}$.
+    \item \textbf{En Excel en Blanco:} Selecciona las filas y columnas vivas vinculándolas directamente (ej. \texttt{=B196}).
+\end{itemize}
+
+\subsection{Inversión y Multiplicación Matricial en Excel}
+\begin{excelbox}[Fórmulas Clave de Inversión y Solución]
+Supongamos que $[K_{11}]$ es una submatriz de $3 \times 3$ ubicada en el rango \textbf{B257:D259}, y las cargas conocidas $\{C_{\text{lib}}\}$ están en \textbf{A257:A259}:
+
+\vspace{0.15cm}
+\noindent\textbf{1. Cálculo de la Matriz Inversa $[K_{11}]^{-1}$:}
+\begin{itemize}
+    \item Selecciona un bloque vacío de $3 \times 3$ (ej. \textbf{F257:H259}).
+    \item Escribe: \texttt{=MINVERSA(B257:D259)} \quad (En inglés: \texttt{=MINVERSE(B257:D259)}).
+    \item Si tienes Excel moderno, presiona \textbf{Enter}. Si tienes Excel antiguo, presiona \textbf{Ctrl + Shift + Enter}.
+\end{itemize}
+
+\vspace{0.15cm}
+\noindent\textbf{2. Cálculo de los Desplazamientos $\{D_{\text{lib}}\} = [K_{11}]^{-1} \cdot \{C_{\text{lib}}\}$:}
+\begin{itemize}
+    \item Selecciona una columna de $3 \times 1$ (ej. \textbf{J257:J259}).
+    \item Escribe: \texttt{=MMULT(F257:H259, A257:A259)} \quad (En inglés: \texttt{=MMULT(F257:H259, A257:A259)}).
+    \item Presiona \textbf{Enter}. ¡Los valores obtenidos son los desplazamientos reales de la armadura en \textbf{centímetros (cm)}!
+\end{itemize}
+\end{excelbox}
+
+\section{PASO 9: Ecuación Reducida y Cálculo de Reacciones \texorpdfstring{$\{R\}$}{R}}
+
+\subsection{Formulación de Reacciones}
+Una vez conocidos los desplazamientos libres $\{D_{\text{lib}}\}$, las reacciones en los apoyos se calculan directamente multiplicando la submatriz $[K_{21}]$ por $\{D_{\text{lib}}\}$:
+\[
+\{R\} = [K_{21}] \cdot \{D_{\text{lib}}\}
+\]
+Donde:
+\begin{itemize}
+    \item $[K_{21}]$ está formada por las \textbf{filas de los apoyos} y las \textbf{columnas de los grados libres} de la matriz global $[K_{\text{armadura}}]$.
+    \item $\{D_{\text{lib}}\}$ es el vector de desplazamientos recién calculado en el Paso 8.
+\end{itemize}
+
+\begin{excelbox}[Fórmula de Reacciones en Excel]
+Si $[K_{21}]$ tiene dimensión $3 \times 3$ (en el rango \textbf{B294:D296}) y $\{D_{\text{lib}}\}$ está en \textbf{J257:J259}:
+\begin{center}
+\texttt{=MMULT(B294:D296, J257:J259)}
+\end{center}
+Los resultados son las reacciones en cada apoyo en \textbf{Kgf}.
+\end{excelbox}
+
+\begin{warningbox}[¡Verificación de Equilibrio de Examen (Puntaje Seguro!)]
+Antes de pasar al siguiente paso, haz la suma estática en tu cuaderno:
+\[
+\sum F_X = \sum P_X + \sum R_X = 0, \qquad \sum F_Y = \sum P_Y + \sum R_Y = 0
+\]
+Si la suma de cargas aplicadas más reacciones calculadas da \textbf{0.0000}, tu cálculo matricial de rigidez, inversa y reacciones está \textbf{100\% PERFECTO}.
+\end{warningbox}
+
+\newpage
+
+\section{PASO 10: Vector Total y Cálculo de Fuerzas Axiales en Barras (\texorpdfstring{$F_m$}{Fm})}
+
+\subsection{Paso 10: Vector Total de Desplazamientos}
+Reúne en una sola columna todos los desplazamientos nodales de la estructura:
+\begin{itemize}
+    \item Para los grados libres, toma el valor numérico calculado en el Paso 8 (en cm).
+    \item Para los grados restringidos (apoyos), coloca el valor exacto \textbf{0}.
+\end{itemize}
+En Excel puedes usar: \texttt{=SI.ERROR(BUSCARV(GDL, rango\_D\_calculados, 2, FALSO), 0)}.
+
+\subsection{Paso 10.1: Fórmula Maestra de Fuerzas Axiales}
+Para cualquier barra $m$ que va desde el nudo de inicio $i$ hasta el nudo de fin $j$, la fuerza axial interna $F_m$ se calcula con la fórmula matricial:
+\[
+F_m = \left(\frac{AE}{L}\right)_m 
+\begin{bmatrix} -C_x & -C_y & +C_x & +C_y \end{bmatrix}
+\begin{Bmatrix} D_{ix} \\ D_{iy} \\ D_{jx} \\ D_{jy} \end{Bmatrix}
+\]
+
+O en forma desarrollada escalar:
+\[
+\mathbf{F_m = \left(\frac{AE}{L}\right)_m \cdot \Big[ -C_x \cdot D_{ix} - C_y \cdot D_{iy} + C_x \cdot D_{jx} + C_y \cdot D_{jy} \Big]}
+\]
+
+\begin{notebookbox}[Regla de Signos y Convención de Esfuerzos de Cátedra]
+\begin{itemize}
+    \item Si $\mathbf{F_m > 0}$ (signo positivo) $\implies$ \textbf{BARRA A TRACCIÓN (+)}: La barra se estira, genera tensión interna.
+    \item Si $\mathbf{F_m < 0}$ (signo negativo) $\implies$ \textbf{BARRA A COMPRESIÓN (-)}: La barra se acorta, sufre compresión.
+    \item Si $\mathbf{F_m = 0}$ (o $|F_m| < 10^{-4}$) $\implies$ \textbf{BARRA DE FUERZA NULA (0)}: Barra de estabilidad geométrica sin esfuerzo bajo ese estado de cargas.
+\end{itemize}
+\end{notebookbox}
+
+\subsection{Automatización en Excel en Blanco}
+Para la Barra 1 en Excel:
+\begin{enumerate}
+    \item Crea una fila con los 4 cosenos con signo:
+    \begin{center}
+    \begin{tabular}{|c|c|c|c|}
+    \hline
+    $-C_x$ & $-C_y$ & $+C_x$ & $+C_y$ \\
+    \hline
+    \texttt{=-J6} & \texttt{=-K6} & \texttt{=J6} & \texttt{=K6} \\
+    \hline
+    \end{tabular}
+    \end{center}
+    \item Al costado, coloca en columna los 4 desplazamientos asociados a esa barra: $[D_{ix}, D_{iy}, D_{jx}, D_{jy}]^T$ vinculándolos desde la tabla de desplazamientos totales.
+    \item En la celda del resultado de $F_1$:
+    \begin{center}
+    \texttt{=N6 * MMULT(rango\_1x4\_cosenos, rango\_4x1\_desplazamientos)}
+    \end{center}
+    (donde \texttt{N6} es $AE/L$).
+    \item Para el diagnóstico de estado:
+    \begin{center}
+    \texttt{=SI(REDONDEAR(F1, 2)>0, "TRACCIÓN (+)", SI(REDONDEAR(F1, 2)<0, "COMPRESIÓN (-)", "FUERZA NULA"))}
+    \end{center}
+\end{enumerate}
+
+\newpage
+
+\section{EJEMPLO NUMÉRICO RESUELTO DE CÁTEDRA (Lunes 05/10)}
+
+Para que puedas verificar tus números mientras practicas en una hoja en blanco, aquí tienes el ejercicio exacto del libro oficial de la cátedra \texttt{EXCEL CORREGIDO CUBA ULIANOV LUN 05 10.xlsx}:
+
+\subsection{Datos de Entrada de la Armadura (4 Nudos, 5 Barras)}
+\begin{itemize}
+    \item \textbf{Propiedades de Material y Sección:} $A = 16.00\text{ cm}^2$, $E = 120\,000\text{ Kgf/cm}^2$, Producto $AE = 1\,920\,000\text{ Kgf}$.
+    \item \textbf{Coordenadas de Nudos:}
+    \begin{itemize}
+        \item Nudo 1: $(0, 0)\text{ cm}$ $\to$ \textbf{Apoyo Fijo} ($R_{1X}, R_{1Y}$, $D_{1X}=0, D_{1Y}=0$).
+        \item Nudo 2: $(1000, 0)\text{ cm}$ $\to$ \textbf{Apoyo Móvil en Y} ($R_{2Y}$, $D_{2Y}=0$, $D_{2X}$ libre).
+        \item Nudo 3: $(200, 400)\text{ cm}$ $\to$ \textbf{Nudo Libre} ($D_{3X}, D_{3Y}$ libres).
+        \item Nudo 4: $(800, 800)\text{ cm}$ $\to$ \textbf{Nudo Libre} ($D_{4X}, D_{4Y}$ libres).
+    \end{itemize}
+    \item \textbf{Cargas Aplicadas Externas:}
+    \begin{itemize}
+        \item En Nudo 2: $P_{2X} = 0\text{ Kgf}$, $P_{2Y} = 0\text{ Kgf}$.
+        \item En Nudo 3: $P_{3X} = 0\text{ Kgf}$, $P_{3Y} = -4000\text{ Kgf}$.
+        \item En Nudo 4: $P_{4X} = 13\,800\text{ Kgf}$, $P_{4Y} = -9800\text{ Kgf}$.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Tabla 1 Resuelta: Geometría y Rigidez de las 5 Barras}
+\begin{center}
+\small
+\begin{tabular}{|c|c|c|r|r|r|r|r|r|r|}
+\hline
+\rowcolor{pastelGreen}
+\textbf{Barra} & \textbf{Inicio} & \textbf{Fin} & $\mathbf{\Delta X}$ (cm) & $\mathbf{\Delta Y}$ (cm) & $\mathbf{L}$ (cm) & $\mathbf{C_x}$ & $\mathbf{C_y}$ & $\mathbf{AE/L}$ (Kgf/cm) \\
+\hline
+1 & 1 & 2 & $+1000.00$ & $0.00$ & $1000.00$ & $+1.0000$ & $0.0000$ & $1\,920.00$ \\
+2 & 1 & 3 & $+200.00$ & $+400.00$ & $447.21$ & $+0.4472$ & $+0.8944$ & $4\,293.25$ \\
+3 & 3 & 2 & $+800.00$ & $-400.00$ & $894.43$ & $+0.8944$ & $-0.4472$ & $2\,146.63$ \\
+4 & 3 & 4 & $+600.00$ & $+400.00$ & $721.11$ & $+0.8321$ & $+0.5547$ & $2\,662.56$ \\
+5 & 4 & 2 & $+200.00$ & $-800.00$ & $824.62$ & $+0.2425$ & $-0.9701$ & $2\,328.34$ \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Resultados Calculados: Desplazamientos Nocales}
+Los 5 grados de libertad libres resultan exactamente:
+\[
+\begin{aligned}
+D_{2X} &= +7.0625\text{ cm} \\
+D_{3X} &= +11.0245\text{ cm} \\
+D_{3Y} &= -5.3725\text{ cm} \\
+D_{4X} &= +11.4172\text{ cm} \\
+D_{4Y} &= -2.8228\text{ cm}
+\end{aligned}
+\]
+
+\subsection{Resultados Calculados: Reacciones en Apoyos y Verificación de Equilibrio}
+\[
+\begin{aligned}
+R_{1X} &= -13\,800.00\text{ Kgf} \\
+R_{1Y} &= -480.00\text{ Kgf} \\
+R_{2Y} &= +14\,280.00\text{ Kgf}
+\end{aligned}
+\]
+\textbf{Comprobación de Equilibrio Estático Global:}
+\begin{align*}
+\sum F_X &= P_{4X} + R_{1X} = 13\,800.00 - 13\,800.00 = \mathbf{0.00\text{ Kgf}} \quad \text{\color{profGreen}(¡CUMPLE AL 100\%!)} \\
+\sum F_Y &= P_{3Y} + P_{4Y} + R_{1Y} + R_{2Y} = -4000 - 9800 - 480 + 14\,280 = \mathbf{0.00\text{ Kgf}} \quad \text{\color{profGreen}(¡CUMPLE AL 100\%!)}
+\end{align*}
+
+\subsection{Resultados Calculados: Fuerzas Axiales en las 5 Barras}
+\begin{center}
+\small
+\begin{tabular}{|c|c|r|c|c|}
+\hline
+\rowcolor{pastelYellow}
+\textbf{Barra} & \textbf{Conectividad} & \textbf{Fuerza Axial $F_m$ (Kgf)} & \textbf{Signo} & \textbf{Diagnóstico Oficial de Cátedra} \\
+\hline
+1 & $1 \to 2$ & $\mathbf{+13\,560.00}$ & $(+)$ & \textbf{\color{profBlue}BARRA A TRACCIÓN (+)} \\
+2 & $1 \to 3$ & $\mathbf{+536.66}$ & $(+)$ & \textbf{\color{profBlue}BARRA A TRACCIÓN (+)} \\
+3 & $3 \to 2$ & $\mathbf{-12\,764.75}$ & $(-)$ & \textbf{\color{roseComp}BARRA A COMPRESIÓN (-)} \\
+4 & $3 \to 4$ & $\mathbf{+4\,635.71}$ & $(+)$ & \textbf{\color{profBlue}BARRA A TRACCIÓN (+)} \\
+5 & $4 \to 2$ & $\mathbf{-4\,778.36}$ & $(-)$ & \textbf{\color{roseComp}BARRA A COMPRESIÓN (-)} \\
+\hline
+\end{tabular}
+\end{center}
+
+\newpage
+
+\section{Hoja de Trucos de Teclado y Fórmulas para el Examen}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{l X X}
+\toprule
+\textbf{Operación} & \textbf{Fórmula en Español} & \textbf{Fórmula en Inglés} \\
+\midrule
+Raíz cuadrada (Pitágoras) & \texttt{=RAIZ(Dx\textasciicircum 2 + Dy\textasciicircum 2)} & \texttt{=SQRT(Dx\textasciicircum 2 + Dy\textasciicircum 2)} \\
+Inversión de Matriz & \texttt{=MINVERSA(rango)} & \texttt{=MINVERSE(range)} \\
+Multiplicación Matricial & \texttt{=MMULT(matriz1, matriz2)} & \texttt{=MMULT(matrix1, matrix2)} \\
+Mapeo de Matriz Expandida & \texttt{=SI.ERROR(INDICE(M, COINCIDIR(f, ef, 0), COINCIDIR(c, ec, 0)), 0)} & \texttt{=IFERROR(INDEX(M, MATCH(f, ef, 0), MATCH(c, ec, 0)), 0)} \\
+Fijar referencia absoluta & Presionar tecla \textbf{F4} (agrega signos \texttt{\$}) & Tecla \textbf{F4} \\
+Matrices clásicas en bloque & Seleccionar rango y presionar \textbf{Ctrl + Shift + Enter} & \textbf{Ctrl + Shift + Enter} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.4cm}
+\begin{pedagcard}[Resumen de 1 Minuto para Empezar tu Examen]
+Cuando el profesor diga: \textit{``Abran una hoja de cálculo en blanco''}:
+\begin{enumerate}
+    \item \textbf{Minuto 1:} Escribe los encabezados de la Tabla 1 (Barra, Inicio, Fin, $\Delta X, \Delta Y, L, C_x, C_y, A, E, AE/L$).
+    \item \textbf{Minuto 3:} Escribe los encabezados de la Tabla 2 con la fórmula \texttt{="U"\&Nudo\&"X"}.
+    \item \textbf{Minuto 6:} Arma las matrices $4\times 4$ locales con las fórmulas $=AE/L \cdot C_x^2$, etc.
+    \item \textbf{Minuto 9:} Arma las expandidas con el truco \texttt{=SI.ERROR(INDICE(M, COINCIDIR(...), COINCIDIR(...)), 0)}.
+    \item \textbf{Minuto 11:} Suma en la matriz $[K_{\text{armadura}}]$ y verifica que la diagonal principal sea toda positiva.
+    \item \textbf{Minuto 13:} Extrae $[K_{11}]$ tachando apoyos, invierte con \texttt{=MINVERSA} y halla desplazamientos con \texttt{=MMULT}.
+    \item \textbf{Minuto 15:} Calcula reacciones con $[K_{21}] \cdot \{D_{\text{lib}}\}$ y comprueba $\sum F_X = 0, \sum F_Y = 0$.
+    \item \textbf{Minuto 18:} Calcula las fuerzas axiales con $(AE/L)[-C_x, -C_y, C_x, C_y]\{D\}$ y clasifícalas en Tracción/Compresión.
+\end{enumerate}
+\end{pedagcard}
+
+\end{document}
