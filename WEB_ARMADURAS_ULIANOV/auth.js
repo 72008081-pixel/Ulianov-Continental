@@ -29,6 +29,16 @@
     const KEY_EXCEL_WHITELIST = 'cerebro_excel_authorized_users_v21';
     const KEY_EXCEL_REQUESTS  = 'cerebro_excel_requests_v21';
 
+    // Control de Acceso de Invitado VIP para el Docente / Ingeniero
+    const KEY_VIP_GUEST_ENABLED = 'cerebro_vip_guest_enabled_v21';
+    const KEY_VIP_GUEST_TOKEN   = 'cerebro_vip_guest_token_v21';
+    const KEY_VIP_GUEST_NAME    = 'cerebro_vip_guest_name_v21';
+    const KEY_VIP_GUEST_EMAIL   = 'cerebro_vip_guest_email_v21';
+
+    const DEFAULT_VIP_TOKEN = 'DOCENTE_VIP_ULIANOV';
+    const DEFAULT_VIP_NAME  = 'Ing. Ulianov Cuba (Docente Invitado VIP)';
+    const DEFAULT_VIP_EMAIL = 'docente.vip@continental.edu.pe';
+
     // Identificador único persistente de este dispositivo/navegador
     let myDeviceId = localStorage.getItem(KEY_DEVICE_ID);
     if (!myDeviceId) {
@@ -301,7 +311,7 @@
 
     function hasExcelPermission(email) {
         const session = getSession();
-        if (session && session.role === 'owner') return true; // Creador/Dueño siempre puede descargar Excel
+        if (session && (session.role === 'owner' || session.role === 'vip_guest')) return true; // Creador/Dueño o Docente Invitado VIP siempre pueden descargar Excel
         const target = email || (session ? session.email : '');
         if (!target) return false;
         return getExcelAuthorizedUsers().includes(target.toLowerCase().trim());
@@ -365,10 +375,61 @@
     // ── SESIÓN PERSISTENTE Y SIN REPETICIÓN DE PROMPTS ────────────
     function getSession() { return getStoredJSON(KEY_SESSION, null); }
 
+    // ── GESTIÓN DE INVITADO VIP (DOCENTE / INGENIERO) ─────────────
+    function isVipGuestEnabled() {
+        const val = localStorage.getItem(KEY_VIP_GUEST_ENABLED);
+        return val === null ? true : val === 'true'; // Por defecto activo
+    }
+
+    function setVipGuestEnabled(enabled) {
+        localStorage.setItem(KEY_VIP_GUEST_ENABLED, enabled ? 'true' : 'false');
+        if (sessionChannel) {
+            sessionChannel.postMessage({
+                type: 'VIP_GUEST_TOGGLED',
+                enabled: !!enabled
+            });
+        }
+    }
+
+    function getVipGuestToken() {
+        return localStorage.getItem(KEY_VIP_GUEST_TOKEN) || DEFAULT_VIP_TOKEN;
+    }
+
+    function setVipGuestToken(token) {
+        localStorage.setItem(KEY_VIP_GUEST_TOKEN, (token || DEFAULT_VIP_TOKEN).trim());
+    }
+
+    function getVipGuestName() {
+        return localStorage.getItem(KEY_VIP_GUEST_NAME) || DEFAULT_VIP_NAME;
+    }
+
+    function getVipGuestEmail() {
+        return localStorage.getItem(KEY_VIP_GUEST_EMAIL) || DEFAULT_VIP_EMAIL;
+    }
+
+    function loginAsVipGuest() {
+        const sessionObj = {
+            role: 'vip_guest',
+            email: getVipGuestEmail(),
+            name: getVipGuestName(),
+            avatar: '👨‍🏫',
+            isVipGuest: true,
+            hasExcelVip: true,
+            loginAt: new Date().toLocaleString()
+        };
+        saveSession(sessionObj);
+        grantExcelPermission(sessionObj.email);
+        authorizeUser(sessionObj.email);
+        return sessionObj;
+    }
+
     function isAuthorized() {
         const session = getSession();
         if (!session) return false;
         if (session.role === 'owner') return true;
+        if (session.role === 'vip_guest') {
+            return isVipGuestEnabled();
+        }
         if (session.role === 'student') {
             if (isUserBanned(session.email)) return false;
             if (isUserAuthorized(session.email)) return true;
@@ -401,6 +462,15 @@
         sessionChannel.onmessage = (event) => {
             const data = event.data;
             if (!data) return;
+
+            if (data.type === 'VIP_GUEST_TOGGLED') {
+                const mySession = getSession();
+                if (mySession && mySession.role === 'vip_guest' && !data.enabled) {
+                    logoutSession();
+                    alert("🔒 El acceso de Invitado VIP ha sido pausado por el Administrador.");
+                }
+                return;
+            }
 
             const mySession = getSession();
             if (mySession && mySession.role === 'student' && mySession.email === data.email) {
@@ -462,6 +532,47 @@
         });
         const base = window.location.origin + window.location.pathname;
         return `${base}#armadura=${enc}`;
+    }
+
+    // Genera el enlace ÚNICO directo para el Docente con acceso VIP ilimitado
+    function generateVipGuestShareUrl(proj) {
+        let enc = '';
+        if (proj && proj.nodes && proj.bars) {
+            enc = encodeTrussPayload({
+                id: proj.id || 'proj_vip_' + Date.now().toString(36),
+                name: proj.name || 'Armadura Cátedra Ulianov',
+                authorEmail: proj.authorEmail || getVipGuestEmail(),
+                createdAt: proj.createdAt || new Date().toLocaleString(),
+                nodes: proj.nodes,
+                bars: proj.bars
+            });
+        } else if (window.CerebroApp && window.CerebroApp.getCurrentData) {
+            try {
+                const cur = window.CerebroApp.getCurrentData();
+                if (cur && cur.nodes && cur.nodes.some(n => n && n.x !== null)) {
+                    enc = encodeTrussPayload({
+                        id: 'proj_vip_' + Date.now().toString(36),
+                        name: 'Armadura Cátedra Ulianov',
+                        authorEmail: getVipGuestEmail(),
+                        createdAt: new Date().toLocaleString(),
+                        nodes: cur.nodes,
+                        bars: cur.bars
+                    });
+                }
+            } catch (e) {}
+        }
+
+        // Armadura de respaldo por defecto indicada por el usuario
+        if (!enc) {
+            enc = 'eyJpZCI6InByb2pfNmk5bWQydTE3OTEyMjcyNjk4NjgiLCJuYW1lIjoiTWkgQXJtYWR1cmEgMiIsImF1dGhvckVtYWlsIjoiNzYxODU0MTFAY29udGluZW50YWwuZWR1LnBlIiwiY3JlYXRlZEF0IjoiNS8xMC8yMDI2LCAxNDowNzo0OSIsIm5vZGVzIjpbeyJpZCI6MSwieCI6MCwieSI6MCwic3VwcG9ydCI6IkZpam8iLCJweCI6MCwicHkiOjB9LHsiaWQiOjIsIngiOjMwMCwieSI6MCwic3VwcG9ydCI6Ik3Ds3ZpbCBZIiwicHgiOjAsInB5IjowfSx7ImlkIjozLCJ4Ijo3MDAsInkiOjAsInN1cHBvcnQiOiJMaWJyZSIsInB4Ijo0MDAwLCJweSI6LTUwMDB9LHsiaWQiOjQsIngiOjMwMCwieSI6NTAwLCJzdXBwb3J0IjoiTGlicmUiLCJweCI6NDAwMCwicHkiOi01MDAwfSx7ImlkIjo1LCJ4IjpudWxsLCJ5IjpudWxsLCJzdXBwb3J0IjoiTGlicmUiLCJweCI6bnVsbCwicHkiOm51bGx9LHsiaWQiOjYsIngiOm51bGwsInkiOm51bGwsInN1cHBvcnQiOiJMaWJyZSIsInB4IjpudWxsLCJweSI6bnVsbH1dLCJiYXJzIjpbeyJpZCI6MSwic3RhcnQiOjQsImVuZCI6MSwiYSI6MTIsImUiOjIxMDAwMDB9LHsiaWQiOjIsInN0YXJ0IjoxLCJlbmQiOjIsImEiOjEyLCJlIjoyMTAwMDAwfSx7ImlkIjozLCJzdGFydCI6MiwiZW5kIjozLCJhIjoxMiwiZSI6MjEwMDAwMH0seyJpZCI6NCwic3RhcnQiOjMsImVuZCI6NCwiYSI6MTIsImUiOjIxMDAwMDB9LHsiaWQiOjUsInN0YXJ0Ijo0LCJlbmQiOjIsImEiOjEyLCJlIjoyMTAwMDAwfSx7ImlkIjo2LCJzdGFydCI6bnVsbCwiZW5kIjpudWxsLCJhIjoxMiwiZSI6MjEwMDAwMH0seyJpZCI6Nywic3RhcnQiOm51bGwsImVuZCI6bnVsbCwiYSI6MTIsImUiOjIxMDAwMDB9LHsiaWQiOjgsInN0YXJ0IjpudWxsLCJlbmQiOm51bGwsImEiOjEyLCJlIjoyMTAwMDAwfV19';
+        }
+
+        let base = window.location.origin + window.location.pathname;
+        if (!base.startsWith('http')) {
+            base = 'https://72008081-pixel.github.io/Ulianov-Continental/';
+        }
+        const token = getVipGuestToken();
+        return `${base}?vip=${encodeURIComponent(token)}#armadura=${enc}`;
     }
 
     // Evaluador Automático de Estabilidad y Resolución Estructural (determina si la armadura "sirve o no")
@@ -697,27 +808,106 @@
         setStoredJSON(KEY_PROJECTS, all);
     }
 
+    // ── GESTIÓN DE ENLACES MÁGICOS Y ACCESO VIP DEL DOCENTE ─────────
+    function getUrlParameter(name) {
+        const n = name.toLowerCase();
+        let search = window.location.search || '';
+        if (search.startsWith('?')) search = search.substring(1);
+        let pairs = search.split('&');
+        for (let p of pairs) {
+            if (!p) continue;
+            let parts = p.split('=');
+            if (decodeURIComponent(parts[0] || '').toLowerCase() === n) {
+                return decodeURIComponent(parts.slice(1).join('=') || '');
+            }
+        }
+        let hash = window.location.hash || '';
+        if (hash.startsWith('#')) hash = hash.substring(1);
+        pairs = hash.split('&');
+        for (let p of pairs) {
+            if (!p) continue;
+            let parts = p.split('=');
+            if (decodeURIComponent(parts[0] || '').toLowerCase() === n) {
+                return decodeURIComponent(parts.slice(1).join('=') || '');
+            }
+        }
+        return null;
+    }
+
+    async function syncVipConfigFromServer() {
+        try {
+            const resp = await fetch('vip-config.json?_t=' + Date.now(), { cache: 'no-store' });
+            if (resp.ok) {
+                const cfg = await resp.json();
+                if (typeof cfg.vipGuestEnabled === 'boolean' && localStorage.getItem(KEY_VIP_GUEST_ENABLED) === null) {
+                    setVipGuestEnabled(cfg.vipGuestEnabled);
+                }
+                if (cfg.vipToken && !localStorage.getItem(KEY_VIP_GUEST_TOKEN)) {
+                    setVipGuestToken(cfg.vipToken);
+                }
+            }
+        } catch (e) {}
+    }
+
+    function checkVipGuestUrl() {
+        const vipVal = getUrlParameter('vip') || getUrlParameter('vip_guest') || getUrlParameter('token');
+        if (!vipVal) return false;
+
+        const currentToken = getVipGuestToken().toUpperCase();
+        const validTokens = [
+            currentToken,
+            DEFAULT_VIP_TOKEN.toUpperCase(),
+            'DOCENTE_VIP',
+            'VIP_DOCENTE'
+        ];
+
+        if (validTokens.includes(vipVal.trim().toUpperCase())) {
+            if (!isVipGuestEnabled()) {
+                alert("🔒 ACCESO DE INVITADO VIP PAUSADO:\n\nEl enlace de acceso VIP para docentes se encuentra temporalmente desactivado desde el Panel de Desarrollador.\nPor favor solicita la reactivación al estudiante.");
+                return false;
+            }
+
+            loginAsVipGuest();
+            setTimeout(() => {
+                alert(`👨‍🏫 ¡Bienvenido, Estimado Ingeniero!\n\nAcceso de Invitado VIP Activado con Éxito.\nPuede evaluar, editar la armadura y descargar gratuitamente:\n✔ Plantilla Excel (.xlsx) con fórmulas dinámicas\n✔ Informe de cálculo estructural en PDF`);
+            }, 500);
+            return true;
+        }
+        return false;
+    }
+
     // Detección y retención de armadura compartida desde URL (#armadura=...)
     let pendingSharedTruss = null;
-    function checkUrlForSharedTruss() {
-        let hash = window.location.hash || '';
-        let search = window.location.search || '';
-        let raw = '';
 
-        if (hash.includes('armadura=')) {
-            raw = hash.split('armadura=')[1];
-        } else if (search.includes('armadura=')) {
-            raw = search.split('armadura=')[1];
+    function loadTrussWithRetry(proj, attempts = 6) {
+        if (window.CerebroApp && window.CerebroApp.loadProjectData) {
+            importAndLoadTruss(proj, { silent: true });
+        } else if (attempts > 0) {
+            setTimeout(() => loadTrussWithRetry(proj, attempts - 1), 250);
+        }
+    }
+
+    function checkUrlForSharedTruss() {
+        let raw = getUrlParameter('armadura');
+        if (!raw) {
+            let hash = window.location.hash || '';
+            if (hash.includes('armadura=')) {
+                raw = hash.split('armadura=')[1];
+                if (raw) raw = raw.split('&')[0];
+            } else {
+                let search = window.location.search || '';
+                if (search.includes('armadura=')) {
+                    raw = search.split('armadura=')[1];
+                    if (raw) raw = raw.split('&')[0];
+                }
+            }
         }
 
         if (raw) {
-            raw = raw.split('&')[0];
             try {
                 const proj = decodeTrussPayload(raw);
                 if (isAuthorized()) {
-                    setTimeout(() => {
-                        importAndLoadTruss(proj, { silent: true });
-                    }, 400);
+                    loadTrussWithRetry(proj);
                 } else {
                     pendingSharedTruss = proj;
                 }
@@ -1241,6 +1431,59 @@
                     </div>
                 </div>
 
+                <!-- ══ CONTROL DE ENLACE DE INVITADO VIP (DOCENTE / INGENIERO) ══ -->
+                <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(6, 78, 59, 0.35)); border: 1.5px solid #10b981; border-radius: 14px; padding: 13px 15px; margin-bottom: 14px; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="font-size: 12.5px; font-weight: 800; color: #34d399; display: flex; align-items: center; gap: 7px;">
+                            <span style="font-size: 16px;">👨‍🏫</span> ENLACE DE INVITADO VIP PARA EL DOCENTE (INGENIERO)
+                        </span>
+                        <span id="devVipStatusBadge" style="font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;">
+                            <!-- Dinámico -->
+                        </span>
+                    </div>
+
+                    <div style="font-size: 11px; color: #cbd5e1; margin-bottom: 10px; line-height: 1.4;">
+                        Enlace de cortesía académica: Permite a tu docente acceder sin contraseñas ni Yape, ver la armadura cargada y <strong>descargar gratis el Excel (.xlsx con fórmulas nativas) y el PDF</strong>.
+                    </div>
+
+                    <!-- Interruptor ON / OFF -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.45); border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                        <div>
+                            <div style="font-size: 11.5px; font-weight: 700; color: #f8fafc;" id="devVipStateTitle">Estado: Enlace VIP Habilitado</div>
+                            <div style="font-size: 10px; color: #94a3b8;" id="devVipStateDesc">El docente puede ingresar directamente con este link.</div>
+                        </div>
+                        <button id="btnToggleVipGuest" type="button" style="padding: 6px 14px; border-radius: 8px; font-size: 11.5px; font-weight: 800; cursor: pointer; transition: all 0.2s ease; border: none;">
+                            <!-- Dinámico -->
+                        </button>
+                    </div>
+
+                    <!-- Enlace directo para compartir -->
+                    <div style="margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label style="font-size: 11px; font-weight: 700; color: #a7f3d0;">
+                                🔗 Enlace Único Directo para tu Ingeniero (WhatsApp / Correo):
+                            </label>
+                            <span style="font-size: 10px; color: #94a3b8;">Con armadura incluida</span>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <input type="text" id="devVipShareLinkInput" readonly class="liquid-input" style="margin: 0; font-size: 11px; text-align: left; padding: 7px 10px; background: rgba(0,0,0,0.6); color: #38bdf8; font-family: monospace;" value="">
+                            <button id="btnCopyVipShareLink" type="button" class="liquid-btn-primary" style="width: auto; padding: 7px 14px; font-size: 11px; white-space: nowrap; background: linear-gradient(135deg, #059669, #10b981);">
+                                📋 Copiar Enlace VIP
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Pie de la tarjeta: Token y regeneración -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #94a3b8; padding-top: 4px;">
+                        <span>Clave Token: <strong id="devVipTokenLabel" style="color: #f59e0b; font-family: monospace;">DOCENTE_VIP_ULIANOV</strong></span>
+                        <div style="display: flex; gap: 8px;">
+                            <button id="btnRegenVipToken" type="button" style="background: none; border: none; color: #38bdf8; font-size: 10.5px; text-decoration: underline; cursor: pointer;">
+                                🔄 Regenerar Clave
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Pestañas del Panel de Desarrollador -->
                 <div style="display: flex; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 12px; overflow-x: auto;">
                     <button class="dev-tab-btn active" data-tab="tabDevPending" style="background:none; border:none; border-bottom:2px solid #00D2B5; color:#00D2B5; font-size:11.5px; font-weight:700; padding:6px 10px; cursor:pointer;">📬 Solicitudes Yape</button>
@@ -1632,6 +1875,44 @@
                 if (target) target.style.display = 'block';
             };
         });
+
+        // Control de Enlace de Invitado VIP para el Docente
+        const btnToggleVip = document.getElementById('btnToggleVipGuest');
+        if (btnToggleVip) {
+            btnToggleVip.onclick = () => {
+                const newState = !isVipGuestEnabled();
+                setVipGuestEnabled(newState);
+                renderDevVipGuestCard();
+                if (newState) {
+                    alert("🟢 ENLACE VIP ACTIVADO:\n\nEl acceso de invitado para tu docente ha sido habilitado con éxito. Ya puede usar el enlace.");
+                } else {
+                    alert("🔴 ENLACE VIP PAUSADO:\n\nEl acceso de invitado para el docente ha sido desactivado. Cualquier persona que intente usar el link no podrá ingresar.");
+                }
+            };
+        }
+
+        const btnCopyVip = document.getElementById('btnCopyVipShareLink');
+        if (btnCopyVip) {
+            btnCopyVip.onclick = () => {
+                const linkInput = document.getElementById('devVipShareLinkInput');
+                if (linkInput && linkInput.value) {
+                    copyToClipboard(linkInput.value, "📋 ¡Enlace VIP para el Ingeniero copiado al portapapeles!\n\nPégaselo directamente por WhatsApp o Correo.");
+                }
+            };
+        }
+
+        const btnRegenToken = document.getElementById('btnRegenVipToken');
+        if (btnRegenToken) {
+            btnRegenToken.onclick = () => {
+                const current = getVipGuestToken();
+                const fresh = prompt("Ingresa el nuevo Token o Clave para el enlace del Docente:\n(Si lo cambias, los enlaces anteriores con el token viejo ya no funcionarán)", current);
+                if (fresh && fresh.trim()) {
+                    setVipGuestToken(fresh.trim());
+                    renderDevVipGuestCard();
+                    alert(`✔ Clave Token VIP actualizada a:\n${getVipGuestToken()}\n\nEl enlace ha sido actualizado con la nueva clave.`);
+                }
+            };
+        }
 
         // Consultor Maestro de Claves en Vivo
         const devKeyInput = document.getElementById('devKeyFinderInput');
@@ -2077,6 +2358,65 @@ Ing. Ulianov Cuba Valencia`;
             updateDevKeyFinder(cleanEmail);
             alert(`✔ Licencia VIP Excel concedida a ${cleanEmail}.`);
         };
+    }
+
+    // ── RENDERIZADO DE TARJETA VIP DOCENTE EN PANEL DE DESARROLLADOR ─
+    function renderDevVipGuestCard() {
+        const badge = document.getElementById('devVipStatusBadge');
+        const btnToggle = document.getElementById('btnToggleVipGuest');
+        const stateTitle = document.getElementById('devVipStateTitle');
+        const stateDesc = document.getElementById('devVipStateDesc');
+        const linkInput = document.getElementById('devVipShareLinkInput');
+        const tokenLabel = document.getElementById('devVipTokenLabel');
+
+        const isEnabled = isVipGuestEnabled();
+        const token = getVipGuestToken();
+
+        if (tokenLabel) tokenLabel.textContent = token;
+
+        if (linkInput) {
+            linkInput.value = generateVipGuestShareUrl();
+        }
+
+        if (isEnabled) {
+            if (badge) {
+                badge.textContent = "🟢 ACTIVO (Acceso Libre)";
+                badge.style.background = "rgba(16, 185, 129, 0.25)";
+                badge.style.color = "#34d399";
+                badge.style.border = "1px solid #10b981";
+            }
+            if (stateTitle) {
+                stateTitle.innerHTML = 'Estado: <span style="color: #34d399;">🟢 Habilitado</span>';
+            }
+            if (stateDesc) {
+                stateDesc.textContent = "El docente puede ingresar directamente con este link y descargar todo gratis.";
+            }
+            if (btnToggle) {
+                btnToggle.textContent = "🔴 Desactivar Enlace VIP";
+                btnToggle.style.background = "#ef4444";
+                btnToggle.style.color = "#ffffff";
+                btnToggle.title = "Haz clic para pausar el acceso al enlace del docente";
+            }
+        } else {
+            if (badge) {
+                badge.textContent = "🔴 PAUSADO (Bloqueado)";
+                badge.style.background = "rgba(239, 68, 68, 0.25)";
+                badge.style.color = "#f87171";
+                badge.style.border = "1px solid #ef4444";
+            }
+            if (stateTitle) {
+                stateTitle.innerHTML = 'Estado: <span style="color: #f87171;">🔴 Desactivado / Pausado</span>';
+            }
+            if (stateDesc) {
+                stateDesc.textContent = "El link del docente está bloqueado. Si intenta ingresar, se le pedirá autorización.";
+            }
+            if (btnToggle) {
+                btnToggle.textContent = "🟢 Activar Enlace VIP";
+                btnToggle.style.background = "#10b981";
+                btnToggle.style.color = "#ffffff";
+                btnToggle.title = "Haz clic para reactivar el acceso gratuito al enlace del docente";
+            }
+        }
     }
 
     // ── RENDERIZADO EN PANEL DE DESARROLLADOR ────────────────────
@@ -2617,6 +2957,7 @@ Ing. Ulianov Cuba Valencia`;
 
     function showDevPanel() {
         buildModals();
+        renderDevVipGuestCard();
         updateDevKeyFinder();
         renderDevPending();
         renderDevUsers();
@@ -2678,17 +3019,52 @@ Ing. Ulianov Cuba Valencia`;
         const session = getSession();
         const authOk = isAuthorized();
 
+        const headerActions = document.querySelector('.header-controls') || document.querySelector('.topbar-actions') || document.querySelector('.presets-bar');
+
+        // Chip de Perfil para Invitado VIP (Docente)
+        let vipChip = document.getElementById('vipGuestHeaderChip');
+        if (authOk && session && session.role === 'vip_guest') {
+            if (!vipChip && headerActions) {
+                vipChip = document.createElement('div');
+                vipChip.id = 'vipGuestHeaderChip';
+                vipChip.style.display = 'inline-flex';
+                vipChip.style.alignItems = 'center';
+                vipChip.style.gap = '6px';
+                vipChip.style.background = 'rgba(16, 185, 129, 0.18)';
+                vipChip.style.border = '1.5px solid #10b981';
+                vipChip.style.borderRadius = '9999px';
+                vipChip.style.padding = '4px 12px';
+                vipChip.style.fontSize = '11.5px';
+                vipChip.style.fontWeight = '700';
+                vipChip.style.color = '#a7f3d0';
+                vipChip.style.boxShadow = '0 0 14px rgba(16, 185, 129, 0.25)';
+                vipChip.innerHTML = `
+                    <span style="font-size: 15px;">👨‍🏫</span>
+                    <span>Docente VIP: <strong style="color: #ffffff;">${session.name || 'Ingeniero'}</strong></span>
+                    <span style="background: #10b981; color: #022c22; font-size: 9px; font-weight: 800; padding: 1px 6px; border-radius: 9999px;">GRATIS</span>
+                `;
+                headerActions.prepend(vipChip);
+            } else if (vipChip) {
+                vipChip.style.display = 'inline-flex';
+            }
+        } else if (vipChip) {
+            vipChip.style.display = 'none';
+        }
+
         // Botón Bloquear / Salir
         const btnRelock = document.getElementById('btnRelock');
         if (btnRelock) {
             btnRelock.style.display = authOk ? 'inline-flex' : 'none';
+            if (session && session.role === 'vip_guest') {
+                btnRelock.innerHTML = '🚪 Salir Invitado';
+            } else {
+                btnRelock.innerHTML = '🔒 Bloquear';
+            }
             btnRelock.onclick = logoutSession;
         }
 
         // Botón Panel del Desarrollador (SOLO para el Desarrollador Maestro)
         let btnOwnerPanel = document.getElementById('btnOwnerPanel');
-        const headerActions = document.querySelector('.header-controls') || document.querySelector('.topbar-actions') || document.querySelector('.presets-bar');
-
         if (!btnOwnerPanel && headerActions && session && session.role === 'owner') {
             btnOwnerPanel = document.createElement('button');
             btnOwnerPanel.id = 'btnOwnerPanel';
@@ -2722,6 +3098,7 @@ Ing. Ulianov Cuba Valencia`;
 
     // ── INICIALIZACIÓN ──────────────────────────────────────────
     function init() {
+        checkVipGuestUrl();
         buildModals();
         updateAppHeader();
 
@@ -2732,6 +3109,7 @@ Ing. Ulianov Cuba Valencia`;
         }
 
         checkUrlForSharedTruss();
+        syncVipConfigFromServer();
     }
 
     if (document.readyState === 'loading') {
@@ -2752,6 +3130,13 @@ Ing. Ulianov Cuba Valencia`;
         verifyAccessCode: verifyAccessCode,
         verifyExcelVipCode: verifyExcelVipCode,
         generateTrussShareUrl: generateTrussShareUrl,
+        generateVipGuestShareUrl: generateVipGuestShareUrl,
+        getVipGuestShareUrl: generateVipGuestShareUrl,
+        isVipGuestEnabled: isVipGuestEnabled,
+        setVipGuestEnabled: setVipGuestEnabled,
+        getVipGuestToken: getVipGuestToken,
+        setVipGuestToken: setVipGuestToken,
+        loginAsVipGuest: loginAsVipGuest,
         importAndLoadTruss: importAndLoadTruss,
         evaluateTrussHealth: evaluateTrussHealth,
         downloadTrussFile: downloadTrussFile,

@@ -763,6 +763,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 13.1 BOTÓN DEDICADO PARA DESCARGA DE INFORME TÉCNICO EN PDF
+    const btnDownloadPDF = document.getElementById('btnDownloadPDF');
+    if (btnDownloadPDF) {
+        btnDownloadPDF.addEventListener('click', async () => {
+            if (!state.solution || !state.solution.success) {
+                alert("La estructura no es cinemáticamente estable o no se ha calculado.");
+                return;
+            }
+            try {
+                btnDownloadPDF.disabled = true;
+                const originalHtml = btnDownloadPDF.innerHTML;
+                btnDownloadPDF.innerHTML = `
+                    <svg class="animate-spin" style="animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+                        <path d="M12 2a10 10 0 0 1 10 10"></path>
+                    </svg> Generando PDF...
+                `;
+
+                const isIsostatic = (state.solution && state.solution.gh === 0);
+                const prefix = isIsostatic ? "Isostatica" : "Hiperestatica";
+                const canvasImg = renderer ? renderer.exportImage() : null;
+                const pdfFilename = `Informe_Calculo_Armadura_${prefix}_Ulianov_${Date.now().toString().slice(-4)}.pdf`;
+                await PDFGenerator.downloadTrussPDF(state.nodes, state.bars, state.solution, canvasImg, pdfFilename);
+
+                btnDownloadPDF.innerHTML = `✔ ¡Informe PDF Descargado!`;
+                btnDownloadPDF.style.background = "#0284c7";
+
+                setTimeout(() => {
+                    btnDownloadPDF.disabled = false;
+                    btnDownloadPDF.innerHTML = originalHtml;
+                    btnDownloadPDF.style.background = "";
+                }, 2500);
+            } catch (err) {
+                console.error("Error al generar PDF:", err);
+                alert("Ocurrió un error al generar el PDF: " + err.message);
+                btnDownloadPDF.disabled = false;
+                btnDownloadPDF.innerHTML = `Descargar PDF`;
+            }
+        });
+    }
+
     // API de integración para Proyectos y Guardado
     window.CerebroApp = {
         getCurrentData: () => ({
