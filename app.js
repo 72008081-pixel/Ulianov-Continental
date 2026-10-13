@@ -7,8 +7,26 @@
 (function () {
     'use strict';
 
-    // Estado reactivo global de la viga
-    let currentState = BeamSolver.getPreset('presentacion_pdf');
+    // Estado reactivo global de la viga (Inicio limpio sin ejemplos)
+    let currentState = {
+        name: 'Viga en Blanco',
+        E: 2100000.0,
+        sec_type: 'RECTANGULAR',
+        b: 15.0,
+        h: 30.0,
+        p3: 0.0,
+        p4: 0.0,
+        prop_mode: 'CONSTANTE',
+        steiner_rows: [],
+        bars: [
+            { xi: 0.0, yi: 0.0, xf: 300.0, yf: 0.0, q: 0.0, P_tramo: 0.0, a_dist: 0.0 }
+        ],
+        oblique_loads: [],
+        nodes: [
+            { cond: 'FIJO', Px: 0.0, Py: 0.0, Mz: 0.0 },
+            { cond: 'RODILLO', Px: 0.0, Py: 0.0, Mz: 0.0 }
+        ]
+    };
     let currentSolution = null;
 
     // Inicialización del DOM
