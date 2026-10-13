@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plantilla Ulianov — Tablas Matriciales de Vigas Continuas (Cátedra Oficial)</title>
+  <!-- Google Identity Services (GIS) Oficial -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root {
+      --bg-body: #090d16;
+      --bg-card: #111827;
+      --bg-panel: #1a2333;
+      --border-subtle: #1e293b;
+      --border-muted: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-sky: #38bdf8;
+      --accent-emerald: #10b981;
+      --accent-amber: #fbbf24;
+      --pastel-mint: #a7f3d0;
+      --pastel-lavender: #ddd6fe;
+      --pastel-sky: #bae6fd;
+      --pastel-butter: #fff2cc;
+      --pastel-green: #c6efce;
+      --pastel-blue: #b4c6e7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      padding-bottom: 60px;
+    }
+
+    header {
+      background: rgba(17, 24, 39, 0.95);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 16px 28px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(10px);
+    }
+
+    .header-content {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .header-title h1 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-title p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      text-decoration: none;
+      border: 1.5px solid transparent;
+      transition: all 0.15s;
+      color: #000000;
+    }
+
+    .btn:hover { opacity: 0.92; transform: translateY(-1px); }
+    .btn-back { background: var(--pastel-mint); border-color: #6ee7b7; }
+    .btn-excel { background: var(--pastel-lavender); border-color: #c4b5fd; }
+
+    .main-container {
+      max-width: 1440px;
+      margin: 20px auto;
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* Tarjetas de Sección */
+    .section-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      background: var(--bg-panel);
+      padding: 10px 16px;
+      font-weight: 800;
+      font-size: 12.5px;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .section-header:hover { background: #222f46; }
+
+    .section-body {
+      padding: 14px 16px;
+      overflow-x: auto;
+    }
+
+    /* Tablas de Cálculo Estilo Cátedra */
+    table.calc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+      text-align: center;
+    }
+
+    table.calc-table th {
+      background: #1e293b;
+      color: #38bdf8;
+      font-weight: 700;
+      padding: 7px 10px;
+      border: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+
+    table.calc-table td {
+      padding: 6px 8px;
+      border: 1px solid var(--border-subtle);
+      white-space: nowrap;
+      font-family: "Consolas", monospace;
+    }
+
+    .cell-subhdr { background: rgba(56, 189, 248, 0.1); color: #38bdf8; font-weight: 700; }
+    .cell-val { color: #f8fafc; font-weight: 600; }
+    .cell-green { background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 700; }
+    .cell-yellow { background: rgba(251, 191, 36, 0.15); color: #fbbf24; font-weight: 700; }
+
+    /* Matrix Scroll */
+    .matrix-scroll {
+      overflow-x: auto;
+      max-height: 420px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      background: #060911;
+      padding: 8px;
+    }
+
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: "Consolas", monospace;
+      font-size: 9.5px;
+    }
+
+    .matrix-table th, .matrix-table td {
+      padding: 4px 6px;
+      text-align: right;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      white-space: nowrap;
+    }
+
+    .matrix-table th { background: #111827; color: #94a3b8; text-align: center; }
+    .matrix-diag { background: rgba(16, 185, 129, 0.18); color: #34d399; font-weight: 800; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-content">
+      <div class="header-title">
+        <h1>📐 PLANTILLA ULIANOV — VIGAS CONTINUAS (CÁTEDRA OFICIAL)</h1>
+        <p>Desglose Pedagógico Correlacional en Tablas Matriciales Paso a Paso • Sincronizado en Tiempo Real</p>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <a href="vigas.html" class="btn btn-back">⬅️ Volver a Cerebro Estructural de Vigas</a>
+        <button id="btnDownloadExcelTables" class="btn btn-excel">📥 Descargar Excel con Fórmulas</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-container">
+
+    <!-- TABLA 1: GEOMETRÍA DE BARRAS -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSec('sec1')">
+        <span>📋 TABLA 1: GEOMETRÍA DE BARRAS, LONGITUDES Y COSENOS DIRECTORES</span>
+        <span id="ico-sec1">▼</span>
+      </div>
+      <div class="section-body" id="sec1">
+        <table class="calc-table" id="tableBarsGeo">
+          <thead>
+            <tr>
+              <th>BARRA #</th>
+              <th>Xi (cm)</th><th>Yi (cm)</th>
+              <th>Xf (cm)</th><th>Yf (cm)</th>
+              <th>ΔX (cm)</th><th>ΔY (cm)</th>
+              <th>LONGITUD L (cm)</th>
+              <th>cos θ</th><th>sen θ</th>
+              <th>q dist (Kgf/cm)</th><th>P tramo (Kgf)</th><th>a (cm)</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyBarsGeo"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TABLA 2: SECCIÓN Y STEINER -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSec('sec2')">
+        <span>📐 TABLA 2: PROPIEDADES MECÁNICAS, SECCIÓN Y TEOREMA DE STEINER</span>
+        <span id="ico-sec2">▼</span>
+      </div>
+      <div class="section-body" id="sec2">
+        <div style="margin-bottom: 10px; font-size: 12px; color: var(--text-muted);">
+          Propiedades globales: <strong>E = <span id="lblE" style="color: #38bdf8;">2100000</span> Kgf/cm²</strong> •
+          <strong>Área A = <span id="lblA" style="color: #34d399;">450.00</span> cm²</strong> •
+          <strong>Inercia Iz = <span id="lblIz" style="color: #fbbf24;">33750.00</span> cm⁴</strong>
+        </div>
+        <table class="calc-table" id="tableSteinerGeo">
+          <thead>
+            <tr>
+              <th>FIGURA #</th><th>TIPO</th><th>b (cm)</th><th>h (cm)</th><th>ÁREA Ai (cm²)</th><th>Yi (cm)</th><th>Ai·Yi (cm³)</th><th>Izi (cm⁴)</th><th>di (cm)</th><th>Ai·di² (cm⁴)</th><th>IT (cm⁴)</th>
+            </tr>
+          </thead>
+          <tbody id="tbodySteinerGeo"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TABLA 3: EVALUACIÓN NODAL Y GL -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSec('sec3')">
+        <span>📍 TABLA 3: EVALUACIÓN NODAL, APOYOS Y GRADOS DE LIBERTAD (GL₁, GL₂)</span>
+        <span id="ico-sec3">▼</span>
+      </div>
+      <div class="section-body" id="sec3">
+        <table class="calc-table" id="tableNodesGeo">
+          <thead>
+            <tr>
+              <th>NUDO #</th><th>X (cm)</th><th>Y (cm)</th><th>CONDICIÓN</th><th>Restricción X</th><th>Restricción Y</th><th>Restricción θ</th><th>Fx (Kgf)</th><th>Fy (Kgf)</th><th>Mz (Kgf·cm)</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyNodesGeo"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TABLA 4: MATRICES LOCALES POR TRAMO -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSec('sec4')">
+        <span>🧠 TABLA 4: MATRICES DE RIGIDEZ LOCALES [k] DE CADA BARRA (6 × 6)</span>
+        <span id="ico-sec4">▼</span>
+      </div>
+      <div class="section-body" id="sec4">
+        <div id="containerLocalMatrices"></div>
+      </div>
+    </div>
+
+    <!-- TABLA 5: MATRIZ GLOBAL ENSAMBLADA [K] -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSec('sec5')">
+        <span>📐 TABLA 5: MATRIZ DE RIGIDEZ GLOBAL ENSAMBLADA [K]</span>
+        <span id="ico-sec5">▼</span>
+      </div>
+      <div class="section-body" id="sec5">
+        <div class="matrix-scroll" id="containerGlobalK"></div>
+      </div>
+    </div>
+
+    <!-- TABLA 6: RESULTADOS (DESPLAZAMIENTOS Y REACCIONES) -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSec('sec6')">
+        <span>📊 TABLA 6: DESPLAZAMIENTOS CALCULADOS {D} Y REACCIONES EN APOYOS {R}</span>
+        <span id="ico-sec6">▼</span>
+      </div>
+      <div class="section-body" id="sec6">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <h4 style="color: #38bdf8; margin-bottom: 6px;">Vector de Desplazamientos y Deflexiones {D} (cm, rad):</h4>
+            <table class="calc-table">
+              <thead>
+                <tr><th>GL #</th><th>NUDO</th><th>DIRECCIÓN</th><th>VALOR</th><th>UNIDAD</th></tr>
+              </thead>
+              <tbody id="tbodyDispTable"></tbody>
+            </table>
+          </div>
+          <div>
+            <h4 style="color: #34d399; margin-bottom: 6px;">Vector de Reacciones de Apoyo {R} (Kgf, Kgf·cm):</h4>
+            <table class="calc-table">
+              <thead>
+                <tr><th>GL #</th><th>NUDO</th><th>COMPONENTE</th><th>REACCIÓN</th><th>UNIDAD</th></tr>
+              </thead>
+              <tbody id="tbodyReactTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer style="text-align: center; font-size: 11px; color: var(--text-muted); padding: 20px 0;">
+    Cátedra de Análisis Estructural II • Desarrollado por el Ing. Ulianov Cuba Valencia • Huancayo, Perú
+  </footer>
+
+  <!-- Scripts -->
+  <script src="auth.js?v=6.0"></script>
+  <script src="beam-solver.js?v=6.0"></script>
+  <script src="assets/exceljs.min.js"></script>
+  <script src="beam-excel-generator.js?v=6.0"></script>
+  <script>
+    function toggleSec(id) {
+      const el = document.getElementById(id);
+      const ico = document.getElementById('ico-' + id);
+      if (!el) return;
+      if (el.style.display === 'none') {
+        el.style.display = 'block';
+        if (ico) ico.textContent = '▼';
+      } else {
+        el.style.display = 'none';
+        if (ico) ico.textContent = '▲';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Cargar estado de viga sincronizado desde localStorage
+      let beamState = null;
+      try {
+        const sync = localStorage.getItem('cerebro_active_beam_sync');
+        if (sync) beamState = JSON.parse(sync);
+      } catch(e) {}
+
+      if (!beamState) {
+        beamState = BeamSolver.getPreset('presentacion_pdf');
+      }
+
+      // 2. Resolver viga
+      const sol = BeamSolver.solveBeam(beamState);
+
+      // 3. Renderizar Tabla 1: Barras
+      const tbGeo = document.getElementById('tbodyBarsGeo');
+      if (tbGeo && sol.barsDetailed) {
+        tbGeo.innerHTML = sol.barsDetailed.filter(b => b.active).map(b => `
+          <tr>
+            <td class="cell-subhdr">Barra ${b.id}</td>
+            <td class="cell-val">${b.xi.toFixed(1)}</td>
+            <td class="cell-val">${b.yi.toFixed(1)}</td>
+            <td class="cell-val">${b.xf.toFixed(1)}</td>
+            <td class="cell-val">${b.yf.toFixed(1)}</td>
+            <td class="cell-val">${b.dx.toFixed(1)}</td>
+            <td class="cell-val">${b.dy.toFixed(1)}</td>
+            <td class="cell-yellow">${b.L.toFixed(1)}</td>
+            <td class="cell-val">${b.cosT.toFixed(4)}</td>
+            <td class="cell-val">${b.sinT.toFixed(4)}</td>
+            <td class="cell-val">${b.q.toFixed(2)}</td>
+            <td class="cell-val">${b.P_tramo.toFixed(2)}</td>
+            <td class="cell-val">${b.a_dist.toFixed(1)}</td>
+          </tr>
+        `).join('');
+      }
+
+      // 4. Renderizar Tabla 2: Sección
+      const lblE = document.getElementById('lblE');
+      const lblA = document.getElementById('lblA');
+      const lblIz = document.getElementById('lblIz');
+      if (lblE) lblE.textContent = (beamState.E || 2100000).toLocaleString();
+      if (lblA && sol.secProps) lblA.textContent = (sol.secProps.A || 0).toFixed(4);
+      if (lblIz && sol.secProps) lblIz.textContent = (sol.secProps.Iz || sol.secProps.I || 0).toFixed(4);
+
+      const tbSteiner = document.getElementById('tbodySteinerGeo');
+      if (tbSteiner && sol.steinerResult && sol.steinerResult.rows) {
+        tbSteiner.innerHTML = sol.steinerResult.rows.map(r => `
+          <tr>
+            <td class="cell-subhdr">${r.idx}</td>
+            <td class="cell-val">${r.tipo}</td>
+            <td class="cell-val">${r.b.toFixed(1)}</td>
+            <td class="cell-val">${r.h.toFixed(1)}</td>
+            <td class="cell-val">${r.A.toFixed(2)}</td>
+            <td class="cell-val">${r.y.toFixed(2)}</td>
+            <td class="cell-val">${r.Ay.toFixed(2)}</td>
+            <td class="cell-val">${r.Iz.toFixed(2)}</td>
+            <td class="cell-val">${r.d.toFixed(2)}</td>
+            <td class="cell-val">${r.Ad2.toFixed(2)}</td>
+            <td class="cell-green">${r.IT.toFixed(2)}</td>
+          </tr>
+        `).join('');
+      }
+
+      // 5. Renderizar Tabla 3: Nudos
+      const tbNodes = document.getElementById('tbodyNodesGeo');
+      if (tbNodes && sol.nodesEvaluated) {
+        tbNodes.innerHTML = sol.nodesEvaluated.filter(n => n.active).map(n => `
+          <tr>
+            <td class="cell-subhdr">Nudo ${n.id}</td>
+            <td class="cell-val">${n.x.toFixed(1)}</td>
+            <td class="cell-val">${n.y.toFixed(1)}</td>
+            <td class="cell-yellow">${n.cond}</td>
+            <td class="cell-val">${n.restX ? 'SÍ (Restr)' : 'NO (Libre)'}</td>
+            <td class="cell-val">${n.restY ? 'SÍ (Restr)' : 'NO (Libre)'}</td>
+            <td class="cell-val">${n.restM ? 'SÍ (Restr)' : 'NO (Libre)'}</td>
+            <td class="cell-val">${n.Fx.toFixed(2)}</td>
+            <td class="cell-val">${n.Fy.toFixed(2)}</td>
+            <td class="cell-val">${n.Mz.toFixed(2)}</td>
+          </tr>
+        `).join('');
+      }
+
+      // 6. Renderizar Tabla 4: Matrices Locales
+      const cLoc = document.getElementById('containerLocalMatrices');
+      if (cLoc && sol.barsDetailed) {
+        cLoc.innerHTML = sol.barsDetailed.filter(b => b.active).map(b => {
+          const kl = b.k_local;
+          const lbls = b.gdlLabels;
+          return `
+            <div style="margin-bottom: 14px;">
+              <h5 style="color: #38bdf8; margin-bottom: 4px;">Barra ${b.id} (L = ${b.L.toFixed(1)} cm):</h5>
+              <div class="matrix-scroll">
+                <table class="matrix-table">
+                  <thead><tr><th>GDL</th>${lbls.map(l => `<th>${l}</th>`).join('')}</tr></thead>
+                  <tbody>
+                    ${kl.map((row, rI) => `
+                      <tr>
+                        <td style="color:#38bdf8; font-weight:700;">${lbls[rI]}</td>
+                        ${row.map((v, cI) => `<td class="${rI === cI ? 'matrix-diag' : ''}">${v.toFixed(2)}</td>`).join('')}
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 7. Renderizar Tabla 5: Matriz Global
+      const cGlob = document.getElementById('containerGlobalK');
+      if (cGlob && sol.K_global && sol.gdlAllLabels) {
+        const k = sol.K_global;
+        const lbls = sol.gdlAllLabels;
+        cGlob.innerHTML = `
+          <table class="matrix-table">
+            <thead><tr><th>GDL</th>${lbls.map(l => `<th>${l}</th>`).join('')}</tr></thead>
+            <tbody>
+              ${k.map((row, rI) => `
+                <tr>
+                  <td style="color:#38bdf8; font-weight:700;">${lbls[rI]}</td>
+                  ${row.map((v, cI) => `<td class="${rI === cI ? 'matrix-diag' : ''}">${v !== 0 ? v.toFixed(1) : '<span style="color:#334155;">0</span>'}</td>`).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      // 8. Renderizar Tabla 6: Desplazamientos y Reacciones
+      const tbDisp = document.getElementById('tbodyDispTable');
+      if (tbDisp && sol.calculatedDisplacements) {
+        tbDisp.innerHTML = sol.calculatedDisplacements.map(d => `
+          <tr>
+            <td class="cell-subhdr">${d.order}</td>
+            <td class="cell-val">${d.uLbl}</td>
+            <td class="cell-val">${d.dLbl}</td>
+            <td class="cell-green">${d.value.toFixed(8)}</td>
+            <td><strong>${d.unit}</strong></td>
+          </tr>
+        `).join('');
+      }
+
+      const tbReact = document.getElementById('tbodyReactTable');
+      if (tbReact && sol.calculatedReactions) {
+        tbReact.innerHTML = sol.calculatedReactions.map(r => `
+          <tr>
+            <td class="cell-subhdr">${r.order}</td>
+            <td class="cell-val">${r.uLbl}</td>
+            <td class="cell-val">${r.C_expr}</td>
+            <td class="cell-green">${r.reactionFinal.toFixed(4)}</td>
+            <td><strong>${r.unit}</strong></td>
+          </tr>
+        `).join('');
+      }
+
+      // 9. Botón Descarga Excel
+      const btnXlsx = document.getElementById('btnDownloadExcelTables');
+      if (btnXlsx) {
+        btnXlsx.addEventListener('click', async () => {
+          if (window.BeamExcelGenerator) {
+            await BeamExcelGenerator.downloadBeamExcel(beamState, 'PLANTILLA_ULIANOV_VIGAS_12_NODOS_METODO_RIGIDEZ.xlsx');
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

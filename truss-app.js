@@ -141,10 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 4. Renderizado Dinámico de Tablas de Entrada
-    const nodesTbody = document.getElementById('nodesTableBody');
-    const barsTbody = document.getElementById('barsTableBody');
+    const nodesTbody = document.getElementById('tbodyNodes') || document.getElementById('nodesTableBody');
+    const barsTbody = document.getElementById('tbodyBars') || document.getElementById('barsTableBody');
 
     function renderTables() {
+        if (!nodesTbody || !barsTbody) return;
         // A. Tabla de Nodos
         nodesTbody.innerHTML = '';
         for (let i = 0; i < 6; i++) {
@@ -286,8 +287,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Actualizar Banner de Estado Estructural
-        const statusBadge = document.getElementById('structuralStatusBadge');
-        const eqBadge = document.getElementById('equilibriumBadge');
+        const statusBadge = document.getElementById('badgeDeterminacy') || document.getElementById('structuralStatusBadge');
+        const eqBadge = document.getElementById('badgeEquilibrium') || document.getElementById('equilibriumBadge');
+        const statNodes = document.getElementById('statActiveNodes');
+        const statBars = document.getElementById('statActiveBars');
+        const statDet = document.getElementById('statDeterminacyText');
 
         if (statusBadge) {
             if (solution && solution.success) {
@@ -298,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     eqBadge.className = "badge " + (solution.equilibrium.isValid ? "badge-green" : "badge-red");
                     eqBadge.style.display = "";
                     eqBadge.innerHTML = solution.equilibrium.isValid
-                        ? `✔ Equilibrio Exacto (∑Fx=0, ∑Fy=0)`
+                        ? `✔ Equilibrio Exacto (ΣFx=0, ΣFy=0)`
                         : `⚠ Error de Equilibrio: Fx=${solution.equilibrium.eqErrorX.toFixed(2)}, Fy=${solution.equilibrium.eqErrorY.toFixed(2)}`;
                 }
             } else {
@@ -308,15 +312,29 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        if (solution && solution.success) {
+            if (statNodes) statNodes.textContent = `${solution.activeNodes ? solution.activeNodes.length : 0} / 6`;
+            if (statBars) statBars.textContent = `${solution.activeBars ? solution.activeBars.length : 0} / 8`;
+            if (statDet) statDet.textContent = solution.structuralType;
+        }
+
         // Actualizar Pestañas de Resultados
         renderResultsTab(solution);
         renderPedagogicalTab(solution);
         renderGlobalMatrixTab(solution);
+
+        // Sincronizar estado en vivo con las 13 tablas pedagógicas
+        try {
+            localStorage.setItem('cerebro_active_truss_sync', JSON.stringify({
+                nodes: state.nodes,
+                bars: state.bars
+            }));
+        } catch(e) {}
     }
 
     // 7. Renderizado de Pestaña 1: Resumen de Resultados
     function renderResultsTab(sol) {
-        const container = document.getElementById('resultsContainer');
+        const container = document.getElementById('resultsSummaryContainer') || document.getElementById('resultsContainer');
         if (!container) return;
 
         if (!sol || !sol.success) {
@@ -476,7 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 8. Renderizado de Pestaña 2: Paso a Paso Pedagógico
     function renderPedagogicalTab(sol) {
-        const container = document.getElementById('pedagogicalContainer');
+        const container = document.getElementById('resultsStepContainer') || document.getElementById('pedagogicalContainer');
         if (!container) return;
 
         if (!sol || !sol.success) {
@@ -551,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 9. Renderizado de Pestaña 3: Matriz Global Ensamblada (12x12)
     function renderGlobalMatrixTab(sol) {
-        const container = document.getElementById('globalMatrixContainer');
+        const container = document.getElementById('matrixKContainer') || document.getElementById('globalMatrixContainer');
         if (!container) return;
 
         if (!sol || !sol.success) {
@@ -638,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 12. Controles de Barra de Herramientas del Canvas
-    const btnFitView = document.getElementById('btnFitView');
+    const btnFitView = document.getElementById('btnResetView') || document.getElementById('btnFitView');
     if (btnFitView) btnFitView.addEventListener('click', () => renderer.fitView());
 
     const btnZoomIn = document.getElementById('btnZoomIn');
@@ -657,7 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const toggleDeform = document.getElementById('toggleDeformed');
+    const toggleDeform = document.getElementById('chkShowDeformed') || document.getElementById('toggleDeformed');
     if (toggleDeform) {
         toggleDeform.addEventListener('change', (e) => {
             renderer.options.showDeformed = e.target.checked;
@@ -665,7 +683,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const deformSlider = document.getElementById('deformScaleSlider');
+    const deformSlider = document.getElementById('rngDeformScale') || document.getElementById('deformScaleSlider');
     if (deformSlider) {
         deformSlider.addEventListener('input', (e) => {
             renderer.options.deformScale = parseFloat(e.target.value);
@@ -675,7 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const toggleForces = document.getElementById('toggleForces');
+    const toggleForces = document.getElementById('chkShowForces') || document.getElementById('toggleForces');
     if (toggleForces) {
         toggleForces.addEventListener('change', (e) => {
             renderer.options.colorByForce = e.target.checked;
@@ -683,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const toggleGrid = document.getElementById('toggleGrid');
+    const toggleGrid = document.getElementById('chkShowGrid') || document.getElementById('toggleGrid');
     if (toggleGrid) {
         toggleGrid.addEventListener('change', (e) => {
             renderer.options.showGrid = e.target.checked;
@@ -691,7 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const btnExportImg = document.getElementById('btnExportImg');
+    const btnExportImg = document.getElementById('btnExportImage') || document.getElementById('btnExportImg');
     if (btnExportImg) {
         btnExportImg.addEventListener('click', () => {
             const dataUrl = renderer.exportImage();
@@ -817,6 +835,18 @@ document.addEventListener('DOMContentLoaded', () => {
             recalculateAndRender(true);
         }
     };
+
+    // Carga de armadura sincronizada desde localStorage (si existe)
+    try {
+        const syncDataStr = localStorage.getItem('cerebro_active_truss_sync');
+        if (syncDataStr) {
+            const parsedSync = JSON.parse(syncDataStr);
+            if (parsedSync.nodes && parsedSync.bars && Array.isArray(parsedSync.nodes)) {
+                state.nodes = parsedSync.nodes;
+                state.bars = parsedSync.bars;
+            }
+        }
+    } catch(e) {}
 
     // Inicialización inicial
     renderTables();

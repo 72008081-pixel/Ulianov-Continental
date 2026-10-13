@@ -698,6 +698,11 @@
 
         // 10. Renderizar Paneles de Matrices Detalladas
         renderMatrixPanes();
+
+        // Sincronizar estado en vivo con las tablas pedagógicas
+        try {
+            localStorage.setItem('cerebro_active_beam_sync', JSON.stringify(currentState));
+        } catch(e) {}
     }
 
     function renderGraficaFinal() {
@@ -759,6 +764,19 @@
 
     // ── RENDERIZADO DE PANELES MATRICIALES (PASO A PASO) ─────────
     function setupMatrixTabs() {
+        // Soporte para pestañas principales en estilo .tabs-nav .tab-btn
+        document.querySelectorAll('.tabs-nav .tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tabs-nav .tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
+                const target = document.getElementById(btn.dataset.tab);
+                if (target) target.classList.add('active');
+            });
+        });
+
+        // Soporte para .matrix-tab-btn
         document.querySelectorAll('.matrix-tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.matrix-tab-btn').forEach(b => b.classList.remove('active'));

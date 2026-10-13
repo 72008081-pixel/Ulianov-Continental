@@ -558,6 +558,7 @@
             const w = load(KEY.whitelist);
             w['docente.vip@continental.edu.pe'] = { email: 'docente.vip@continental.edu.pe', name: 'Ing. Ulianov (Docente VIP)', ts: Date.now() };
             save(KEY.whitelist, w);
+            grantExcel('docente.vip@continental.edu.pe');
             updateHeader(); return;
         }
 

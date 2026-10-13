@@ -1,836 +1,1179 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema Maestro de Análisis Matricial de Vigas — Plantilla Ulianov v5.5</title>
-  <style>
-    :root {
-      --primary: #1e293b;
-      --secondary: #0f766e;
-      --accent: #2563eb;
-      --bg: #f8fafc;
-      --card-bg: #ffffff;
-      --border: #e2e8f0;
-      --text: #1e293b;
-      --text-muted: #64748b;
-      --pastel-green: #dcfce7;
-      --pastel-diag: #d1fae5;
-      --pastel-peach: #fee2e2;
-      --pastel-yellow: #fff2cc;
-      --pastel-lavender: #ededfa;
-      --pastel-blue: #b4c6e7;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEREBRO ESTRUCTURAL v6.0 | Vigas Continuas & Exportador de Excel Nativo (Plantilla Ulianov)</title>
+    <!-- Google Identity Services (GIS) Oficial -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        /* ── VARIABLES & DESIGN SYSTEM v6.0 (VIGAS CONTINUAS) ────── */
+        :root {
+            --bg-body:       #090d16;
+            --bg-card:       #111827;
+            --bg-panel:      #1a2333;
+            --bg-input:      #0d1424;
+            --border-subtle: #1e293b;
+            --border-muted:  #334155;
+            --border-focus:  #38bdf8;
+            --text-main:     #f8fafc;
+            --text-muted:    #94a3b8;
+            --text-dim:      #64748b;
+            --accent-sky:    #38bdf8;
+            --accent-emerald:#10b981;
+            --accent-rose:   #f43f5e;
+            --accent-amber:  #fbbf24;
+            --accent-indigo: #818cf8;
+            /* Pasteles Naturales con Letras Negras */
+            --pastel-mint:   #a7f3d0;
+            --pastel-lavender:#ddd6fe;
+            --pastel-butter: #fef08a;
+            --pastel-peach:  #fed7aa;
+            --pastel-sky:    #bae6fd;
+            --pastel-pink:   #fbcfe8;
+            --pastel-slate:  #e2e8f0;
+            --radius-sm:     6px;
+            --radius-md:     10px;
+            --radius-lg:     14px;
+            --font-sans:     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono:     "Consolas", "Courier New", monospace;
+        }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-    body {
-      background-color: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-      padding-bottom: 60px;
-    }
+        html, body {
+            min-height: 100vh;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            font-size: 13px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
 
-    header {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      color: white;
-      padding: 22px 32px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
+        /* ── SCROLLBARS ─────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-body); }
+        ::-webkit-scrollbar-thumb { background: var(--border-muted); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-    .header-content {
-      max-width: 1400px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
+        /* ── HEADER SUPERIOR ────────────────────────────────────── */
+        .header-nav {
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-subtle);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding: 10px 20px;
+        }
 
-    .header-title h1 {
-      font-size: 1.55rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
+        .header-inner {
+            max-width: 1440px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
 
-    .header-title p {
-      font-size: 0.88rem;
-      color: #94a3b8;
-      margin-top: 4px;
-    }
+        .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
 
-    .header-badges {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
+        .brand-logo {
+            width: 38px;
+            height: 38px;
+            border-radius: var(--radius-md);
+            background: linear-gradient(135deg, #742284 0%, #2563eb 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 4px 14px rgba(116, 34, 132, 0.35);
+            flex-shrink: 0;
+        }
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      border-radius: 9999px;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
+        .brand-title-wrap h1 {
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
 
-    .badge-teal { background: #0d9488; color: white; }
-    .badge-emerald { background: #059669; color: white; }
-    .badge-amber { background: #d97706; color: white; }
-    .badge-blue { background: #2563eb; color: white; }
+        .brand-badge {
+            font-size: 10px;
+            font-weight: 700;
+            color: #000000;
+            background: var(--pastel-mint);
+            padding: 2px 7px;
+            border-radius: 99px;
+            border: 1px solid #6ee7b7;
+        }
 
-    .main-container {
-      max-width: 1400px;
-      margin: 20px auto;
-      padding: 0 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
+        .brand-subtitle {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
 
-    /* Action bar */
-    .action-bar {
-      background: white;
-      padding: 14px 20px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
 
-    .btn {
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: 1px solid transparent;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      text-decoration: none;
-    }
+        /* ── SELECTOR DE CASOS (PASTEL CON LETRAS NEGRAS) ────────── */
+        .select-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--pastel-butter);
+            border: 1px solid #fde047;
+            border-radius: var(--radius-sm);
+            padding: 4px 8px;
+        }
 
-    .btn-primary { background: #0f766e; color: white; }
-    .btn-primary:hover { background: #115e59; }
-    .btn-success { background: #059669; color: white; border-color: #10b981; }
-    .btn-success:hover { background: #047857; }
-    .btn-blue { background: #2563eb; color: white; border-color: #3b82f6; }
-    .btn-blue:hover { background: #1d4ed8; }
-    .btn-outline { background: white; color: #475569; border-color: #cbd5e1; }
-    .btn-outline:hover { background: #f8fafc; color: #1e293b; }
+        .select-label {
+            font-size: 11px;
+            color: #000000;
+            font-weight: 800;
+        }
 
-    /* Verification card */
-    .verification-card {
-      background: white;
-      border-radius: 12px;
-      border: 1px solid #10b981;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      padding: 16px 20px;
-    }
+        .preset-select {
+            background: transparent;
+            color: #000000;
+            font-size: 12px;
+            font-weight: 800;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 2px 4px;
+        }
 
-    .verification-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 10px;
-    }
+        .preset-select option {
+            background: #ffffff;
+            color: #000000;
+        }
 
-    .verification-title {
-      font-size: 1rem;
-      font-weight: 700;
-      color: #065f46;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+        /* ── BOTONES EN COLORES PASTELES NATURALES CON LETRAS NEGRAS ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 800;
+            padding: 7px 13px;
+            border-radius: var(--radius-sm);
+            border: 1.5px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s ease;
+            color: #000000;
+            box-sizing: border-box;
+        }
 
-    .verification-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
+        .btn:hover {
+            transform: translateY(-1px);
+            opacity: 0.92;
+        }
 
-    @media (max-width: 768px) {
-      .verification-grid { grid-template-columns: 1fr; }
-    }
+        .btn-excel {
+            background: var(--pastel-mint);
+            color: #000000;
+            border-color: #6ee7b7;
+            box-shadow: 0 2px 8px rgba(167, 243, 208, 0.3);
+        }
 
-    .check-box {
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      border-radius: 8px;
-      padding: 10px 14px;
-    }
+        .btn-png {
+            background: var(--pastel-sky);
+            color: #000000;
+            border-color: #7dd3fc;
+        }
 
-    .check-box-title {
-      font-weight: 700;
-      font-size: 0.85rem;
-      color: #166534;
-      margin-bottom: 4px;
-    }
+        .btn-tables {
+            background: var(--pastel-lavender);
+            color: #000000;
+            border-color: #c4b5fd;
+        }
 
-    .check-box-detail {
-      font-size: 0.8rem;
-      color: #15803d;
-    }
+        .btn-nav-module {
+            background: var(--pastel-mint);
+            color: #000000;
+            border-color: #6ee7b7;
+        }
 
-    /* Section Cards */
-    .section-card {
-      background: white;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      overflow: hidden;
-    }
+        .btn-home {
+            background: var(--pastel-peach);
+            color: #000000;
+            border-color: #fb923c;
+        }
 
-    .section-header {
-      background: #f8fafc;
-      padding: 12px 18px;
-      font-weight: 700;
-      font-size: 0.92rem;
-      color: #1e293b;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      user-select: none;
-    }
+        .btn-dev-btn {
+            background: var(--pastel-pink);
+            color: #000000;
+            border-color: #f472b6;
+            font-weight: 800;
+        }
 
-    .section-header:hover {
-      background: #f1f5f9;
-    }
+        .btn-clear {
+            background: var(--pastel-slate);
+            color: #000000;
+            border-color: #cbd5e1;
+        }
 
-    .section-header-teal {
-      background: #f0fdfa;
-      border-left: 4px solid #0d9488;
-      color: #0f766e;
-    }
+        /* ── STATUS STRIP ───────────────────────────────────────── */
+        .status-strip {
+            background: var(--bg-body);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 6px 20px;
+        }
 
-    .section-header-blue {
-      background: #f0f9ff;
-      border-left: 4px solid #0284c7;
-      color: #0369a1;
-    }
+        .status-strip-inner {
+            max-width: 1440px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
 
-    .section-body {
-      padding: 16px 20px;
-    }
+        .status-badges-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-    /* Canvas styling */
-    .canvas-container {
-      width: 100%;
-      height: 480px;
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      position: relative;
-      overflow: hidden;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-    }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 800;
+            border: 1px solid;
+            transition: all 0.2s ease;
+        }
 
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
+        .badge-green {
+            background: var(--pastel-mint);
+            color: #064e3b;
+            border-color: #6ee7b7;
+        }
 
-    /* Tables */
-    .table-container {
-      overflow-x: auto;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-    }
+        .badge-blue {
+            background: var(--pastel-sky);
+            color: #0369a1;
+            border-color: #7dd3fc;
+        }
 
-    table.excel-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.82rem;
-      text-align: center;
-    }
+        .badge-amber {
+            background: var(--pastel-butter);
+            color: #78350f;
+            border-color: #fde047;
+        }
 
-    table.excel-table th {
-      background: #b4c6e7;
-      color: #0f172a;
-      font-weight: 700;
-      padding: 8px 10px;
-      border: 1px solid #94a3b8;
-      white-space: nowrap;
-    }
+        .status-info-text {
+            font-size: 11px;
+            color: var(--text-dim);
+        }
 
-    table.excel-table td {
-      padding: 6px 8px;
-      border: 1px solid #cbd5e1;
-      white-space: nowrap;
-      color: #0f172a;
-    }
+        /* ── MAIN WORKSPACE (2 COLUMNAS) ────────────────────────── */
+        .workspace {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 520px;
+            gap: 20px;
+        }
 
-    .cell-input {
-      background-color: var(--pastel-yellow) !important;
-      padding: 2px !important;
-    }
+        /* ── COLUMNA IZQUIERDA: CANVAS INTERACTIVO DE LA VIGA ───── */
+        .canvas-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
 
-    .cell-input input, .cell-input select {
-      width: 100%;
-      border: 1px solid transparent;
-      background: transparent;
-      font-family: inherit;
-      font-size: 0.82rem;
-      font-weight: 600;
-      text-align: center;
-      padding: 4px;
-      outline: none;
-      color: #000;
-    }
+        .card-header-bar {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(17, 24, 39, 0.6);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
 
-    .cell-input input:focus, .cell-input select:focus {
-      border: 1px solid #2563eb;
-      background: #ffffff;
-      border-radius: 4px;
-    }
+        .card-header-title {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
 
-    .calc-cell {
-      background: #c6efce;
-      font-weight: 700;
-      color: #000;
-    }
+        .canvas-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
 
-    /* Matrix tabs */
-    .matrix-tabs {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 12px;
-      border-bottom: 2px solid #e2e8f0;
-      padding-bottom: 6px;
-      overflow-x: auto;
-    }
+        .tool-btn {
+            background: var(--pastel-slate);
+            color: #000000;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
 
-    .tab-btn, .matrix-tab-btn {
-      padding: 7px 14px;
-      font-size: 0.8rem;
-      font-weight: 700;
-      border-radius: 6px;
-      border: 1px solid #cbd5e1;
-      background: #f8fafc;
-      color: #475569;
-      cursor: pointer;
-      white-space: nowrap;
-    }
+        .tool-btn:hover {
+            background: var(--pastel-sky);
+        }
 
-    .tab-btn.active, .matrix-tab-btn.active {
-      background: #0f766e;
-      color: white;
-      border-color: #0f766e;
-    }
+        .canvas-stage {
+            position: relative;
+            width: 100%;
+            height: 480px;
+            background: #060911;
+        }
 
-    .matrix-pane {
-      display: none;
-      overflow-x: auto;
-      background: #f8fafc;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      padding: 12px;
-    }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
 
-    .matrix-pane.active {
-      display: block;
-    }
+        /* Tarjeta flotante en canvas */
+        .canvas-floating-info {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(13, 20, 36, 0.88);
+            border: 1px solid var(--border-muted);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            font-size: 11px;
+            pointer-events: none;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
 
-    /* Form controls inline */
-    .form-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
+        .floating-title {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #38bdf8;
+            margin-bottom: 4px;
+        }
 
-    .form-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+        .floating-stat {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
 
-    .form-label {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #334155;
-    }
+        .floating-stat span:last-child {
+            color: var(--text-main);
+            font-weight: 700;
+            font-family: var(--font-mono);
+        }
 
-    .form-input {
-      padding: 6px 10px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      outline: none;
-      background: #fff;
-    }
+        /* Leyenda inferior del canvas */
+        .canvas-legend {
+            padding: 8px 16px;
+            background: rgba(13, 20, 36, 0.5);
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
 
-    .form-input:focus {
-      border-color: #2563eb;
-    }
+        .legend-items {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
 
-    @media print {
-      body { background: white; padding: 0; }
-      header { background: #1e293b; color: white; padding: 12px; }
-      .action-bar, .no-print { display: none !important; }
-      .section-card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; margin-bottom: 20px; }
-    }
-  </style>
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+        }
+
+        /* ── COLUMNA DERECHA: ENTRADAS REACTIVAS ─────────────────── */
+        .inputs-column {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .input-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .input-card-head {
+            padding: 10px 14px;
+            background: rgba(17, 24, 39, 0.7);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .input-card-title {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .input-card-units {
+            font-size: 10px;
+            color: var(--text-dim);
+            font-family: var(--font-mono);
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        table.data-table th {
+            background: #1e293b;
+            color: #94a3b8;
+            font-weight: 700;
+            padding: 6px 8px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-subtle);
+            white-space: nowrap;
+            font-size: 10px;
+        }
+
+        table.data-table td {
+            padding: 4px 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            text-align: center;
+        }
+
+        table.data-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Inputs dentro de tablas: celdas suaves con texto nítido */
+        .cell-input {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-muted);
+            border-radius: 4px;
+            color: #fff2cc;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 6px;
+            text-align: center;
+            outline: none;
+            transition: all 0.15s;
+        }
+
+        .cell-input:focus {
+            border-color: var(--accent-sky);
+            background: #111e38;
+            color: #ffffff;
+        }
+
+        .cell-select {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-muted);
+            border-radius: 4px;
+            color: #38bdf8;
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 4px 6px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .cell-select:focus {
+            border-color: var(--accent-sky);
+        }
+
+        .cell-select option {
+            background: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        /* Form inline controls */
+        .form-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        /* ── RESULTADOS INFERIORES: PESTAÑAS ────────────────────── */
+        .results-section {
+            max-width: 1440px;
+            margin: 0 auto 30px auto;
+            padding: 0 20px;
+        }
+
+        .tabs-nav {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 16px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            border-bottom: 2px solid transparent;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+        }
+
+        .tab-btn.active {
+            color: #000000;
+            background: var(--pastel-sky);
+            border-radius: 6px 6px 0 0;
+            border-bottom-color: #0284c7;
+            font-weight: 800;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .results-grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .mini-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            padding: 12px 14px;
+        }
+
+        .mini-card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border-subtle);
+            font-weight: 800;
+            font-size: 12px;
+        }
+
+        .mini-card-formula {
+            font-size: 10px;
+            color: var(--text-dim);
+            font-family: var(--font-mono);
+        }
+
+        table.results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11.5px;
+        }
+
+        table.results-table th {
+            color: #94a3b8;
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 4px 6px;
+            border-bottom: 1px solid var(--border-subtle);
+            text-align: center;
+        }
+
+        table.results-table td {
+            padding: 5px 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-family: var(--font-mono);
+        }
+
+        .force-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 99px;
+            font-size: 10px;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .force-tension {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .force-compress {
+            background: rgba(244, 63, 94, 0.15);
+            color: #f43f5e;
+            border: 1px solid rgba(244, 63, 94, 0.3);
+        }
+
+        /* ── MATRIX VIEW ────────────────────────────────────────── */
+        .matrix-scroll-wrap {
+            overflow-x: auto;
+            max-height: 440px;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            background: var(--bg-card);
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono);
+            font-size: 9.5px;
+        }
+
+        .matrix-table th, .matrix-table td {
+            padding: 4px 5px;
+            text-align: right;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            white-space: nowrap;
+        }
+
+        .matrix-table th {
+            background: var(--bg-panel);
+            color: var(--text-dim);
+            text-align: center;
+        }
+
+        .matrix-diag {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            font-weight: 800;
+        }
+
+        /* ── FOOTER ─────────────────────────────────────────────── */
+        .footer {
+            border-top: 1px solid var(--border-subtle);
+            padding: 16px 20px;
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .footer a {
+            color: var(--accent-sky);
+            text-decoration: none;
+        }
+
+        /* ── RESPONSIVE ─────────────────────────────────────────── */
+        @media (max-width: 1100px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+            .canvas-stage {
+                height: 400px;
+            }
+            .results-grid-2col {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
 
-  <!-- Header -->
-  <header>
-    <div class="header-content">
-      <div class="header-title">
-        <h1>📏 SISTEMA MAESTRO DE ANÁLISIS MATRICIAL DE VIGAS</h1>
-        <p>Método Directo de la Rigidez • Cátedra Ing. Ulianov Cuba Valencia • PLANTILLA ULIANOV v5.5</p>
-      </div>
-      <div class="header-badges">
-        <span class="badge badge-emerald">✓ Cero Errores</span>
-        <span class="badge badge-teal">⚡ Cálculo en Tiempo Real</span>
-        <span class="badge badge-blue">📐 Hasta 12 Nudos y 11 Barras</span>
-        <a href="index.html" class="btn" style="background: rgba(255,255,255,0.15); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 800; border: 1px solid rgba(255,255,255,0.3); padding: 5px 12px; font-size: 0.8rem;">🏠 Menú Principal</a>
-        <a href="armaduras.html" class="btn" style="background: linear-gradient(135deg, #0f766e, #2563eb); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 800; border: 1px solid #38bdf8; padding: 5px 12px; font-size: 0.8rem;">🏗️ Ir a Armaduras 2D ➔</a>
-        <button id="cb-header-btn">👑 Panel Ulianov</button>
-      </div>
-    </div>
-  </header>
-
-  <div class="main-container">
-
-    <!-- Action Toolbar (Without Examples) -->
-    <div class="action-bar">
-      <button class="btn btn-success" id="btnTopDownloadExcel">
-        📥 Descargar Excel PLANTILLA ULIANOV (.xlsx)
-      </button>
-      <button class="btn btn-blue" id="btnTopDownloadPNG">
-        📸 Descargar 6° Gráfica Final (.PNG)
-      </button>
-      <button class="btn btn-outline" id="btnClearExercise" style="margin-left: auto;">
-        🔄 Limpiar Todo / Nueva Viga
-      </button>
-      <button class="btn btn-primary no-print" onclick="window.print()">
-        🖨️ Imprimir / PDF
-      </button>
-    </div>
-
-    <!-- Hidden Preset Select for JS compatibility -->
-    <select id="selectPreset" style="display: none;"></select>
-
-    <!-- Double Verification Card -->
-    <div class="verification-card" id="verification-card">
-      <div class="verification-header">
-        <span class="verification-title">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          SISTEMA DE AUTO-VERIFICACIÓN DUAL DE INGENIERÍA
-        </span>
-        <span class="badge badge-emerald" id="beamHealthBadge">Estabilidad Verificada</span>
-      </div>
-
-      <div class="verification-grid">
-        <div class="check-box" id="check-box-1">
-          <div class="check-box-title">
-            <span>✓ VERIFICACIÓN 1: Determinación Cinemática y Restricciones Nodales</span>
-          </div>
-          <div class="check-box-detail" id="check-detail-1">
-            Grados de libertad libres (GL₁) y restringidos (GL₂) evaluados conforme a la PLANTILLA ULIANOV.
-          </div>
-        </div>
-
-        <div class="check-box" id="check-box-2">
-          <div class="check-box-title">
-            <span>✓ VERIFICACIÓN 2: Equilibrio Estático Global de Cargas y Reacciones (ΣFy = 0, ΣM = 0)</span>
-          </div>
-          <div class="check-box-detail" id="check-detail-2">
-            Verificando sumatoria de fuerzas verticales aplicadas vs reacciones calculadas.
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 0. ASISTENTE RÁPIDO DE TRAMOS -->
-    <div class="section-card">
-      <div class="section-header section-header-blue" onclick="toggleSection('sec-quick')">
-        <span>⚡ ASISTENTE RÁPIDO: GENERAR VIGA POR LONGITUDES DE TRAMOS (L₁, L₂, L₃...)</span>
-        <span id="icon-sec-quick">▼</span>
-      </div>
-      <div class="section-body" id="sec-quick">
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Número de Tramos (Barras):</label>
-            <input type="number" id="quickNumBars" class="form-input" min="1" max="11" value="3" style="width: 70px;">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Unidad de Longitud:</label>
-            <select id="quickDistUnit" class="form-input" style="font-weight: 700;">
-              <option value="m">Metros (m) — Convertirá automáticamente a cm</option>
-              <option value="cm">Centímetros (cm)</option>
-            </select>
-          </div>
-          <button type="button" id="btnApplyQuickSpans" class="btn btn-primary">
-            ✓ Aplicar y Generar Nudos y Barras
-          </button>
-        </div>
-        <div id="quickSpanInputsContainer" class="form-row" style="margin-top: 8px;"></div>
-      </div>
-    </div>
-
-    <!-- 1. SECCIÓN Y MATERIAL (STEINER) -->
-    <div class="section-card">
-      <div class="section-header section-header-teal" onclick="toggleSection('sec-prop')">
-        <span>📐 1. SECCIÓN TRANSVERSAL, TEOREMA DE STEINER Y MÓDULO DE ELASTICIDAD E</span>
-        <span id="icon-sec-prop">▼</span>
-      </div>
-      <div class="section-body" id="sec-prop">
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Tipo de Sección:</label>
-            <select id="inpSecType" class="form-input" style="font-weight: 700; background: var(--pastel-yellow);">
-              <option value="RECTANGULAR">Rectangular (b × h)</option>
-              <option value="T_SECTION">Sección T (b_ala × h_ala + b_alma × h_alma)</option>
-              <option value="I_SECTION">Sección I / Doble T simétrica</option>
-              <option value="BOX">Sección Cajón Hueco (b × h con espesor t)</option>
-              <option value="STEINER_CUSTOM">Compuesta Personalizada (Tabla Steiner)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Régimen:</label>
-            <select id="inpPropMode" class="form-input" style="font-weight: 700;">
-              <option value="CONSTANTE">E, A, I Constantes en toda la Viga</option>
-              <option value="VARIABLE">Valores Independientes por Barra</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Módulo E (Kgf/cm²):</label>
-            <input type="number" step="any" id="inpGlobalE" class="form-input" value="2100000" style="width: 120px; background: var(--pastel-yellow); font-weight: 700;">
-          </div>
-        </div>
-
-        <div class="form-row" id="sectionParamRow">
-          <div class="form-group">
-            <label class="form-label" id="lblParamB">b (cm):</label>
-            <input type="number" step="any" id="inpSecB" class="form-input" value="15" style="width: 80px; background: var(--pastel-yellow);">
-          </div>
-          <div class="form-group">
-            <label class="form-label" id="lblParamH">h (cm):</label>
-            <input type="number" step="any" id="inpSecH" class="form-input" value="30" style="width: 80px; background: var(--pastel-yellow);">
-          </div>
-          <div class="form-group">
-            <label class="form-label" id="lblParamP3">t_ala (cm):</label>
-            <input type="number" step="any" id="inpSecP3" class="form-input" value="0" style="width: 80px; background: var(--pastel-yellow);">
-          </div>
-          <div class="form-group">
-            <label class="form-label" id="lblParamP4">t_alma (cm):</label>
-            <input type="number" step="any" id="inpSecP4" class="form-input" value="0" style="width: 80px; background: var(--pastel-yellow);">
-          </div>
-
-          <div style="margin-left: auto; display: flex; align-items: center; gap: 14px;">
-            <div style="font-size: 0.85rem; font-weight: 700;">
-              Área A = <span id="outGlobalA" style="color: #0f766e;">450.00</span> cm²
+    <!-- ══ HEADER SUPERIOR ══════════════════════════════════════════ -->
+    <header class="header-nav">
+        <div class="header-inner">
+            <div class="brand-box">
+                <div class="brand-logo">📐</div>
+                <div class="brand-title-wrap">
+                    <h1>
+                        CEREBRO ESTRUCTURAL <span class="brand-badge">v6.0</span>
+                    </h1>
+                    <div class="brand-subtitle">Análisis Matricial de Vigas Continuas e Inclinadas • PLANTILLA ULIANOV v6.0</div>
+                </div>
             </div>
-            <div style="font-size: 0.85rem; font-weight: 700;">
-              Inercia Iz = <span id="outGlobalIz" style="color: #2563eb;">33750.00</span> cm⁴
+
+            <div class="header-controls">
+                <button id="cb-header-btn" class="btn btn-dev-btn" title="Panel de control maestro del administrador">
+                    👑 Panel Desarrollador
+                </button>
+
+                <div class="select-wrapper">
+                    <span class="select-label">Caso:</span>
+                    <select id="selectPreset" class="preset-select">
+                        <option value="presentacion_pdf">1. Ejemplo PDF (P=1200, Oblicua 2500, M=800)</option>
+                        <option value="cuaderno_distribuidas">2. Ejemplo Cuaderno (Cargas Distribuidas q)</option>
+                        <option value="ejemplos_ingeniero">3. Viga Continua (7 Nudos, 6 Barras)</option>
+                        <option value="viga_steiner_t">4. Sección T Compuesta (Steiner)</option>
+                    </select>
+                </div>
+
+                <a href="vigas-tablas.html" class="btn btn-tables" title="Ver desglose correlacional en todas las tablas de la Plantilla Ulianov">
+                    📊 Ver Tablas de Vigas
+                </a>
+
+                <a href="armaduras.html" class="btn btn-nav-module" title="Ir al módulo de Armaduras 2D">
+                    🏗️ Ir a Armaduras ➔
+                </a>
+
+                <a href="index.html" class="btn btn-home" title="Ir al menú principal de la Suite">
+                    🏠 Menú Principal
+                </a>
+
+                <button id="btnTopDownloadPNG" class="btn btn-png" title="Descargar la 6° Gráfica Final de Cátedra en PNG">
+                    📸 6° Gráfica PNG
+                </button>
+
+                <button id="btnTopDownloadExcel" class="btn btn-excel" title="Descargar libro Excel con fórmulas nativas de la Plantilla Ulianov">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                    </svg>
+                    Descargar Excel PLANTILLA ULIANOV
+                </button>
             </div>
-            <button type="button" id="btnToggleSteiner" class="btn btn-outline" style="font-size: 0.78rem;">
-              📊 Abrir Tabla Steiner
+        </div>
+    </header>
+
+    <!-- ══ STATUS STRIP ═════════════════════════════════════════════ -->
+    <section class="status-strip">
+        <div class="status-strip-inner">
+            <div class="status-badges-group">
+                <span id="beamHealthBadge" class="badge badge-green">Viga Continua: Estable (Criterio Cinemático)</span>
+                <span id="beamEquilibriumBadge" class="badge badge-blue">✓ Equilibrio Global Verificado (ΣFy = 0, ΣM = 0)</span>
+            </div>
+            <div class="status-info-text">
+                Método Directo de la Rigidez • Grados de libertad por nudo: [Ux, Uy, Uθ] • 100% Cátedra Ing. Ulianov Cuba
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ WORKSPACE PRINCIPAL (CANVAS + ENTRADAS) ══════════════════ -->
+    <main class="workspace">
+
+        <!-- ── COLUMNA IZQUIERDA: CANVAS INTERACTIVO ──────────────── -->
+        <section class="canvas-card">
+            <div class="card-header-bar">
+                <div class="card-header-title">
+                    <span>📸 Vista en Vivo de la Viga</span>
+                </div>
+                <div class="canvas-toolbar">
+                    <button type="button" id="btnClearExercise" class="tool-btn" title="Limpiar datos y empezar una viga desde cero">🧹 Limpiar</button>
+                    <button type="button" id="btnDownloadPNGMain" class="tool-btn" title="Descargar imagen en alta resolución">📸 PNG</button>
+                    <select id="selectDiagramUnit" class="tool-btn" style="cursor: pointer;" title="Unidad de fuerza">
+                        <option value="kgf">Kgf</option>
+                        <option value="ton">ton</option>
+                        <option value="kn">kN</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="canvas-stage">
+                <canvas id="canvasGraficaFinal" width="1360" height="480"></canvas>
+
+                <!-- Tarjeta flotante en canvas -->
+                <div class="canvas-floating-info">
+                    <div class="floating-title">Geometría de la Viga</div>
+                    <div class="floating-stat">
+                        <span>Nudos Totales:</span>
+                        <span id="statBeamNodes">4</span>
+                    </div>
+                    <div class="floating-stat">
+                        <span>Tramos (Barras):</span>
+                        <span id="statBeamBars">3</span>
+                    </div>
+                    <div class="floating-stat">
+                        <span>Estado:</span>
+                        <span style="color: #34d399;">Cinemáticamente Estable</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leyenda inferior -->
+            <div class="canvas-legend">
+                <span>6° Gráfica Final: Nudos (círculos), Tramos (línea), Cargas aplicadas y Reacciones {R}</span>
+                <div class="legend-items">
+                    <span><span class="legend-dot" style="background: #38bdf8;"></span> Nudos & Apoyos</span>
+                    <span><span class="legend-dot" style="background: #fbbf24;"></span> Cargas q, P</span>
+                    <span><span class="legend-dot" style="background: #34d399;"></span> Reacciones {R}</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── COLUMNA DERECHA: ENTRADAS REACTIVAS ─────────────────── -->
+        <section class="inputs-column">
+
+            <!-- 1. SECCIÓN TRANSVERSAL, STEINER Y MÓDULO E -->
+            <div class="input-card">
+                <div class="input-card-head">
+                    <div class="input-card-title">
+                        <span>1. Sección Transversal, Steiner y Módulo E</span>
+                    </div>
+                    <div class="input-card-units">cm | cm⁴ | Kgf/cm²</div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Tipo Sección:</label>
+                        <select id="inpSecType" class="cell-select" style="width: 140px;">
+                            <option value="RECTANGULAR">Rectangular (b × h)</option>
+                            <option value="T_SECTION">Sección T (Alas y Almas)</option>
+                            <option value="I_SECTION">Sección I / Doble T</option>
+                            <option value="BOX">Cajón Hueco</option>
+                            <option value="STEINER_CUSTOM">Compuesta Steiner</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Régimen:</label>
+                        <select id="inpPropMode" class="cell-select" style="width: 120px;">
+                            <option value="CONSTANTE">E, A, I Constantes</option>
+                            <option value="VARIABLE">Por Barra</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">E (Kgf/cm²):</label>
+                        <input type="number" step="any" id="inpGlobalE" class="cell-input" value="2100000" style="width: 90px;">
+                    </div>
+                </div>
+
+                <div class="form-row" id="sectionParamRow" style="padding-top: 0;">
+                    <div class="form-group">
+                        <label class="form-label" id="lblParamB">b:</label>
+                        <input type="number" step="any" id="inpSecB" class="cell-input" value="15" style="width: 55px;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" id="lblParamH">h:</label>
+                        <input type="number" step="any" id="inpSecH" class="cell-input" value="30" style="width: 55px;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" id="lblParamP3">t_ala:</label>
+                        <input type="number" step="any" id="inpSecP3" class="cell-input" value="0" style="width: 55px;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" id="lblParamP4">t_alma:</label>
+                        <input type="number" step="any" id="inpSecP4" class="cell-input" value="0" style="width: 55px;">
+                    </div>
+                    <button type="button" id="btnToggleSteiner" class="tool-btn" style="margin-left: auto;">
+                        📊 Tabla Steiner
+                    </button>
+                </div>
+
+                <!-- Preview de la sección transversal y cálculo automático -->
+                <div style="display: flex; gap: 14px; align-items: center; padding: 6px 12px 10px 12px; border-top: 1px solid var(--border-subtle);">
+                    <canvas id="canvasSectionPreview" width="90" height="60" style="border: 1px solid var(--border-muted); border-radius: 4px; background: #060911;"></canvas>
+                    <div style="font-size: 11px; line-height: 1.6;">
+                        <div>Área A = <strong id="outGlobalA" style="color: #38bdf8;">450.00</strong> cm²</div>
+                        <div>Inercia Iz = <strong id="outGlobalIz" style="color: #34d399;">33750.00</strong> cm⁴</div>
+                    </div>
+                </div>
+
+                <!-- Tabla Steiner Desplegable -->
+                <div id="steinerWrap" style="display: none; padding: 8px 12px; border-top: 1px solid var(--border-subtle);">
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Fig</th><th>Tipo</th><th>b</th><th>h</th><th>Ai</th><th>Yi</th><th>Ai·Yi</th><th>Izi</th><th>di</th><th>Ai·di²</th><th>IT</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodySteiner"></tbody>
+                            <tfoot id="tfootSteiner"></tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. ASISTENTE Y TABLA DE TRAMOS (BARRAS) -->
+            <div class="input-card">
+                <div class="input-card-head">
+                    <div class="input-card-title">
+                        <span>2. Tramos, Longitudes y Cargas (Hasta 11 Barras)</span>
+                    </div>
+                    <div class="input-card-units">cm | Kgf/cm | Kgf</div>
+                </div>
+
+                <!-- Asistente rápido por distancias L1, L2, L3... -->
+                <div class="form-row" style="background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border-subtle);">
+                    <div class="form-group">
+                        <label class="form-label">Tramos:</label>
+                        <input type="number" id="quickNumBars" class="cell-input" min="1" max="11" value="3" style="width: 45px;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Unidad:</label>
+                        <select id="quickDistUnit" class="cell-select" style="width: 80px;">
+                            <option value="m">Metros (m)</option>
+                            <option value="cm">cm</option>
+                        </select>
+                    </div>
+                    <button type="button" id="btnApplyQuickSpans" class="tool-btn" style="background: var(--pastel-mint);">
+                        ✓ Aplicar Tramos
+                    </button>
+                </div>
+                <div id="quickSpanInputsContainer" class="form-row" style="padding-top: 4px; padding-bottom: 4px;"></div>
+
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Xi</th><th>Yi</th><th>Xf</th><th>Yf</th>
+                                <th>L (cm)</th>
+                                <th>cos θ</th><th>sen θ</th>
+                                <th>q (Kgf/cm)</th><th>P (Kgf)</th><th>a (cm)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyBars"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. EVALUACIÓN NODAL, APOYOS Y CARGAS NODALES -->
+            <div class="input-card">
+                <div class="input-card-head">
+                    <div class="input-card-title">
+                        <span>3. Evaluación Nodal y Apoyos (Hasta 12 Nudos)</span>
+                    </div>
+                    <div class="input-card-units">cm | Kgf | Kgf·cm</div>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>X</th><th>Y</th>
+                                <th>Condición Apoyo</th>
+                                <th>Fx</th><th>Fy</th><th>Mz</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyNodes"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 4. DESCOMPONEDOR DE CARGAS OBLICUAS (TRIÁNGULO O ÁNGULO) -->
+            <div class="input-card">
+                <div class="input-card-head">
+                    <div class="input-card-title">
+                        <span>4. Descomponedor de Cargas Oblicuas / Inclinadas</span>
+                    </div>
+                    <div class="input-card-units">Triángulo V/H o Ángulo θ</div>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Carga</th><th>Nudo</th><th>P (Kgf)</th><th>Pend. V</th><th>Pend. H</th><th>Ángulo θ</th><th>Sent. X</th><th>Sent. Y</th><th>Fx</th><th>Fy</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyOblique"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- ══ PESTAÑAS INFERIORES: RESULTADOS Y AUDITORÍA MATRICIAL ════ -->
+    <section class="results-section">
+        <div class="input-card">
+            <div class="card-header-bar" style="border-bottom: none; padding-bottom: 0;">
+                <div class="tabs-nav">
+                    <button class="tab-btn active" data-tab="tab-beam-summary">
+                        📊 Resumen Ejecutivo y Reacciones
+                    </button>
+                    <button class="tab-btn" data-tab="tab-beam-local">
+                        🧠 Matrices Locales de Vigas [k] (6×6)
+                    </button>
+                    <button class="tab-btn" data-tab="tab-beam-global">
+                        📐 Matriz de Rigidez Global [K]
+                    </button>
+                    <button class="tab-btn" data-tab="tab-beam-reduced">
+                        🧮 Submatrices [K₁₁] y [K₂₁]
+                    </button>
+                    <button class="tab-btn" data-tab="tab-beam-equations">
+                        📋 Sistema {Q} = [K]{D}
+                    </button>
+                </div>
+            </div>
+
+            <div style="padding: 16px;">
+                <!-- TAB 1: RESUMEN EJECUTIVO -->
+                <div class="tab-content active" id="tab-beam-summary">
+                    <div class="results-grid-2col">
+                        <!-- Reacciones en Apoyos -->
+                        <div class="mini-card">
+                            <div class="mini-card-head" style="color: var(--accent-emerald);">
+                                <span>Reacciones en Apoyos</span>
+                                <span class="mini-card-formula">{R} = [K₂₁] · {D} − {Q_rest}</span>
+                            </div>
+                            <div class="table-wrap">
+                                <table class="results-table">
+                                    <thead>
+                                        <tr>
+                                            <th>GL #</th><th>Nudo</th><th>Componente</th><th>Reacción</th><th>Unidad</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodySummaryReactions"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Desplazamientos y Giros Nodales -->
+                        <div class="mini-card">
+                            <div class="mini-card-head" style="color: var(--accent-sky);">
+                                <span>Desplazamientos y Deflexiones Nodales</span>
+                                <span class="mini-card-formula">{D} = [K₁₁]⁻¹ · {Q_lib}</span>
+                            </div>
+                            <div class="table-wrap">
+                                <table class="results-table">
+                                    <thead>
+                                        <tr>
+                                            <th>GL #</th><th>Nudo</th><th>Dirección</th><th>Valor</th><th>Unidad</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodySummaryDisplacements"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: MATRICES LOCALES -->
+                <div class="tab-content" id="tab-beam-local">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+                        Matrices de Rigidez de Barra [k] en coordenadas locales y globales con grados de libertad: [U_iX, U_iY, U_iθ, U_jX, U_jY, U_jθ].
+                    </div>
+                    <div id="paneLocalBars" class="matrix-scroll-wrap"></div>
+                </div>
+
+                <!-- TAB 3: MATRIZ GLOBAL -->
+                <div class="tab-content" id="tab-beam-global">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between;">
+                        <span>Matriz Ensamblada Global [K]. Diagonal principal resaltada en verde.</span>
+                        <span style="font-family: var(--font-mono); color: #34d399;">Simetría Matricial K_ij = K_ji</span>
+                    </div>
+                    <div id="paneGlobalK" class="matrix-scroll-wrap"></div>
+                </div>
+
+                <!-- TAB 4: SUBMATRICES -->
+                <div class="tab-content" id="tab-beam-reduced">
+                    <div class="results-grid-2col">
+                        <div class="mini-card">
+                            <div class="mini-card-head" style="color: var(--accent-sky);">
+                                <span>Submatriz [K₁₁] (Libre - Libre)</span>
+                            </div>
+                            <div id="paneReducedKLL" class="matrix-scroll-wrap"></div>
+                        </div>
+                        <div class="mini-card">
+                            <div class="mini-card-head" style="color: var(--accent-emerald);">
+                                <span>Submatriz [K₂₁] (Restringido - Libre)</span>
+                            </div>
+                            <div id="paneReducedKRL" class="matrix-scroll-wrap"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: SISTEMA DE ECUACIONES -->
+                <div class="tab-content" id="tab-beam-equations">
+                    <div id="paneFullEq" class="matrix-scroll-wrap"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 16px;">
+            <button id="btnDownloadExcelMain" class="btn btn-excel" style="font-size: 13px; padding: 10px 22px;">
+                📥 Descargar Libro Completo en Excel con Fórmulas Nativas (PLANTILLA ULIANOV .xlsx)
             </button>
-          </div>
         </div>
+    </section>
 
-        <!-- Preview canvas of section -->
-        <div style="display: flex; gap: 16px; align-items: center; margin-top: 10px;">
-          <canvas id="canvasSectionPreview" width="140" height="90" style="border: 1px solid var(--border); border-radius: 6px; background: #ffffff;"></canvas>
-          <div style="font-size: 0.78rem; color: var(--text-muted);">
-            Vista previa geométrica de la sección con centroide y fibra de referencia calculados por Steiner.
-          </div>
-        </div>
+    <!-- ══ PIE DE PÁGINA ════════════════════════════════════════════ -->
+    <footer class="footer">
+        CEREBRO ESTRUCTURAL v6.0 • Cátedra de Análisis Estructural II • Desarrollado por el Ing. Ulianov Cuba Valencia • Huancayo, Perú
+        • <a href="https://github.com/72008081-pixel/Ulianov-Continental" target="_blank">Repositorio en GitHub</a>
+    </footer>
 
-        <!-- Steiner Table Collapsible -->
-        <div id="steinerWrap" style="display: none; margin-top: 14px;">
-          <div class="table-container">
-            <table class="excel-table" id="tableSteiner">
-              <thead>
-                <tr>
-                  <th>FIGURA #</th>
-                  <th>TIPO</th>
-                  <th>b (cm)</th>
-                  <th>h (cm)</th>
-                  <th>ÁREA Ai (cm²)</th>
-                  <th>CENTROIDE Yi (cm)</th>
-                  <th>Ai · Yi (cm³)</th>
-                  <th>INERCIA PROPIA Izi (cm⁴)</th>
-                  <th>dist di = (Yi - Ȳ) (cm)</th>
-                  <th>Ai · di² (cm⁴)</th>
-                  <th>INERCIA TOTAL IT (cm⁴)</th>
-                </tr>
-              </thead>
-              <tbody id="tbodySteiner"></tbody>
-              <tfoot id="tfootSteiner"></tfoot>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 2. GEOMETRÍA DE BARRAS (TABLA GRANDE PLANTILLA ULIANOV) -->
-    <div class="section-card">
-      <div class="section-header" onclick="toggleSection('sec-bars')">
-        <span>📋 2. TABLA MAESTRA DE BARRAS — PLANTILLA ULIANOV (Hasta 11 Barras)</span>
-        <span id="icon-sec-bars">▼</span>
-      </div>
-      <div class="section-body" id="sec-bars">
-        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
-          Celdas amarillas: Coordenadas nodales (cm), carga distribuida q (Kgf/cm), carga puntual en el tramo P (Kgf) y distancia al inicio 'a' (cm).
-        </p>
-        <div class="table-container">
-          <table class="excel-table">
-            <thead>
-              <tr>
-                <th rowspan="2">BARRA #</th>
-                <th colspan="2">NUDO INICIAL</th>
-                <th colspan="2">NUDO FINAL</th>
-                <th colspan="2">PROYECCIONES</th>
-                <th rowspan="2">LONGITUD L (cm)</th>
-                <th colspan="2">COSENOS DIRECTORES</th>
-                <th colspan="3">CARGAS EN EL TRAMO</th>
-              </tr>
-              <tr>
-                <th>Xi (cm)</th>
-                <th>Yi (cm)</th>
-                <th>Xf (cm)</th>
-                <th>Yf (cm)</th>
-                <th>ΔX (cm)</th>
-                <th>ΔY (cm)</th>
-                <th>cos θ</th>
-                <th>sen θ</th>
-                <th>q dist (Kgf/cm)</th>
-                <th>P tramo (Kgf)</th>
-                <th>a (cm)</th>
-              </tr>
-            </thead>
-            <tbody id="tbodyBars"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- 3. EVALUACIÓN NODAL, RESTRICCIONES Y CARGAS NODALES -->
-    <div class="section-card">
-      <div class="section-header" onclick="toggleSection('sec-nodes')">
-        <span>📍 3. EVALUACIÓN NODAL: CONDICIONES DE APOYO Y VECTORES DE CARGA NODAL (Hasta 12 Nudos)</span>
-        <span id="icon-sec-nodes">▼</span>
-      </div>
-      <div class="section-body" id="sec-nodes">
-        <div class="table-container">
-          <table class="excel-table">
-            <thead>
-              <tr>
-                <th rowspan="2">NUDO #</th>
-                <th colspan="2">COORDENADAS (cm)</th>
-                <th colspan="3">CONDICIÓN DE APOYO (RESTRICCIÓN)</th>
-                <th colspan="3">CARGAS NODALES PUNTUALES</th>
-              </tr>
-              <tr>
-                <th>X (cm)</th>
-                <th>Y (cm)</th>
-                <th>Restricción X</th>
-                <th>Restricción Y</th>
-                <th>Restricción θ (Giro)</th>
-                <th>Fx (Kgf)</th>
-                <th>Fy (Kgf)</th>
-                <th>Momento M (Kgf·cm)</th>
-              </tr>
-            </thead>
-            <tbody id="tbodyNodes"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- 4. CARGAS OBLICUAS / INCLINADAS -->
-    <div class="section-card">
-      <div class="section-header" onclick="toggleSection('sec-oblique')">
-        <span>↗️ 4. DESCOMPONEDOR DE CARGAS OBLICUAS / INCLINADAS POR PENDIENTE O ÁNGULO</span>
-        <span id="icon-sec-oblique">▼</span>
-      </div>
-      <div class="section-body" id="sec-oblique">
-        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
-          Ingresa la magnitud de la fuerza inclinada y su triángulo de pendiente (V/H) o ángulo para proyectar exactamente en Fx y Fy nodales.
-        </p>
-        <div class="table-container">
-          <table class="excel-table">
-            <thead>
-              <tr>
-                <th>CARGA #</th>
-                <th>NUDO DESTINO</th>
-                <th>MAGNITUD P (Kgf)</th>
-                <th>PENDIENTE VERTICAL (V)</th>
-                <th>PENDIENTE HORIZONTAL (H)</th>
-                <th>ÁNGULO θ (°)</th>
-                <th>SENTIDO X</th>
-                <th>SENTIDO Y</th>
-                <th>Fx RESULTANTE (Kgf)</th>
-                <th>Fy RESULTANTE (Kgf)</th>
-              </tr>
-            </thead>
-            <tbody id="tbodyOblique"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- 5. 6° GRÁFICA FINAL (PIZARRA ULIANOV) -->
-    <div class="section-card">
-      <div class="section-header section-header-teal" onclick="toggleSection('sec-canvas')">
-        <span>📸 5. "6° GRÁFICA FINAL" — DIAGRAMA COMPLETO DE CÁTEDRA (NODOS, BARRAS, CARGAS Y REACCIONES)</span>
-        <span id="icon-sec-canvas">▼</span>
-      </div>
-      <div class="section-body" id="sec-canvas">
-        <div class="form-row" style="margin-bottom: 10px;">
-          <div class="form-group">
-            <label class="form-label">Unidad de Fuerzas en Canvas:</label>
-            <select id="selectDiagramUnit" class="form-input" style="font-weight: 700;">
-              <option value="kgf">Kgf (Cátedra Oficial)</option>
-              <option value="ton">Toneladas (ton = Kgf / 1000)</option>
-              <option value="kn">KiloNewtons (kN)</option>
-            </select>
-          </div>
-          <button type="button" id="btnDownloadPNGMain" class="btn btn-blue" style="margin-left: auto;">
-            📸 Descargar Gráfica en Alta Resolución (.PNG)
-          </button>
-        </div>
-
-        <div class="canvas-container">
-          <canvas id="canvasGraficaFinal" width="1360" height="480"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- 6. RESULTADOS: DESPLAZAMIENTOS Y REACCIONES -->
-    <div class="section-card">
-      <div class="section-header section-header-teal" onclick="toggleSection('sec-results')">
-        <span>📊 6. RESULTADOS NUMÉRICOS: DESPLAZAMIENTOS {D} Y REACCIONES {R}</span>
-        <span id="icon-sec-results">▼</span>
-      </div>
-      <div class="section-body" id="sec-results">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div>
-            <h4 style="font-size: 0.85rem; font-weight: 700; color: #0f766e; margin-bottom: 8px;">
-              Vector de Desplazamientos Nodal {D} (cm, rad):
-            </h4>
-            <div class="table-container">
-              <table class="excel-table">
-                <thead>
-                  <tr>
-                    <th>GL #</th>
-                    <th>NUDO</th>
-                    <th>DIRECCIÓN</th>
-                    <th>VALOR</th>
-                    <th>UNIDAD</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodySummaryDisplacements"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div>
-            <h4 style="font-size: 0.85rem; font-weight: 700; color: #2563eb; margin-bottom: 8px;">
-              Vector de Reacciones de Apoyo {R} (Kgf, Kgf·cm):
-            </h4>
-            <div class="table-container">
-              <table class="excel-table">
-                <thead>
-                  <tr>
-                    <th>GL #</th>
-                    <th>NUDO</th>
-                    <th>COMPONENTE</th>
-                    <th>REACCIÓN</th>
-                    <th>UNIDAD</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodySummaryReactions"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 7. AUDITORÍA MATRICIAL PASO A PASO -->
-    <div class="section-card">
-      <div class="section-header" onclick="toggleSection('sec-matrices')">
-        <span>🧮 7. AUDITORÍA MATRICIAL COMPLETA ([k] LOCALES, [K] GLOBAL, PARTICIONAMIENTO Y {Q} = [K]{D})</span>
-        <span id="icon-sec-matrices">▼</span>
-      </div>
-      <div class="section-body" id="sec-matrices">
-        <div class="matrix-tabs">
-          <button type="button" class="matrix-tab-btn active" data-mtab="paneLocalBars">Matrices Locales [k] por Barra</button>
-          <button type="button" class="matrix-tab-btn" data-mtab="paneGlobalK">Matriz de Rigidez Global [K]</button>
-          <button type="button" class="matrix-tab-btn" data-mtab="paneReducedKLL">Submatriz [K₁₁] (Libre-Libre)</button>
-          <button type="button" class="matrix-tab-btn" data-mtab="paneReducedKRL">Submatriz [K₂₁] (Restringido-Libre)</button>
-          <button type="button" class="matrix-tab-btn" data-mtab="paneFullEq">Sistema de Ecuaciones {Q} = [K]{D}</button>
-        </div>
-
-        <div id="paneLocalBars" class="matrix-pane active"></div>
-        <div id="paneGlobalK" class="matrix-pane"></div>
-        <div id="paneReducedKLL" class="matrix-pane"></div>
-        <div id="paneReducedKRL" class="matrix-pane"></div>
-        <div id="paneFullEq" class="matrix-pane"></div>
-      </div>
-    </div>
-
-    <!-- Bottom Download Button -->
-    <div style="text-align: center; margin-top: 10px;">
-      <button class="btn btn-success" id="btnDownloadExcelMain" style="font-size: 1rem; padding: 12px 24px;">
-        📥 Descargar Libro Excel Completo con Fórmulas Vivas (PLANTILLA ULIANOV .xlsx)
-      </button>
-    </div>
-
-  </div>
-
-  <footer style="text-align: center; font-size: 0.8rem; color: #94a3b8; padding: 24px 0 10px;">
-    Cátedra de Análisis Estructural II • Ing. Ulianov Cuba Valencia • CEREBRO ESTRUCTURAL PRO v5.5
-  </footer>
-
-  <!-- Scripts -->
-  <script>
-    function toggleSection(id) {
-      const el = document.getElementById(id);
-      const icon = document.getElementById('icon-' + id);
-      if (!el) return;
-      if (el.style.display === 'none') {
-        el.style.display = 'block';
-        if (icon) icon.textContent = '▼';
-      } else {
-        el.style.display = 'none';
-        if (icon) icon.textContent = '▲';
-      }
-    }
-  </script>
-  <script src="auth.js?v=5.5"></script>
-  <script src="beam-solver.js?v=5.5"></script>
-  <script src="beam-canvas.js?v=5.5"></script>
-  <script src="assets/exceljs.min.js"></script>
-  <script src="beam-excel-generator.js?v=5.5"></script>
-  <script src="beam-app.js?v=5.5"></script>
+    <!-- Dependencias de cálculo y autenticación -->
+    <script src="auth.js?v=6.0"></script>
+    <script src="beam-solver.js?v=6.0"></script>
+    <script src="beam-canvas.js?v=6.0"></script>
+    <script src="assets/exceljs.min.js"></script>
+    <script src="beam-excel-generator.js?v=6.0"></script>
+    <script src="beam-app.js?v=6.0"></script>
 </body>
 </html>

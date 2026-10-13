@@ -642,8 +642,7 @@
       <div class="header-badges">
         <span class="badge badge-emerald">✓ Cero Errores</span>
         <span class="badge badge-teal">⚡ Cálculo en Tiempo Real</span>
-        <span class="badge badge-amber">📊 Formato Oficial Cátedra</span>
-        <span class="badge badge-blue">🌐 Dominio Público</span>
+        <a href="../armaduras.html" class="btn" style="background: #a7f3d0; color: #000000; text-decoration: none; border-radius: 8px; font-weight: 800; border: 1.5px solid #6ee7b7; padding: 6px 14px; font-size: 0.82rem;">⬅️ Volver a Cerebro Estructural</a>
       </div>
     </div>
   </header>
@@ -1141,6 +1140,18 @@
     // =========================================================================
     let currentNodes = JSON.parse(JSON.stringify(PRESETS.whatsapp.nodes));
     let currentBars = JSON.parse(JSON.stringify(PRESETS.whatsapp.bars));
+
+    // Sincronización automática con Cerebro Estructural
+    try {
+      const syncStr = localStorage.getItem('cerebro_active_truss_sync');
+      if (syncStr) {
+        const parsed = JSON.parse(syncStr);
+        if (parsed.nodes && parsed.bars && Array.isArray(parsed.nodes)) {
+          currentNodes = JSON.parse(JSON.stringify(parsed.nodes));
+          currentBars = JSON.parse(JSON.stringify(parsed.bars));
+        }
+      }
+    } catch(e) {}
 
     // Canvas view state
     let viewZoom = 1.0;
