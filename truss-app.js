@@ -191,12 +191,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const pal = BAR_PALETTE[m % BAR_PALETTE.length];
             const tr = document.createElement('tr');
 
-            // Opciones de nodos 1..6
+            // Opciones de nodos 1..6 (N1, N2... compactos para visualización perfecta)
             let optStart = `<option value="">—</option>`;
             let optEnd   = `<option value="">—</option>`;
             for (let n = 1; n <= 6; n++) {
-                optStart += `<option value="${n}" ${br.start === n ? 'selected' : ''}>Nodo ${n}</option>`;
-                optEnd   += `<option value="${n}" ${br.end === n ? 'selected' : ''}>Nodo ${n}</option>`;
+                optStart += `<option value="${n}" ${br.start === n ? 'selected' : ''}>N${n}</option>`;
+                optEnd   += `<option value="${n}" ${br.end === n ? 'selected' : ''}>N${n}</option>`;
             }
 
             tr.innerHTML = `
@@ -226,48 +226,76 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 5. Escuchar cambios de entrada en vivo
+    // 5. Escuchar cambios de entrada en vivo con actualización reactiva total
     function handleInputChange(e) {
         const target = e.target;
+        if (!target || !target.dataset) return;
         const type = target.dataset.type;
-        const idx = parseInt(target.dataset.idx);
+        const idx = parseInt(target.dataset.idx, 10);
         const field = target.dataset.field;
+        if (isNaN(idx)) return;
 
         if (type === 'node') {
-            let val = target.value.trim();
+            let val = (target.value !== undefined) ? String(target.value).trim() : '';
             if (field === 'x' || field === 'y' || field === 'px' || field === 'py') {
-                state.nodes[idx][field] = val === '' ? null : parseFloat(val);
+                state.nodes[idx][field] = (val === '' || isNaN(parseFloat(val))) ? null : parseFloat(val);
             } else {
-                state.nodes[idx][field] = val;
+                state.nodes[idx][field] = val || 'Libre';
             }
         } else if (type === 'bar') {
-            let val = target.value.trim();
+            let val = (target.value !== undefined) ? String(target.value).trim() : '';
             if (field === 'start' || field === 'end') {
-                state.bars[idx][field] = val === '' ? null : parseInt(val);
+                state.bars[idx][field] = (val === '' || isNaN(parseInt(val, 10))) ? null : parseInt(val, 10);
             } else if (field === 'a' || field === 'e') {
-                state.bars[idx][field] = val === '' ? 10 : parseFloat(val);
+                state.bars[idx][field] = (val === '' || isNaN(parseFloat(val))) ? (field === 'a' ? 10 : 2100000) : parseFloat(val);
             }
         }
 
         recalculateAndRender(false);
     }
 
+    // Delegación reactiva de eventos en tablas y documento completo
     const inputContainer = document.getElementById('inputTablesContainer');
     if (inputContainer) {
         inputContainer.addEventListener('input', handleInputChange);
         inputContainer.addEventListener('change', handleInputChange);
     }
+    if (nodesTbody) {
+        nodesTbody.addEventListener('input', handleInputChange);
+        nodesTbody.addEventListener('change', handleInputChange);
+    }
+    if (barsTbody) {
+        barsTbody.addEventListener('input', handleInputChange);
+        barsTbody.addEventListener('change', handleInputChange);
+    }
+    document.addEventListener('input', (e) => {
+        if (e.target && e.target.dataset && (e.target.dataset.type === 'node' || e.target.dataset.type === 'bar')) {
+            handleInputChange(e);
+        }
+    });
+    document.addEventListener('change', (e) => {
+        if (e.target && e.target.dataset && (e.target.dataset.type === 'node' || e.target.dataset.type === 'bar')) {
+            handleInputChange(e);
+        }
+    });
 
     // 6. Recalcular y Actualizar Todo el Dashboard
+    let lastActiveCount = -1;
     function recalculateAndRender(autoFit = false) {
         // Resolver mediante TrussSolver
         const solution = TrussSolver.solveTruss(state.nodes, state.bars);
         state.solution = solution;
 
+        const currentActive = state.nodes.filter(n => n.x !== null && n.x !== '' && n.y !== null && n.y !== '').length;
+        const countChanged = (currentActive !== lastActiveCount);
+        lastActiveCount = currentActive;
+
         // Actualizar Canvas
         renderer.setData(state.nodes, state.bars, solution);
-        if (autoFit) {
+        if (autoFit || countChanged) {
             renderer.fitView();
+        } else {
+            renderer.render();
         }
 
         // Actualizar previsualización de Longitud L y AE/L en tabla de barras
@@ -701,6 +729,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const toggleLoads = document.getElementById('chkShowLoads');
+    if (toggleLoads) {
+        toggleLoads.addEventListener('change', (e) => {
+            renderer.options.showLoads = e.target.checked;
+            renderer.render();
+        });
+    }
+
     const toggleGrid = document.getElementById('chkShowGrid') || document.getElementById('toggleGrid');
     if (toggleGrid) {
         toggleGrid.addEventListener('change', (e) => {
@@ -741,7 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
 
                     const filename = `Plantilla_Armaduras_${prefix}_Catedra_Ulianov_${Date.now().toString().slice(-4)}.xlsx`;
-                    await ExcelGenerator.downloadTrussExcel(state.nodes, state.bars, isIsostatic, filename, state.solverResult);
+                    await ExcelGenerator.downloadTrussExcel(state.nodes, state.bars, isIsostatic, filename, state.solution);
 
                     btnDownloadExcel.innerHTML = `✔ ¡Excel VIP Descargado!`;
                     btnDownloadExcel.style.background = "#047857";

@@ -1038,6 +1038,9 @@
             const ec = excelCode(s.email);
             alert(`📊 Para descargar el Excel (.xlsx) con fórmulas nativas necesitas el Código Excel.\n\nSolicita al Ing. Ulianov por WhatsApp (${YAPE.display}) enviando tu comprobante de Yape.\n\nCuando el Ing. te lo envíe, tu código será:\n${ec}`);
         },
+        showAuthModal: showAuthModal,
+        openAuthModal: showAuthModal,
+        lock: showAuthModal,
         showAdminPanel: showPanelModal,
         openAdminWorkflow: openAdminWorkflow
     };

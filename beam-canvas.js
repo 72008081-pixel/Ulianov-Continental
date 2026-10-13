@@ -696,10 +696,15 @@
     /**
      * Descarga el canvas de la "6° Gráfica Final" como archivo PNG de alta resolución
      */
-    function downloadGraficaFinalPNG(solverResult, options = {}, filename = '6_Grafica_Final_Viga_Ulianov.png') {
-        const offCanvas = document.createElement('canvas');
-        renderGraficaFinal(offCanvas, solverResult, Object.assign({}, options, { width: 1320, height: 600 }));
-        const dataUrl = offCanvas.toDataURL('image/png');
+    function downloadGraficaFinalPNG(target, options = {}, filename = '6_Grafica_Final_Viga_Ulianov.png') {
+        let dataUrl = '';
+        if (target && target.tagName === 'CANVAS') {
+            dataUrl = target.toDataURL('image/png');
+        } else {
+            const offCanvas = document.createElement('canvas');
+            renderGraficaFinal(offCanvas, target, Object.assign({}, options, { width: 1320, height: 600 }));
+            dataUrl = offCanvas.toDataURL('image/png');
+        }
         const a = document.createElement('a');
         a.href = dataUrl;
         a.download = filename;

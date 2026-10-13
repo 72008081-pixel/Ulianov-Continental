@@ -1045,8 +1045,22 @@
         // Descargar PNG
         const triggerPNG = () => {
             const cv = document.getElementById('canvasGraficaFinal');
-            if (cv && window.BeamCanvas) {
-                BeamCanvas.downloadGraficaFinalPNG(cv, '6TO_GRAFICA_FINAL_VIGA_ULIANOV.png');
+            if (cv) {
+                try {
+                    const dataUrl = cv.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    a.href = dataUrl;
+                    a.download = '6TO_GRAFICA_FINAL_VIGA_ULIANOV.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    return;
+                } catch(e) {
+                    console.warn('Canvas toDataURL fallback', e);
+                }
+            }
+            if (window.BeamCanvas && currentSolution) {
+                BeamCanvas.downloadGraficaFinalPNG(currentSolution, {}, '6TO_GRAFICA_FINAL_VIGA_ULIANOV.png');
             }
         };
 
@@ -1059,15 +1073,39 @@
         const triggerExcel = async () => {
             if (window.CerebroAuth && !CerebroAuth.isAuthorized()) {
                 alert('🔒 Para descargar la PLANTILLA ULIANOV en Excel (.xlsx) debes iniciar sesión con tu cuenta.');
-                CerebroAuth.lock();
+                if (typeof CerebroAuth.openAuthModal === 'function') {
+                    CerebroAuth.openAuthModal();
+                } else if (typeof CerebroAuth.showAuthModal === 'function') {
+                    CerebroAuth.showAuthModal();
+                }
+                return;
+            }
+
+            if (window.CerebroAuth && !CerebroAuth.hasExcelPermission()) {
+                CerebroAuth.showExcelVipNotice();
                 return;
             }
 
             if (window.BeamExcelGenerator) {
+                const btn1 = document.getElementById('btnTopDownloadExcel');
+                const btn2 = document.getElementById('btnDownloadExcelMain');
+                const orig1 = btn1 ? btn1.innerHTML : '';
+                const orig2 = btn2 ? btn2.innerHTML : '';
+                if (btn1) btn1.innerHTML = '⏳ Generando Excel...';
+                if (btn2) btn2.innerHTML = '⏳ Generando Excel (.xlsx)...';
+
                 try {
                     await BeamExcelGenerator.downloadBeamExcel(currentState, 'PLANTILLA_ULIANOV_VIGAS_12_NODOS_METODO_RIGIDEZ.xlsx');
+                    if (btn1) btn1.innerHTML = '✔ ¡Excel Descargado!';
+                    if (btn2) btn2.innerHTML = '✔ ¡Excel Descargado!';
                 } catch (e) {
+                    console.error('Error generando Excel:', e);
                     alert('Error generando Excel: ' + e.message);
+                } finally {
+                    setTimeout(() => {
+                        if (btn1) btn1.innerHTML = orig1;
+                        if (btn2) btn2.innerHTML = orig2;
+                    }, 2500);
                 }
             } else {
                 alert('Generador Excel no disponible.');

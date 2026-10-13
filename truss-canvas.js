@@ -668,53 +668,55 @@
         }
 
         _drawAppliedLoads(ctx, validNodesMap) {
+            const nodeR = 14;
+            const arrowLen = 55;
+
             for (const nd of validNodesMap.values()) {
                 const px = nd.px;
                 const py = nd.py;
                 if (Math.abs(px) < 1e-4 && Math.abs(py) < 1e-4) continue;
 
                 const p = this.worldToScreen(nd.x, nd.y);
-                const arrowLen = 50;
 
-                // Carga en X
+                // Carga en X (Px)
                 if (Math.abs(px) > 1e-4) {
-                    const dir = px > 0 ? 1 : -1;
-                    const fromX = p.x - dir * arrowLen;
-                    const toX = p.x;
-                    this._drawVectorArrow(ctx, fromX, p.y, toX, p.y, '#F97316', `Px = ${px} Kgf`);
+                    const dir = px > 0 ? 1 : -1; // +X hacia la derecha, -X hacia la izquierda
+                    const toX = p.x - dir * (nodeR + 2);
+                    const fromX = toX - dir * arrowLen;
+                    this._drawVectorArrow(ctx, fromX, p.y, toX, p.y, '#F97316', `Px = ${px > 0 ? '+' : ''}${px} Kgf`, false, dir > 0 ? 'right' : 'left');
                 }
 
-                // Carga en Y
+                // Carga en Y (Py)
                 if (Math.abs(py) > 1e-4) {
-                    // py > 0 va hacia arriba (en pantalla Y disminuye)
-                    const dir = py > 0 ? -1 : 1;
-                    const fromY = p.y - dir * arrowLen;
-                    const toY = p.y;
-                    this._drawVectorArrow(ctx, p.x, fromY, p.x, toY, '#F97316', `Py = ${py} Kgf`);
+                    const dir = py > 0 ? -1 : 1; // +Y arriba (pantalla Y-), -Y abajo (pantalla Y+)
+                    const toY = p.y + dir * (nodeR + 2);
+                    const fromY = toY + dir * arrowLen;
+                    this._drawVectorArrow(ctx, p.x, fromY, p.x, toY, '#F43F5E', `Py = ${py > 0 ? '+' : ''}${py} Kgf`, false, py > 0 ? 'up' : 'down');
                 }
             }
         }
 
         _drawReactions(ctx, validNodesMap) {
+            const nodeR = 14;
             for (const r of this.solution.reactions) {
                 if (Math.abs(r.value) < 1e-3) continue;
                 if (!validNodesMap.has(r.nodeId)) continue;
 
                 const nd = validNodesMap.get(r.nodeId);
                 const p = this.worldToScreen(nd.x, nd.y);
-                const arrowLen = 45;
+                const arrowLen = 50;
 
                 ctx.save();
                 if (r.direction === 'X') {
                     const dir = r.value > 0 ? 1 : -1;
-                    const fromX = p.x;
-                    const toX = p.x + dir * arrowLen;
+                    const fromX = p.x + dir * (nodeR + 2);
+                    const toX = fromX + dir * arrowLen;
                     this._drawVectorArrow(ctx, fromX, p.y, toX, p.y, '#10B981', `${r.label} = ${r.value.toFixed(1)} Kgf`, true);
                 } else if (r.direction === 'Y') {
                     // Valor positivo empuja hacia arriba
                     const dir = r.value > 0 ? -1 : 1;
-                    const fromY = p.y;
-                    const toY = p.y + dir * arrowLen;
+                    const fromY = p.y + dir * (nodeR + 2);
+                    const toY = fromY + dir * arrowLen;
                     this._drawVectorArrow(ctx, p.x, fromY, p.x, toY, '#10B981', `${r.label} = ${r.value.toFixed(1)} Kgf`, true);
                 }
                 ctx.restore();
@@ -725,7 +727,7 @@
             ctx.save();
             ctx.strokeStyle = color;
             ctx.fillStyle = color;
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 3.0;
 
             // Línea del vector
             ctx.beginPath();
@@ -735,7 +737,7 @@
 
             // Cabeza de la flecha en (x2, y2)
             const angle = Math.atan2(y2 - y1, x2 - x1);
-            const headLen = 10;
+            const headLen = 13;
             ctx.beginPath();
             ctx.moveTo(x2, y2);
             ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
@@ -743,23 +745,43 @@
             ctx.closePath();
             ctx.fill();
 
-            // Etiqueta del vector
-            ctx.font = 'bold 10px "Segoe UI", sans-serif';
-            ctx.fillStyle = color;
+            // Etiqueta del vector con pastilla protectora de alto contraste
+            ctx.font = 'bold 10.5px "Segoe UI", sans-serif';
+            const tm = ctx.measureText(label);
             const midX = (x1 + x2) / 2;
             const midY = (y1 + y2) / 2;
 
+            let badgeX = midX;
+            let badgeY = midY;
+
             if (Math.abs(y2 - y1) < 5) {
                 // Vector horizontal
-                ctx.textAlign = 'center';
-                ctx.textBaseline = isReaction ? 'top' : 'bottom';
-                ctx.fillText(label, midX, midY + (isReaction ? 6 : -6));
+                badgeY = midY + (isReaction ? 14 : -14);
             } else {
                 // Vector vertical
-                ctx.textAlign = isReaction ? 'left' : 'right';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(label, midX + (isReaction ? 6 : -6), midY);
+                badgeX = midX + (isReaction ? (tm.width / 2 + 10) : -(tm.width / 2 + 10));
             }
+
+            // Fondo pastilla
+            const padW = tm.width + 10;
+            const padH = 18;
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(badgeX - padW / 2, badgeY - padH / 2, padW, padH, 4);
+            } else {
+                ctx.rect(badgeX - padW / 2, badgeY - padH / 2, padW, padH);
+            }
+            ctx.fill();
+            ctx.stroke();
+
+            // Texto de la etiqueta
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(label, badgeX, badgeY);
 
             ctx.restore();
         }

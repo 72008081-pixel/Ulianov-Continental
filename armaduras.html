@@ -843,6 +843,9 @@
                     <label style="font-size: 11px; color: var(--text-muted); margin-left: 8px; cursor: pointer;">
                         <input type="checkbox" id="chkShowGrid" checked style="vertical-align: middle;"> Cuadrícula
                     </label>
+                    <label style="font-size: 11px; color: #f97316; font-weight: 700; cursor: pointer;">
+                        <input type="checkbox" id="chkShowLoads" checked style="vertical-align: middle;"> 🎯 Cargas
+                    </label>
                     <label style="font-size: 11px; color: var(--text-muted); cursor: pointer;">
                         <input type="checkbox" id="chkShowForces" checked style="vertical-align: middle;"> Esfuerzos
                     </label>
@@ -886,7 +889,7 @@
         </section>
 
         <!-- ── COLUMNA DERECHA: TABLAS DE ENTRADA REACTIVAS ───────── -->
-        <section class="inputs-column">
+        <section class="inputs-column" id="inputTablesContainer">
 
             <!-- TABLA 1: NODOS Y CONDICIONES DE APOYO -->
             <div class="input-card">
@@ -903,7 +906,7 @@
                                 <th style="width: 32px;">#</th>
                                 <th>X (cm)</th>
                                 <th>Y (cm)</th>
-                                <th style="width: 95px;">Apoyo</th>
+                                <th style="width: 105px;">Apoyo</th>
                                 <th>Px (Kgf)</th>
                                 <th>Py (Kgf)</th>
                             </tr>
@@ -928,10 +931,10 @@
                         <thead>
                             <tr>
                                 <th style="width: 28px;">#</th>
-                                <th style="width: 58px;">Inicio</th>
-                                <th style="width: 58px;">Fin</th>
-                                <th>Área</th>
-                                <th>Mód. E</th>
+                                <th style="width: 72px;">Inicio</th>
+                                <th style="width: 72px;">Fin</th>
+                                <th style="width: 58px;">Área</th>
+                                <th style="width: 80px;">Mód. E</th>
                                 <th>L (cm)</th>
                                 <th>AE/L</th>
                             </tr>
