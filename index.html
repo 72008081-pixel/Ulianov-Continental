@@ -1,847 +1,439 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEREBRO ESTRUCTURAL v4.0 — Edición Vigas (PLANTILLA ULIANOV)</title>
-    <style>
-        :root {
-            --bg-page: #f1f5f9;
-            --bg-card: #ffffff;
-            --text-main: #000000;
-            --text-dark: #0f172a;
-            --text-muted: #334155;
-            --border-dark: #64748b;
-            --border-light: #cbd5e1;
-            --excel-yellow: #FFF2CC;
-            --excel-yellow-bright: #FFFF00;
-            --excel-celeste: #CCECFF;
-            --excel-header: #B4C6E7;
-            --excel-subhdr: #D9E1F2;
-            --excel-green: #C6EFCE;
-            --excel-green-soft: #E2EFDA;
-            --excel-peach: #FCE4D6;
-            --excel-lavender: #EDEDFA;
-            --accent-blue: #1d4ed8;
-            --accent-green: #15803d;
-            --accent-purple: #742284;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CEREBRO ESTRUCTURAL PRO — Suite de Análisis Matricial (Ing. Ulianov Cuba)</title>
+  <style>
+    :root {
+      --bg-dark: #0b1120;
+      --card-dark: #131d31;
+      --card-border: rgba(255, 255, 255, 0.12);
+      --primary-cyan: #00D2B5;
+      --primary-blue: #38bdf8;
+      --primary-purple: #a855f7;
+      --text-white: #f8fafc;
+      --text-muted: #94a3b8;
+    }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
 
-        body {
-            background-color: var(--bg-page);
-            color: var(--text-main);
-            font-family: 'Segoe UI', Calibri, Arial, sans-serif;
-            font-size: 13px;
-            line-height: 1.45;
-            padding-bottom: 60px;
-        }
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 100% 0%, rgba(116, 34, 132, 0.28) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(14, 165, 233, 0.18) 0px, transparent 50%),
+        linear-gradient(180deg, #0b1120 0%, #070d19 100%);
+      color: var(--text-white);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
 
-        /* ── BARRA SUPERIOR CLARA ── */
-        .topbar {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            background: #ffffff;
-            border-bottom: 2px solid #94a3b8;
-            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
-            padding: 10px 18px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
+    /* ── BARRA SUPERIOR ── */
+    header.hub-header {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
 
-        .brand-wrap {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-        .brand-logo {
-            background: var(--excel-header);
-            border: 2px solid #000000;
-            color: #000000;
-            font-weight: 900;
-            font-size: 15px;
-            padding: 5px 10px;
-            border-radius: 8px;
-        }
+    .brand-logo-pill {
+      background: linear-gradient(135deg, #742284 0%, #2563eb 100%);
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 13px;
+      padding: 6px 14px;
+      border-radius: 99px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 4px 14px rgba(116, 34, 132, 0.35);
+    }
 
-        .brand-title {
-            font-size: 16px;
-            font-weight: 900;
-            color: #000000;
-        }
+    .brand-title {
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
 
-        .brand-sub {
-            font-size: 11.5px;
-            color: #334155;
-            font-weight: 700;
-        }
+    .brand-sub {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
 
-        .topbar-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 7px 13px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 800;
-            cursor: pointer;
-            border: 1.5px solid #000000;
-            color: #000000;
-            background: #ffffff;
-            transition: all 0.15s ease;
-            text-decoration: none;
-        }
+    .user-pill {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      padding: 6px 12px;
+      border-radius: 99px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #cbd5e1;
+    }
 
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(0,0,0,0.12);
-        }
+    .btn-top {
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s ease;
+      border: none;
+    }
 
-        .btn-excel {
-            background: var(--excel-green);
-            border-color: #15803d;
-            color: #000000;
-        }
+    .btn-dev {
+      background: linear-gradient(135deg, #742284, #9333ea);
+      color: #ffffff;
+      border: 1px solid #c084fc;
+    }
 
-        .btn-png {
-            background: var(--excel-celeste);
-            border-color: #0284c7;
-            color: #000000;
-        }
+    .btn-exit {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
 
-        .btn-yellow {
-            background: var(--excel-yellow);
-            border-color: #ca8a04;
-            color: #000000;
-        }
+    /* ── CONTENIDO PRINCIPAL DEL PORTAL ── */
+    main.hub-main {
+      max-width: 1240px;
+      margin: 36px auto;
+      padding: 0 20px;
+      flex: 1;
+      width: 100%;
+    }
 
-        .btn-community {
-            background: #f3e8ff;
-            border-color: #7e22ce;
-            color: #000000;
-        }
+    .hero-banner {
+      text-align: center;
+      margin-bottom: 34px;
+    }
 
-        /* ── CONTENEDOR PRINCIPAL ── */
-        .container {
-            max-width: 1460px;
-            margin: 14px auto;
-            padding: 0 14px;
-        }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 210, 181, 0.12);
+      border: 1px solid rgba(0, 210, 181, 0.4);
+      color: var(--primary-cyan);
+      padding: 4px 14px;
+      border-radius: 99px;
+      font-size: 11.5px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
 
-        /* ── BANNER ESTILO EXCEL ── */
-        .excel-banner {
-            background: var(--excel-celeste);
-            border: 2px solid #000000;
-            padding: 10px 14px;
-            border-radius: 10px;
-            margin-bottom: 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
+    .hero-title {
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 60%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
 
-        .excel-banner h1 {
-            font-size: 16px;
-            font-weight: 900;
-            color: #000000;
-        }
+    .hero-desc {
+      font-size: 14.5px;
+      color: var(--text-muted);
+      max-width: 680px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
 
-        .excel-banner p {
-            font-size: 12px;
-            color: #0f172a;
-            font-weight: 600;
-        }
+    /* ── GRILLA DE MÓDULOS ── */
+    .modules-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 34px;
+    }
 
-        /* ── TARJETAS DE SECCIÓN ── */
-        .section-card {
-            background: var(--bg-card);
-            border: 2px solid #94a3b8;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            overflow: hidden;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
-        }
+    @media (max-width: 860px) {
+      .modules-grid {
+        grid-template-columns: 1fr;
+      }
+    }
 
-        .section-header {
-            background: var(--excel-header);
-            border-bottom: 2px solid #000000;
-            padding: 9px 14px;
-            font-size: 13.5px;
-            font-weight: 900;
-            color: #000000;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
+    .module-card {
+      background: var(--card-dark);
+      border: 1.5px solid var(--card-border);
+      border-radius: 20px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+      transition: all 0.22s ease;
+    }
 
-        .section-header.yellow-hdr {
-            background: var(--excel-yellow-bright);
-        }
+    .module-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(56, 189, 248, 0.5);
+      box-shadow: 0 28px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(56, 189, 248, 0.15);
+    }
 
-        .section-header.celeste-hdr {
-            background: var(--excel-celeste);
-        }
+    .card-top {
+      margin-bottom: 20px;
+    }
 
-        .section-header.green-hdr {
-            background: var(--excel-green);
-        }
+    .card-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 6px;
+      margin-bottom: 14px;
+      letter-spacing: 0.5px;
+    }
 
-        .section-body {
-            padding: 14px;
-        }
+    .badge-truss {
+      background: rgba(13, 148, 136, 0.2);
+      color: #2dd4bf;
+      border: 1px solid rgba(13, 148, 136, 0.5);
+    }
 
-        /* ── TABLAS ESTILO EXCEL CLÁSICO ── */
-        .table-scroll {
-            overflow-x: auto;
-            width: 100%;
-        }
+    .badge-beam {
+      background: rgba(234, 179, 8, 0.2);
+      color: #facc15;
+      border: 1px solid rgba(234, 179, 8, 0.5);
+    }
 
-        table.excel-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-            color: #000000;
-        }
+    .module-icon {
+      font-size: 42px;
+      margin-bottom: 12px;
+      display: inline-block;
+    }
 
-        table.excel-table th {
-            background: var(--excel-header);
-            color: #000000;
-            font-weight: 800;
-            border: 1px solid #000000;
-            padding: 6px 8px;
-            text-align: center;
-            white-space: nowrap;
-        }
+    .module-name {
+      font-size: 22px;
+      font-weight: 900;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
 
-        table.excel-table td {
-            border: 1px solid #475569;
-            padding: 4px 6px;
-            text-align: center;
-            color: #000000;
-            white-space: nowrap;
-        }
+    .module-summary {
+      font-size: 13px;
+      color: #cbd5e1;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
 
-        .cell-input {
-            background-color: var(--excel-yellow) !important;
-            padding: 2px !important;
-        }
+    .features-list {
+      list-style: none;
+      margin-bottom: 20px;
+    }
 
-        .cell-input input, .cell-input select {
-            width: 100%;
-            min-width: 68px;
-            background: transparent;
-            border: 1px solid transparent;
-            color: #000000;
-            font-weight: 800;
-            font-size: 12px;
-            font-family: inherit;
-            text-align: center;
-            padding: 4px 4px;
-            border-radius: 4px;
-            outline: none;
-        }
+    .features-list li {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-        .cell-input input:focus, .cell-input select:focus {
-            background: #ffffff;
-            border-color: #1d4ed8;
-            box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.2);
-        }
+    .features-list li strong {
+      color: #e2e8f0;
+    }
 
-        .cell-auto-green {
-            background-color: var(--excel-green) !important;
-            font-weight: 800;
-        }
+    .btn-enter-module {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 900;
+      text-decoration: none;
+      transition: all 0.18s ease;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    }
 
-        .cell-auto-softgreen {
-            background-color: var(--excel-green-soft) !important;
-            font-weight: 700;
-        }
+    .btn-truss {
+      background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+      color: #ffffff;
+      border: 1px solid #14b8a6;
+    }
+    .btn-truss:hover {
+      background: #14b8a6;
+      box-shadow: 0 6px 20px rgba(20, 184, 166, 0.4);
+    }
 
-        .cell-auto-celeste {
-            background-color: var(--excel-celeste) !important;
-            font-weight: 800;
-        }
+    .btn-beam {
+      background: linear-gradient(135deg, #742284 0%, #2563eb 100%);
+      color: #ffffff;
+      border: 1px solid #38bdf8;
+    }
+    .btn-beam:hover {
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
+      filter: brightness(1.1);
+    }
 
-        .cell-auto-peach {
-            background-color: var(--excel-peach) !important;
-            font-weight: 800;
-        }
+    /* ── BARRA INFERIOR DE SOPORTE YAPE ── */
+    .yape-info-banner {
+      background: rgba(116, 34, 132, 0.18);
+      border: 1px dashed rgba(116, 34, 132, 0.6);
+      border-radius: 14px;
+      padding: 16px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
 
-        .cell-auto-subhdr {
-            background-color: var(--excel-subhdr) !important;
-            font-weight: 800;
-        }
+    .yape-info-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
 
-        .cell-restricted-row td {
-            background-color: var(--excel-yellow-bright) !important;
-            font-weight: 800;
-        }
-
-        /* ── GRILLAS DE DISEÑO ── */
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1.35fr 0.65fr;
-            gap: 14px;
-        }
-
-        .grid-equal-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-        }
-
-        @media (max-width: 1024px) {
-            .grid-2, .grid-equal-2 {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* ── ASISTENTE RÁPIDO DE LONGITUDES ── */
-        .quick-spans-bar {
-            background: #f8fafc;
-            border: 1.5px solid #94a3b8;
-            border-radius: 10px;
-            padding: 10px 12px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .span-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            background: var(--excel-yellow);
-            border: 1.5px solid #ca8a04;
-            border-radius: 8px;
-            padding: 3px 8px;
-            font-size: 11.5px;
-            font-weight: 800;
-        }
-
-        .span-pill input {
-            width: 56px;
-            border: 1px solid #94a3b8;
-            background: #ffffff;
-            color: #000000;
-            font-weight: 800;
-            text-align: center;
-            padding: 3px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        /* ── PESTAÑAS DE MATRICES ── */
-        .matrix-tabs {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-            border-bottom: 2px solid #cbd5e1;
-            padding-bottom: 8px;
-        }
-
-        .matrix-tab-btn {
-            background: #f1f5f9;
-            border: 1.5px solid #64748b;
-            color: #000000;
-            font-weight: 800;
-            font-size: 12px;
-            padding: 7px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        .matrix-tab-btn.active {
-            background: var(--excel-yellow-bright);
-            border-color: #000000;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-        }
-
-        .status-pill-ok {
-            background: var(--excel-green);
-            border: 1.5px solid #15803d;
-            color: #000000;
-            padding: 4px 10px;
-            border-radius: 99px;
-            font-weight: 900;
-            font-size: 12px;
-        }
-
-        .status-pill-err {
-            background: #fee2e2;
-            border: 1.5px solid #dc2626;
-            color: #991b1b;
-            padding: 4px 10px;
-            border-radius: 99px;
-            font-weight: 900;
-            font-size: 12px;
-        }
-    </style>
+    .footer {
+      text-align: center;
+      font-size: 11.5px;
+      color: #64748b;
+      padding: 20px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+  </style>
 </head>
 <body>
 
-    <!-- ══ BARRA SUPERIOR DE NAVEGACIÓN Y ACCIONES ══ -->
-    <header class="topbar">
-        <div class="brand-wrap">
-            <div class="brand-logo">PLANTILLA ULIANOV v4.0</div>
-            <div>
-                <div class="brand-title">CEREBRO ESTRUCTURAL — ANÁLISIS MATRICIAL DE VIGAS (12 NUDOS Y 11 BARRAS)</div>
-                <div class="brand-sub">Método Directo de la Rigidez • Basado 100% en la Pestaña "PLANTILLA ULIANOV" • Parche v4.0</div>
-            </div>
+  <!-- HEADER -->
+  <header class="hub-header">
+    <div class="brand-wrap">
+      <div class="brand-logo-pill">CEREBRO PRO v4.0</div>
+      <div>
+        <div class="brand-title">CEREBRO ESTRUCTURAL — SUITE DE INGENIERÍA</div>
+        <div class="brand-sub">Métodos Matriciales de Rigidez Directa • Cátedra Ing. Ulianov Cuba Valencia</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <span id="activeUserHeaderBadge" class="user-pill">🔒 Verificando sesión...</span>
+      <button type="button" id="btnOwnerPanel" class="btn-top btn-dev" style="display: none;">
+        👑 Panel Maestro Ulianov
+      </button>
+      <button type="button" id="btnRelock" class="btn-top btn-exit">
+        🔒 Bloquear / Salir
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENIDO CENTRAL -->
+  <main class="hub-main">
+    <div class="hero-banner">
+      <div class="hero-badge">⚡ PLATAFORMA INTEGRADA DE CÁLCULO ESTRUCTURAL</div>
+      <h1 class="hero-title">Selecciona tu Módulo de Análisis Matricial</h1>
+      <p class="hero-desc">
+        Tu aporte de <strong>S/ 15.00</strong> te da acceso permanente a los dos módulos de cálculo matricial con doble comprobación estática y exportación de plantillas maestras en Excel.
+      </p>
+    </div>
+
+    <div class="modules-grid">
+      <!-- MÓDULO 1: ARMADURAS 2D -->
+      <div class="module-card">
+        <div class="card-top">
+          <span class="card-badge badge-truss">MÓDULO CÁTEDRA OFICIAL</span>
+          <div class="module-icon">🏗️</div>
+          <h2 class="module-name">Análisis Matricial de Armaduras 2D</h2>
+          <p class="module-summary">
+            Resolución completa de armaduras articuladas en el plano hasta 12 Nudos y 15 Barras con visualización gráfica interactiva y diagramas de barras.
+          </p>
+          <ul class="features-list">
+            <li>✔ <strong>Gráfica con Cotas y Fuerzas:</strong> Cargas nodales, reacciones y desplazamientos.</li>
+            <li>✔ <strong>Fuerzas Axiales:</strong> Clasificación automática en Tracción (T) o Compresión (C).</li>
+            <li>✔ <strong>Doble Verificación Estática:</strong> Comprobación de equilibrio de nudos al 100%.</li>
+            <li>✔ <strong>Informe Técnico en PDF:</strong> Descarga inmediata de memoria de cálculo.</li>
+            <li>✔ <strong>Plantilla Maestra en Excel:</strong> Exportación con fórmulas nativas matriciales.</li>
+          </ul>
         </div>
+        <a href="armaduras.html" class="btn-enter-module btn-truss">
+          <span>🚀 Ingresar a Armaduras 2D</span>
+          <span>➔</span>
+        </a>
+      </div>
 
-        <div class="topbar-actions">
-            <span id="activeUserHeaderBadge" style="background: #f1f5f9; border: 1.5px solid #cbd5e1; padding: 5px 10px; border-radius: 99px; font-weight: 800; font-size: 11.5px;">
-                👤 Participante
-            </span>
-
-            <button type="button" id="btnCommunityMembers" class="btn btn-community" title="Ver a todos los integrantes registrados y votar / botar">
-                👥 Integrantes / Votar (<span id="badgeCommunityCount">1</span>)
-            </button>
-
-            <button type="button" id="btnMyProjects" class="btn">
-                📂 Ejercicios / Enlaces
-            </button>
-
-            <button type="button" id="btnSaveProject" class="btn btn-yellow">
-                💾 Guardar Viga
-            </button>
-
-            <button type="button" id="btnTopDownloadPNG" class="btn btn-png">
-                📸 Descargar 6° Gráfica Final (.PNG)
-            </button>
-
-            <button type="button" id="btnTopDownloadExcel" class="btn btn-excel">
-                📥 Descargar Excel PLANTILLA ULIANOV (.XLSX)
-            </button>
-
-            <button type="button" id="btnOwnerPanel" class="btn" style="display: none; background: #fef08a; border-color: #ca8a04;">
-                👑 Panel Ulianov
-            </button>
-
-            <button type="button" id="btnRelock" class="btn" style="background: #fee2e2; border-color: #dc2626;">
-                🔒 Salir
-            </button>
+      <!-- MÓDULO 2: VIGAS (PLANTILLA ULIANOV) -->
+      <div class="module-card">
+        <div class="card-top">
+          <span class="card-badge badge-beam">NUEVA VERSIÓN 4.0 • PLANTILLA ULIANOV</span>
+          <div class="module-icon">📐</div>
+          <h2 class="module-name">Análisis Matricial de Vigas</h2>
+          <p class="module-summary">
+            Cálculo matricial de vigas continuas e inclinadas hasta 12 Nudos y 11 Barras basado al 100% en la pestaña oficial <strong>PLANTILLA ULIANOV</strong>.
+          </p>
+          <ul class="features-list">
+            <li>✔ <strong>Sección Universal & Steiner:</strong> Rectangular, T, I, cajón o compuesta por Steiner.</li>
+            <li>✔ <strong>Asistente Rápido de Tramos:</strong> Generación automática de coordenadas por longitudes.</li>
+            <li>✔ <strong>Cargas Oblicuas y Distribuidas:</strong> Descomponedor por pendiente o ángulo y q dist.</li>
+            <li>✔ <strong>6° Gráfica Final en PNG:</strong> Diagrama idéntico a la pizarra del ingeniero descargable en 1 clic.</li>
+            <li>✔ <strong>PLANTILLA ULIANOV (.xlsx):</strong> Descarga con fórmulas nativas y pre-cálculo sin errores.</li>
+          </ul>
         </div>
-    </header>
+        <a href="vigas.html" class="btn-enter-module btn-beam">
+          <span>🚀 Ingresar a Vigas (Plantilla Ulianov)</span>
+          <span>➔</span>
+        </a>
+      </div>
+    </div>
 
-    <main class="container">
-
-        <!-- ══ BANNER DE SELECCIÓN DE EJERCICIO Y ASISTENTE DE DISTANCIAS ══ -->
-        <div class="excel-banner">
-            <div>
-                <h1>📐 RESOLUCIÓN UNIVERSAL DE VIGAS CONTINUAS E INCLINADAS — PLANTILLA ULIANOV</h1>
-                <p>Celdas <span style="background:#FFF2CC; padding:1px 6px; border:1px solid #000; font-weight:800;">AMARILLAS</span> = Datos de entrada • Celdas <span style="background:#C6EFCE; padding:1px 6px; border:1px solid #000; font-weight:800;">VERDES / CELESTES</span> = Cálculo automático en tiempo real y en Excel.</p>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <label style="font-weight: 900; font-size: 12.5px;">📚 Cargar Ejercicio Base:</label>
-                <select id="selectPreset" style="background: #FFF2CC; border: 2px solid #000000; padding: 6px 10px; border-radius: 8px; font-weight: 800; font-size: 12.5px; color: #000000; cursor: pointer;">
-                    <option value="presentacion_pdf">1. Ejemplo Presentación PDF — 4 Nudos, 3 Barras (P=1200, Oblicua 2500, M=800)</option>
-                    <option value="cuaderno_distribuidas">2. Ejemplo Cuaderno — Viga con Cargas Distribuidas q (4 Nudos, 3 Barras)</option>
-                    <option value="ejemplos_ingeniero">3. Ejemplos del Ingeniero — Viga Continua de 7 Nudos y 6 Barras</option>
-                    <option value="viga_steiner_t">4. Viga con Sección Compuesta T por Teorema de Steiner (5 Nudos, 4 Barras)</option>
-                </select>
-                <button type="button" id="btnClearExercise" class="btn" style="background: #ffffff;">
-                    🧹 Limpiar Datos
-                </button>
-            </div>
+    <!-- BANNER YAPE S/ 15.00 -->
+    <div class="yape-info-banner">
+      <div class="yape-info-left">
+        <div style="font-size: 32px;">💜</div>
+        <div>
+          <div style="font-weight: 800; font-size: 13.5px; color: #ffffff;">
+            Apoyo Único al Proyecto de Revisión de Ejercicios: <span style="color: #00D2B5;">S/ 15.00</span>
+          </div>
+          <div style="font-size: 11.5px; color: #cbd5e1;">
+            Yapea al <strong>933 685 462</strong> a nombre de <strong>Ulianov Sabath Cuba Valencia</strong>. Un solo aporte habilita el acceso a ambos módulos.
+          </div>
         </div>
+      </div>
+      <a href="https://api.whatsapp.com/send?phone=51933685462&text=Hola%20Ing.%20Ulianov%20Cuba,%20consulto%20sobre%20mi%20acceso%20a%20CEREBRO%20ESTRUCTURAL%20PRO" target="_blank" rel="noopener noreferrer" style="background: #25D366; color: #ffffff; text-decoration: none; font-size: 12px; font-weight: 800; padding: 9px 14px; border-radius: 8px;">
+        📲 WhatsApp al Ing. Ulianov
+      </a>
+    </div>
+  </main>
 
-        <!-- ══ PASO 0: ASISTENTE RÁPIDO PARA CREAR VIGA POR DISTANCIAS (L1, L2, L3...) ══ -->
-        <div class="section-card">
-            <div class="section-header celeste-hdr">
-                <span>⚡ ASISTENTE RÁPIDO DE DISTANCIAS DE TRAMOS (AUTO-GENERA COORDENADAS Xi, Yi, Xf, Yf DE LA VIGA)</span>
-                <span style="font-size: 11.5px; font-weight: 700;">Pon cuántos tramos tiene tu viga y la longitud de cada tramo</span>
-            </div>
-            <div class="section-body">
-                <div class="quick-spans-bar">
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <label style="font-weight: 800;">N° de Barras (Tramos):</label>
-                        <select id="quickNumBars" style="background: #FFF2CC; border: 1.5px solid #000; padding: 4px 8px; border-radius: 6px; font-weight: 800;">
-                            <option value="1">1 Barra (2 Nudos)</option>
-                            <option value="2">2 Barras (3 Nudos)</option>
-                            <option value="3" selected>3 Barras (4 Nudos)</option>
-                            <option value="4">4 Barras (5 Nudos)</option>
-                            <option value="5">5 Barras (6 Nudos)</option>
-                            <option value="6">6 Barras (7 Nudos)</option>
-                            <option value="7">7 Barras (8 Nudos)</option>
-                            <option value="8">8 Barras (9 Nudos)</option>
-                            <option value="9">9 Barras (10 Nudos)</option>
-                            <option value="10">10 Barras (11 Nudos)</option>
-                            <option value="11">11 Barras (12 Nudos)</option>
-                        </select>
-                    </div>
+  <footer class="footer">
+    Desarrollado por el <strong>Ing. Ulianov Cuba Valencia</strong> • Cátedra de Análisis Estructural II • Huancayo, Perú • 2026
+  </footer>
 
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <label style="font-weight: 800;">Unidad de tus distancias:</label>
-                        <select id="quickDistUnit" style="background: #FFF2CC; border: 1.5px solid #000; padding: 4px 8px; border-radius: 6px; font-weight: 800;">
-                            <option value="m" selected>Metros (m) ➔ Convierte a cm automático</option>
-                            <option value="cm">Centímetros (cm) directo</option>
-                        </select>
-                    </div>
-
-                    <div id="quickSpanInputsContainer" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;"></div>
-
-                    <button type="button" id="btnApplyQuickSpans" class="btn btn-excel">
-                        ✔ Aplicar Distancias a las Barras
-                    </button>
-                </div>
-                <div style="font-size: 11.5px; color: #334155;">
-                    💡 <strong>Nota:</strong> El cálculo matricial interno de la <em>PLANTILLA ULIANOV</em> trabaja en <strong>kgf y cm</strong> (para que coincida con $E$ en $\text{kgf/cm}^2$ e $I_z$ en $\text{cm}^4$). Si escribes tus tramos arriba en <strong>metros (ej. 2 m, 2 m, 4 m)</strong>, se pasan automáticamente a <strong>200 cm, 200 cm, 400 cm</strong> en la tabla y la <strong>6° Gráfica Final</strong> te muestra tus cotas en metros tal como la pizarra del ingeniero.
-                </div>
-            </div>
-        </div>
-
-        <!-- ══ BLOQUE 0: PROPIEDADES GEOMÉTRICAS DE LA SECCIÓN + CALCULADORA DE STEINER ══ -->
-        <div class="section-card">
-            <div class="section-header">
-                <span>0. PROPIEDADES DEL MATERIAL Y SECCIÓN TRANSVERSAL UNIVERSAL (RECTANGULAR, CIRCULAR, T, I, CAJÓN O STEINER)</span>
-                <button type="button" id="btnToggleSteiner" class="btn btn-yellow" style="padding: 4px 10px; font-size: 11.5px;">
-                    📐 Mostrar / Ocultar Tabla Teorema de Steiner (7 Piezas)
-                </button>
-            </div>
-            <div class="section-body">
-                <div class="grid-2">
-                    <div class="table-scroll">
-                        <table class="excel-table">
-                            <thead>
-                                <tr>
-                                    <th>E (kgf/cm²)</th>
-                                    <th>TIPO DE SECCIÓN</th>
-                                    <th id="lblParamB">b / D_ext (cm)</th>
-                                    <th id="lblParamH">h / d_int (cm)</th>
-                                    <th id="lblParamP3">b_sup / b_int (cm)</th>
-                                    <th id="lblParamP4">h_int (cm)</th>
-                                    <th>MODO</th>
-                                    <th>ÁREA A (cm²) [AUTO]</th>
-                                    <th>INERCIA Iz (cm⁴) [AUTO]</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="cell-input"><input type="number" id="inpGlobalE" step="any" value="2100000"></td>
-                                    <td class="cell-input">
-                                        <select id="inpSecType">
-                                            <option value="RECTANGULAR">RECTANGULAR (b × h)</option>
-                                            <option value="CIRCULAR">CIRCULAR (Diámetro D)</option>
-                                            <option value="TUBULAR_CIRCULAR">TUBULAR CIRCULAR (D_ext, d_int)</option>
-                                            <option value="TRAPEZOIDAL">TRAPEZOIDAL (b_inf, h, b_sup)</option>
-                                            <option value="TRIANGULAR">TRIANGULAR (b × h)</option>
-                                            <option value="CAJON_HUECO">CAJÓN HUECO (B, H, b_int, h_int)</option>
-                                            <option value="STEINER_COMPUESTA">STEINER COMPUESTA (T, I, L, C...)</option>
-                                            <option value="DIRECTO_A_I">DIRECTO (Ingresar A e Iz directos)</option>
-                                        </select>
-                                    </td>
-                                    <td class="cell-input"><input type="number" id="inpSecB" step="any" value="15"></td>
-                                    <td class="cell-input"><input type="number" id="inpSecH" step="any" value="30"></td>
-                                    <td class="cell-input"><input type="number" id="inpSecP3" step="any" value="0"></td>
-                                    <td class="cell-input"><input type="number" id="inpSecP4" step="any" value="0"></td>
-                                    <td class="cell-input">
-                                        <select id="inpPropMode">
-                                            <option value="CONSTANTE">CONSTANTE</option>
-                                            <option value="POR_BARRA">POR_BARRA</option>
-                                        </select>
-                                    </td>
-                                    <td class="cell-auto-green" id="outGlobalA">450.0000</td>
-                                    <td class="cell-auto-green" id="outGlobalIz">33750.0000</td>
-                                </tr>
-                            </tbody>
-                        </table>
-
-                        <!-- Tabla de Steiner desplegable -->
-                        <div id="steinerWrap" style="margin-top: 12px; display: none;">
-                            <div style="background: var(--excel-subhdr); border: 1px solid #000; padding: 6px 10px; font-weight: 900; font-size: 12px;">
-                                0B. CALCULADORA UNIVERSAL DE CENTROIDE E INERCia POR EL TEOREMA DE STEINER: Iz = Σ(I₀ᵢ + Aᵢ·dyᵢ²)
-                            </div>
-                            <table class="excel-table" id="tableSteiner">
-                                <thead>
-                                    <tr>
-                                        <th>PIEZA</th>
-                                        <th>TIPO DE FIGURA</th>
-                                        <th>b / D (cm)</th>
-                                        <th>b_sup (cm)</th>
-                                        <th>h (cm)</th>
-                                        <th>y_base (cm)</th>
-                                        <th>x_centro (cm)</th>
-                                        <th>Área Aᵢ (cm²)</th>
-                                        <th>yᵢ (cm)</th>
-                                        <th>Aᵢ·yᵢ (cm³)</th>
-                                        <th>I₀ᵢ (cm⁴)</th>
-                                        <th>dy = |yᵢ - Ȳ|</th>
-                                        <th>I₀ᵢ + Aᵢ·dy² (cm⁴)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbodySteiner"></tbody>
-                                <tfoot id="tfootSteiner"></tfoot>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Vista Previa Gráfica de la Sección Transversal -->
-                    <div style="background: #ffffff; border: 1.5px solid #64748b; border-radius: 10px; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                        <div style="font-size: 11.5px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Vista de la Sección Transversal y Eje Neutro:</div>
-                        <canvas id="canvasSectionPreview" style="width: 100%; height: 155px; display: block;"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ══ GRÁFICA FINAL 6° DEL EJERCICIO (INTERPRETACIÓN AUTOMÁTICA Y DESCARGA PNG) ══ -->
-        <div class="section-card" style="border-color: #0284c7; border-width: 2.5px;">
-            <div class="section-header celeste-hdr">
-                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                    <span style="font-size: 15px;">📊 6° GRÁFICA FINAL DEL EJERCICIO (CON BARRAS [1..11], NUDOS (1..12), COORDENADAS, GDL Y CARGAS)</span>
-                    <span id="beamHealthBadge" class="status-pill-ok">🟢 ESTRUCTURA ESTABLE</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <label style="font-size: 12px; font-weight: 800;">Unidades en la Gráfica:</label>
-                    <select id="selectDiagramUnit" style="background: #ffffff; border: 1.5px solid #000; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 12px; cursor: pointer;">
-                        <option value="m" selected>Mostrar en Metros (m y Kgf.m) — Igual a Pizarra</option>
-                        <option value="cm">Mostrar en Centímetros (cm y Kgf.cm)</option>
-                    </select>
-                    <button type="button" id="btnDownloadPNGMain" class="btn btn-png" style="background: #0284c7; color: #ffffff; border-color: #000000;">
-                        📸 Descargar "6° Gráfica Final" en PNG
-                    </button>
-                    <button type="button" id="btnDownloadExcelMain" class="btn btn-excel" style="background: #16a34a; color: #ffffff; border-color: #000000;">
-                        📥 Descargar Excel PLANTILLA ULIANOV (.xlsx)
-                    </button>
-                </div>
-            </div>
-            <div class="section-body" style="background: #ffffff; padding: 10px;">
-                <div style="width: 100%; overflow-x: auto; border: 1.5px solid #cbd5e1; border-radius: 10px; background: #ffffff;">
-                    <canvas id="canvasGraficaFinal" style="width: 100%; min-width: 960px; height: 470px; display: block;"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- ══ TABLA 1 Y TABLA 2: DATOS DE LAS 11 BARRAS Y GDL CORRELACIONALES AUTOMÁTICOS ══ -->
-        <div class="section-card">
-            <div class="section-header">
-                <span>1. TABLA DE DATOS DE LAS BARRAS (HASTA 11 BARRAS) + 2. CUADRO DE GRADOS DE LIBERTAD CORRELACIONALES AUTOMÁTICOS</span>
-                <span style="font-size: 11.5px;">Al ingresar Xi, Yi, Xf, Yf se activa el tramo; si lo dejas vacío, se limpia automáticamente</span>
-            </div>
-            <div class="section-body">
-                <div class="table-scroll">
-                    <table class="excel-table" id="tableBars">
-                        <thead>
-                            <tr>
-                                <th>BARRA</th>
-                                <th>Nudo i [AUTO]</th>
-                                <th>Nudo f [AUTO]</th>
-                                <th>Xi (cm)</th>
-                                <th>Yi (cm)</th>
-                                <th>Xf (cm)</th>
-                                <th>Yf (cm)</th>
-                                <th>q dist. (kgf/cm)</th>
-                                <th>P_tramo (kgf)</th>
-                                <th>a_dist (cm)</th>
-                                <th>L (cm) [AUTO]</th>
-                                <th>cos θ</th>
-                                <th>sen θ</th>
-                                <th>12EI/L³</th>
-                                <th>6EI/L²</th>
-                                <th>4EI/L</th>
-                                <th>2EI/L</th>
-                                <th>EA/L</th>
-                                <th style="background:#D9E1F2;">GDL INICIO (Ux, Uy, Uθ)</th>
-                                <th style="background:#D9E1F2;">GDL FINAL (Ux, Uy, Uθ)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbodyBars"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ══ TABLA 3 Y 3B: EVALUACIÓN NODAL (12 NUDOS) + DESCOMPONEDOR DE CARGAS OBLICUAS ══ -->
-        <div class="grid-2">
-            <!-- Tabla 3: Evaluación Nodal -->
-            <div class="section-card">
-                <div class="section-header">
-                    <span>3. TABLA DE EVALUACIÓN NODAL (12 NUDOS) — CONDICIÓN Y CUADRO DE DESPLAZAMIENTOS</span>
-                </div>
-                <div class="section-body">
-                    <div class="table-scroll">
-                        <table class="excel-table" id="tableNodes">
-                            <thead>
-                                <tr>
-                                    <th>NUDO</th>
-                                    <th>ACTIVO</th>
-                                    <th>CONDICIÓN DE APOYO</th>
-                                    <th>¿Hay Dx?</th>
-                                    <th>¿Hay Dy?</th>
-                                    <th>¿Hay Dθ?</th>
-                                    <th>Dx [AUTO]</th>
-                                    <th>Dy [AUTO]</th>
-                                    <th>Dθ [AUTO]</th>
-                                    <th>Px Nodal (kgf)</th>
-                                    <th>Py Nodal (kgf)</th>
-                                    <th>Mz Nodal (kgf·cm)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbodyNodes"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tabla 3B: Descomponedor de Cargas Oblicuas -->
-            <div class="section-card">
-                <div class="section-header yellow-hdr">
-                    <span>3B. DESCOMPONEDOR DE CARGAS PUNTUALES OBLICUAS (6 FILAS)</span>
-                </div>
-                <div class="section-body">
-                    <div style="font-size: 11.5px; color: #0f172a; margin-bottom: 8px;">
-                        Descompone fuerzas inclinadas por <strong>PENDIENTE_dx_dy</strong> (ej. 3 y 4) o <strong>ANGULO_GRADOS</strong> y las suma automáticamente al nudo exacto:
-                    </div>
-                    <div class="table-scroll">
-                        <table class="excel-table" id="tableOblique">
-                            <thead>
-                                <tr>
-                                    <th>N°</th>
-                                    <th>NUDO</th>
-                                    <th>P Oblicua (kgf)</th>
-                                    <th>MODO</th>
-                                    <th>dx o α°</th>
-                                    <th>dy</th>
-                                    <th>Sentido X</th>
-                                    <th>Sentido Y</th>
-                                    <th>Fx (kgf)</th>
-                                    <th>Fy (kgf)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbodyOblique"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ══ RESUMEN INMEDIATO DE RESULTADOS: DESPLAZAMIENTOS [D] Y REACCIONES [R] ══ -->
-        <div class="grid-equal-2">
-            <div class="section-card">
-                <div class="section-header green-hdr">
-                    <span>9B. RESULTADOS FINALES DE LOS DESPLAZAMIENTOS DESPEJADOS [D_libres] = [K_LL]⁻¹ · [C_libres]</span>
-                </div>
-                <div class="section-body">
-                    <div class="table-scroll">
-                        <table class="excel-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>GDL</th>
-                                    <th>INCÓGNITA</th>
-                                    <th>CARGA NETA [C_libre]</th>
-                                    <th>DESPLAZAMIENTO / GIRO</th>
-                                    <th>UNIDAD</th>
-                                    <th>TIPO</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbodySummaryDisplacements"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section-card">
-                <div class="section-header yellow-hdr">
-                    <span>11. RESULTADOS FINALES DE LAS REACCIONES EN LOS APOYOS [R] = [K_RL]·[D_libres] - [C_apoyo]</span>
-                </div>
-                <div class="section-body">
-                    <div class="table-scroll">
-                        <table class="excel-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>GDL APOYO</th>
-                                    <th>INCÓGNITA EN [C]</th>
-                                    <th>PRODUCTO [K_RL]·[D]</th>
-                                    <th>CARGA EN APOYO</th>
-                                    <th>REACCIÓN FINAL</th>
-                                    <th>UNIDAD</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbodySummaryReactions"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ══ VISOR COMPLETO DE TODAS LAS MATRICES DE "PLANTILLA ULIANOV" ══ -->
-        <div class="section-card">
-            <div class="section-header celeste-hdr">
-                <span>🧮 DESARROLLO MATRICIAL COMPLETO DE LA PESTAÑA "PLANTILLA ULIANOV" (PASO A PASO)</span>
-                <span style="font-size: 11.5px;">Idéntico al archivo Excel descargable (.xlsx)</span>
-            </div>
-            <div class="section-body">
-                <div class="matrix-tabs">
-                    <button type="button" class="matrix-tab-btn active" data-mtab="paneLocalBars">
-                        4. Matrices por Tramo (6×6 Local y 6×36 Extendida)
-                    </button>
-                    <button type="button" class="matrix-tab-btn" data-mtab="paneGlobalK">
-                        5. Matriz Global [K] (36×36 con Diagonal Resaltada)
-                    </button>
-                    <button type="button" class="matrix-tab-btn" data-mtab="paneFullEq">
-                        6–8. Matriz de Cargas [C], [D] y Ecuación [C]=[K][D]
-                    </button>
-                    <button type="button" class="matrix-tab-btn" data-mtab="paneReducedKLL">
-                        9. Ecuación Reducida [K_LL] e Inversa [K_LL]⁻¹
-                    </button>
-                    <button type="button" class="matrix-tab-btn" data-mtab="paneReducedKRL">
-                        10. Ecuación Reducida de Reacciones [K_RL]·[D_libres]
-                    </button>
-                </div>
-
-                <!-- PANE 1: MATRICES POR TRAMO -->
-                <div id="paneLocalBars" class="matrix-pane" style="display: block;"></div>
-
-                <!-- PANE 2: MATRIZ GLOBAL 36x36 -->
-                <div id="paneGlobalK" class="matrix-pane" style="display: none;"></div>
-
-                <!-- PANE 3: ECUACIÓN COMPLETA [C] = [K][D] -->
-                <div id="paneFullEq" class="matrix-pane" style="display: none;"></div>
-
-                <!-- PANE 4: REDUCIDA [K_LL] E INVERSA -->
-                <div id="paneReducedKLL" class="matrix-pane" style="display: none;"></div>
-
-                <!-- PANE 5: REDUCIDA [K_RL] -->
-                <div id="paneReducedKRL" class="matrix-pane" style="display: none;"></div>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- Librería ExcelJS y Módulos de CEREBRO ESTRUCTURAL v4.0 -->
-    <script src="assets/exceljs.min.js"></script>
-    <script src="beam-solver.js"></script>
-    <script src="beam-canvas.js"></script>
-    <script src="beam-excel-generator.js"></script>
-    <script src="auth.js"></script>
-    <script src="app.js"></script>
+  <!-- Control de Acceso y Sesión -->
+  <script src="auth.js"></script>
 </body>
 </html>

@@ -858,6 +858,7 @@
 
     return {
         renderGraficaFinal,
+        renderGraficaFinalCanvas: renderGraficaFinal,
         downloadGraficaFinalPNG,
         renderCrossSectionPreview
     };

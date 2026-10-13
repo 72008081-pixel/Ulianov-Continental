@@ -198,6 +198,7 @@
             A,
             Y_CG,
             I,
+            Iz: I,
             labels,
             steiner
         };
@@ -775,12 +776,54 @@
             };
         });
 
+        const barsDetailed = barsTable.map((bar, bIdx) => {
+            const loc = localMatrices[bIdx];
+            const ext = extendedMatrices[bIdx];
+            return {
+                idx: bIdx,
+                barNum: bIdx + 1,
+                active: bar.active,
+                nodeStart: bIdx + 1,
+                nodeEnd: bIdx + 2,
+                L: bar.L,
+                E: bar.E,
+                cosT: bar.Cosx != null ? bar.Cosx : 1.0,
+                sinT: bar.Cosy != null ? bar.Cosy : 0.0,
+                k1: bar.k12 != null ? bar.k12 : 0.0,
+                k2: bar.k6 != null ? bar.k6 : 0.0,
+                k3: bar.k4 != null ? bar.k4 : 0.0,
+                k4: bar.k2 != null ? bar.k2 : 0.0,
+                eaL: bar.kEA != null ? bar.kEA : 0.0,
+                K_local: loc ? loc.matrix : [],
+                K_ext: ext ? ext.matrix : [],
+                dofLabels: loc ? loc.dofLabels : []
+            };
+        });
+
+        const equationRows = [];
+        for (let g = 0; g < TOTAL_DOFS; g++) {
+            const cRow = cargasRows[g];
+            const dRow = dispRows[g];
+            if (!cRow || !cRow.active) continue;
+            const isRestricted = (dRow.D_expr === '0' || dRow.hay === 'NO');
+            equationRows.push({
+                dofIndex: g,
+                uLbl: gdlAllLabels[g],
+                C_expr: cRow.C_expr,
+                K_row: K_global[g],
+                D_expr: dRow.D_expr,
+                isRestricted: isRestricted
+            });
+        }
+
         return {
             success: true,
             secProps,
             activeBarsCount,
             maxActiveNode,
             barsTable,
+            barsDetailed,
+            equationRows,
             gdlTable,
             obliqueTable,
             nodesTable,
@@ -957,6 +1000,7 @@
         computeSteinerTable,
         computeSectionProperties,
         solveBeam,
+        solve: solveBeam,
         PRESETS,
         getPreset
     };

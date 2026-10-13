@@ -569,13 +569,13 @@
         // 2. Actualizar etiquetas de sección A e Iz
         const outA = document.getElementById('outGlobalA');
         const outIz = document.getElementById('outGlobalIz');
-        if (outA && currentSolution.secProps) outA.textContent = currentSolution.secProps.A.toFixed(4);
-        if (outIz && currentSolution.secProps) outIz.textContent = currentSolution.secProps.Iz.toFixed(4);
+        if (outA && currentSolution.secProps) outA.textContent = ((currentSolution.secProps.A != null ? currentSolution.secProps.A : 0)).toFixed(4);
+        if (outIz && currentSolution.secProps) outIz.textContent = ((currentSolution.secProps.Iz != null ? currentSolution.secProps.Iz : (currentSolution.secProps.I != null ? currentSolution.secProps.I : 0))).toFixed(4);
 
         // 3. Renderizar Canvas de Vista Previa de Sección
         const cvSec = document.getElementById('canvasSectionPreview');
-        if (cvSec && window.BeamCanvas) {
-            BeamCanvas.renderCrossSectionPreview(cvSec, currentState, currentSolution.secProps);
+        if (cvSec && window.BeamCanvas && currentSolution.secProps) {
+            BeamCanvas.renderCrossSectionPreview(cvSec, currentSolution.secProps);
         }
 
         // 4. Actualizar celdas de la tabla de Steiner si aplica
@@ -618,14 +618,14 @@
                 const bd = currentSolution.barsDetailed[i];
                 if (bd && bd.active) {
                     tr.style.opacity = '1';
-                    tr.querySelector('.bar-out-L').textContent = bd.L.toFixed(2);
-                    tr.querySelector('.bar-out-cos').textContent = bd.cosT.toFixed(4);
-                    tr.querySelector('.bar-out-sin').textContent = bd.sinT.toFixed(4);
-                    tr.querySelector('.bar-out-k1').textContent = bd.k1.toFixed(2);
-                    tr.querySelector('.bar-out-k2').textContent = bd.k2.toFixed(2);
-                    tr.querySelector('.bar-out-k3').textContent = bd.k3.toFixed(2);
-                    tr.querySelector('.bar-out-k4').textContent = bd.k4.toFixed(2);
-                    tr.querySelector('.bar-out-ea').textContent = bd.eaL.toFixed(2);
+                    tr.querySelector('.bar-out-L').textContent = (bd.L != null ? bd.L : 0).toFixed(2);
+                    tr.querySelector('.bar-out-cos').textContent = (bd.cosT != null ? bd.cosT : 1).toFixed(4);
+                    tr.querySelector('.bar-out-sin').textContent = (bd.sinT != null ? bd.sinT : 0).toFixed(4);
+                    tr.querySelector('.bar-out-k1').textContent = (bd.k1 != null ? bd.k1 : 0).toFixed(2);
+                    tr.querySelector('.bar-out-k2').textContent = (bd.k2 != null ? bd.k2 : 0).toFixed(2);
+                    tr.querySelector('.bar-out-k3').textContent = (bd.k3 != null ? bd.k3 : 0).toFixed(2);
+                    tr.querySelector('.bar-out-k4').textContent = (bd.k4 != null ? bd.k4 : 0).toFixed(2);
+                    tr.querySelector('.bar-out-ea').textContent = (bd.eaL != null ? bd.eaL : 0).toFixed(2);
                 } else {
                     tr.style.opacity = '0.5';
                     tr.querySelector('.bar-out-L').textContent = '-';
@@ -687,7 +687,10 @@
         const unitSel = document.getElementById('selectDiagramUnit');
         const unit = unitSel ? unitSel.value : 'm';
         if (cv && window.BeamCanvas && currentSolution) {
-            BeamCanvas.renderGraficaFinalCanvas(cv, currentSolution, { unit: unit });
+            const drawFn = BeamCanvas.renderGraficaFinal || BeamCanvas.renderGraficaFinalCanvas;
+            if (typeof drawFn === 'function') {
+                drawFn(cv, currentSolution, { unitMode: unit, unit: unit });
+            }
         }
     }
 
