@@ -1,7 +1,7 @@
 /**
  * auth.js — CEREBRO ESTRUCTURAL PRO v6.1
  * Sistema de Control de Acceso, Privacidad Estricta de Licencias y Base de Proyectos
- * - Muro de pago obligatorio (Yape S/ 15.00) para todo usuario nuevo
+ * - Solicitud de aporte voluntario por Yape para todo usuario nuevo
  * - PRIVACIDAD ESTRICTA: El panel y botones de admin NUNCA son visibles para alumnos ni docente
  * - Solo el administrador (Vayolett1404) activa el panel y botones de control
  * - 2 códigos independientes por usuario: ACCESO + EXCEL
@@ -19,7 +19,7 @@
         holder: 'Ulianov Sabath Cuba Valencia',
         phone: '933685462',
         display: '933 685 462',
-        amount: 'S/ 15.00',
+        amount: 'Aporte voluntario',
         qr: 'assets/yape_qr_ulianov.png'
     };
 
@@ -232,7 +232,7 @@
             <div class="cb-view" id="cb-v-yape">
                 <div class="cb-logo" style="background:linear-gradient(135deg,#4a1942,#742284)">ACTIVAR ACCESO — ${YAPE.amount}</div>
                 <p class="cb-title" style="margin-top:6px">Activación de Licencia</p>
-                <p class="cb-sub">Realiza el pago y envía tu comprobante al Ing. Ulianov para que active tu cuenta.</p>
+                <p class="cb-sub">Aporta el monto que puedas y envía tu comprobante al Ing. Ulianov para que active tu cuenta.</p>
 
                 <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:11.5px">
                     Cuenta: <strong id="cb-yape-email" style="color:#38bdf8;font-family:monospace"></strong>
