@@ -84,6 +84,8 @@ with sync_playwright() as p:
 
     panel_visible = page.locator("#cb-panel-card").is_visible()
     assert panel_visible
+    assert page.locator("#cb-copy-docente-link").count() > 0
+    print("Docente VIP Copy Link Button found: OK")
     students_html = page.locator("#cb-students-list").inner_html()
     assert "alumno.v6@continental.edu.pe" in students_html
     assert "ACC-" in students_html
@@ -103,6 +105,8 @@ with sync_playwright() as p:
 
     assert "Armaduras Planas 2D" in page2.title()
     assert page2.locator("#trussCanvas").count() > 0
+    assert page2.locator("#cb-floating-admin").count() > 0
+    print("Armaduras Canvas and Floating Admin Button found: OK")
     print("Armaduras Canvas found: OK")
 
     # Check results tabs

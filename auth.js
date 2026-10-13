@@ -111,7 +111,7 @@
     function checkAuthorized() {
         const s = getSession();
         if (!s) return false;
-        if (s.role === 'admin') return true;
+        if (s.role === 'admin' || s.role === 'docente') return true;
         if (s.role === 'student' && isAuthorized(s.email) && !isBanned(s.email)) return true;
         clearSession();
         return false;
@@ -256,6 +256,27 @@
                 <p class="cb-panel-title">👑 Panel de Control — Ing. Ulianov Cuba Valencia</p>
                 <button id="cb-panel-close" class="cb-sbtn cb-sbtn-gray" style="padding:5px 10px;font-size:12px">✕ Cerrar</button>
             </div>
+
+            <!-- ENLACE VIP DOCENTE / INGENIERO -->
+            <div style="background: rgba(13, 148, 136, 0.15); border: 1.5px solid #0d9488; border-radius: 9px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div>
+                    <div style="font-size: 11.5px; font-weight: 800; color: #2dd4bf; display: flex; align-items: center; gap: 6px;">
+                        👨‍🏫 ENLACE DIRECTO PARA EL INGENIERO / DOCENTE
+                    </div>
+                    <div style="font-size: 10.5px; color: #94a3b8; margin-top: 2px;">
+                        Acceso directo sin muro de pago con rol de Docente y descarga de Excel habilitada.
+                    </div>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <button id="cb-copy-docente-link" class="cb-sbtn cb-sbtn-green" style="padding: 6px 13px; font-size: 11px; font-weight: 800;">
+                        📋 Copiar Link Docente
+                    </button>
+                    <button id="cb-open-docente-link" class="cb-sbtn cb-sbtn-blue" style="padding: 6px 11px; font-size: 11px; font-weight: 800;">
+                        🔗 Abrir
+                    </button>
+                </div>
+            </div>
+
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
                 <div style="flex:1;min-width:220px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px">
                     <div style="font-size:11px;font-weight:800;color:#34d399;margin-bottom:6px">⚡ AUTORIZACIÓN RÁPIDA</div>
@@ -318,7 +339,13 @@
         // Links
         document.getElementById('cb-link-admin').onclick = () => switchView('cb-v-admin');
         document.getElementById('cb-back-login').onclick = () => switchView('cb-v-login');
-        document.getElementById('cb-back-from-admin').onclick = () => switchView('cb-v-login');
+        document.getElementById('cb-back-from-admin').onclick = () => {
+            if (checkAuthorized()) {
+                hideAuthModal();
+            } else {
+                switchView('cb-v-login');
+            }
+        };
 
         // Copy phone
         document.getElementById('cb-copy-phone').onclick = () => {
@@ -340,6 +367,29 @@
         document.getElementById('cb-quick-access').onclick = quickAccess;
         document.getElementById('cb-quick-excel').onclick = quickExcel;
         document.getElementById('cb-refresh-list').onclick = renderStudentList;
+
+        // Docente VIP link copy & open
+        const copyDocBtn = document.getElementById('cb-copy-docente-link');
+        if (copyDocBtn) {
+            copyDocBtn.onclick = () => {
+                const url = new URL(location.href);
+                url.searchParams.set('vip', 'DOCENTE_VIP_ULIANOV');
+                const finalUrl = url.toString();
+                navigator.clipboard.writeText(finalUrl).then(() => {
+                    alert('✔ ¡Enlace VIP de Docente copiado al portapapeles!\n\n' + finalUrl + '\n\nEnvíalo al Ingeniero para acceso directo sin muro de pago.');
+                }).catch(() => {
+                    prompt('Copia este enlace para el Ingeniero:', finalUrl);
+                });
+            };
+        }
+        const openDocBtn = document.getElementById('cb-open-docente-link');
+        if (openDocBtn) {
+            openDocBtn.onclick = () => {
+                const url = new URL(location.href);
+                url.searchParams.set('vip', 'DOCENTE_VIP_ULIANOV');
+                window.open(url.toString(), '_blank');
+            };
+        }
 
         document.getElementById('cb-lookup-email').oninput = function () {
             const email = this.value.trim().toLowerCase();
@@ -506,23 +556,75 @@
     }
     function hidePanelModal() { const p = document.getElementById('cb-panel-overlay'); if (p) p.classList.add('cb-hidden'); }
 
+    // ── GESTIÓN DE ACCESO AL PANEL ADMIN ─────────────────────────
+    function openAdminWorkflow() {
+        const s = getSession();
+        if (s && s.role === 'admin') {
+            showPanelModal();
+        } else {
+            buildModal();
+            switchView('cb-v-admin');
+            showAuthModal();
+            setTimeout(() => {
+                const passInput = document.getElementById('cb-admin-pass');
+                if (passInput) {
+                    passInput.value = '';
+                    passInput.focus();
+                }
+            }, 100);
+        }
+    }
+
+    // ── BOTÓN FLOTANTE PERMANENTE EN TODAS LAS PÁGINAS ───────────
+    function injectFloatingAdminButton() {
+        if (document.getElementById('cb-floating-admin')) return;
+        const fb = document.createElement('button');
+        fb.id = 'cb-floating-admin';
+        fb.innerHTML = '👑 Panel Licencias';
+        fb.title = 'Panel Maestro de Licencias y Alumnos (Ing. Ulianov Cuba)';
+        fb.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:999990;padding:8px 16px;background:#fbcfe8;color:#000000;border:1.5px solid #f472b6;border-radius:99px;font-size:12px;font-weight:900;box-shadow:0 4px 16px rgba(0,0,0,0.6);cursor:pointer;transition:transform 0.15s;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0.3px;display:flex;align-items:center;gap:6px;';
+        fb.onmouseover = () => fb.style.transform = 'scale(1.05)';
+        fb.onmouseout = () => fb.style.transform = 'scale(1)';
+        fb.onclick = () => openAdminWorkflow();
+        document.body.appendChild(fb);
+    }
+
     // ── HEADER ───────────────────────────────────────────────────
     function updateHeader() {
         const s = getSession();
-        // Find or create header button
-        let btn = document.getElementById('cb-header-btn');
-        if (!btn) return;
+
+        // 1. Asignar apertura del panel a todos los botones admin en headers
+        document.querySelectorAll('#cb-header-btn, .btn-dev-btn, [data-admin-trigger]').forEach(b => {
+            b.onclick = () => openAdminWorkflow();
+        });
+
+        // 2. Crear o actualizar píldora de cuenta de usuario
+        let userPill = document.getElementById('cb-user-pill');
+        if (!userPill) {
+            userPill = document.createElement('div');
+            userPill.id = 'cb-user-pill';
+            userPill.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#cbd5e1;cursor:pointer;transition:all 0.15s;white-space:nowrap;';
+            const navRight = document.querySelector('.header-right') || document.querySelector('.header-actions') || document.querySelector('.status-strip-inner');
+            if (navRight) {
+                navRight.prepend(userPill);
+            }
+        }
+
         if (s && s.role === 'admin') {
-            btn.textContent = '👑 Panel Admin';
-            btn.onclick = showPanelModal;
+            userPill.innerHTML = '👑 Admin: <strong>Ing. Ulianov Cuba</strong> <span style="font-size:10px;color:#f472b6;">(Salir)</span>';
+            userPill.title = 'Sesión de Administrador activa. Clic para salir.';
+            userPill.onclick = () => { if (confirm('¿Cerrar sesión de Administrador?')) { clearSession(); location.reload(); } };
+        } else if (s && s.role === 'docente') {
+            userPill.innerHTML = '👨‍🏫 Docente: <strong>Ing. Ulianov Cuba</strong> <span style="font-size:10px;color:#38bdf8;">(Salir)</span>';
+            userPill.title = 'Sesión de Docente activa. Clic para salir.';
+            userPill.onclick = () => { if (confirm('¿Cerrar sesión docente?')) { clearSession(); location.reload(); } };
         } else if (s && checkAuthorized()) {
-            btn.textContent = '👤 ' + (s.name || s.email);
-            btn.onclick = () => {
-                if (confirm('¿Cerrar sesión?')) { clearSession(); location.reload(); }
-            };
+            userPill.innerHTML = `👤 <strong>${s.name || s.email.split('@')[0]}</strong> <span style="font-size:10px;color:#94a3b8;">(Salir)</span>`;
+            userPill.title = `Sesión de ${s.email}. Clic para salir.`;
+            userPill.onclick = () => { if (confirm('¿Cerrar sesión de usuario?')) { clearSession(); location.reload(); } };
         } else {
-            btn.textContent = '🔒 Iniciar Sesión';
-            btn.onclick = showAuthModal;
+            userPill.innerHTML = '🔒 Iniciar Sesión';
+            userPill.onclick = () => showAuthModal();
         }
     }
 
@@ -533,7 +635,7 @@
         hasExcelPermission: () => {
             const s = getSession();
             if (!s) return false;
-            if (s.role === 'admin') return true;
+            if (s.role === 'admin' || s.role === 'docente') return true;
             return hasExcel(s.email);
         },
         showExcelVipNotice: () => {
@@ -542,24 +644,27 @@
             const ec = excelCode(s.email);
             alert(`📊 Para descargar el Excel (.xlsx) con fórmulas nativas necesitas el Código Excel.\n\nSolicita al Ing. Ulianov por WhatsApp (${YAPE.display}) enviando tu comprobante de Yape.\n\nCuando el Ing. te lo envíe, tu código será:\n${ec}`);
         },
-        showAdminPanel: showPanelModal
+        showAdminPanel: showPanelModal,
+        openAdminWorkflow: openAdminWorkflow
     };
 
     // ── INIT ─────────────────────────────────────────────────────
     function init() {
         buildModal();
+        injectFloatingAdminButton();
         updateHeader();
 
         // Check VIP token in URL
         const params = new URLSearchParams(location.search);
         const vipToken = params.get('vip');
         if (vipToken === 'DOCENTE_VIP_ULIANOV') {
-            setSession({ role: 'student', email: 'docente.vip@continental.edu.pe', name: 'Ing. Ulianov Cuba (Docente VIP)' });
+            setSession({ role: 'docente', email: 'docente.vip@continental.edu.pe', name: 'Ing. Ulianov Cuba (Docente)' });
             const w = load(KEY.whitelist);
-            w['docente.vip@continental.edu.pe'] = { email: 'docente.vip@continental.edu.pe', name: 'Ing. Ulianov (Docente VIP)', ts: Date.now() };
+            w['docente.vip@continental.edu.pe'] = { email: 'docente.vip@continental.edu.pe', name: 'Ing. Ulianov Cuba (Docente)', ts: Date.now() };
             save(KEY.whitelist, w);
             grantExcel('docente.vip@continental.edu.pe');
-            updateHeader(); return;
+            updateHeader();
+            return;
         }
 
         if (checkAuthorized()) { updateHeader(); return; }
