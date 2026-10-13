@@ -758,14 +758,14 @@
                 <div class="brand-logo">⚡</div>
                 <div class="brand-title-wrap">
                     <h1>
-                        CEREBRO ESTRUCTURAL <span class="brand-badge">v6.0</span>
+                        CEREBRO ESTRUCTURAL <span class="brand-badge">v6.1</span>
                     </h1>
                     <div class="brand-subtitle">Desarrollado por Ingeniero Ulianov Cuba Valencia — Cálculo Matricial y Exportador de Excel Nativo</div>
                 </div>
             </div>
 
             <div class="header-controls">
-                <button id="cb-header-btn" class="btn btn-dev-btn" title="Panel de control maestro del administrador">
+                <button id="cb-header-btn" class="btn btn-dev-btn" title="Panel de control maestro del administrador" style="display:none;">
                     👑 Panel Desarrollador
                 </button>
 
@@ -779,6 +779,13 @@
                         <option value="blank">Modelo en Blanco</option>
                     </select>
                 </div>
+
+                <button id="btnSaveTrussProject" class="btn btn-clear" style="background:#e0e7ff;border-color:#a5b4fc" title="Guardar armadura actual en Mis Proyectos">
+                    💾 Guardar Armadura
+                </button>
+                <button id="btnOpenTrussProjects" class="btn btn-clear" style="background:#ede9fe;border-color:#c4b5fd" title="Ver y cargar proyectos guardados de armaduras">
+                    📂 Mis Proyectos
+                </button>
 
                 <a href="armaduras-tablas.html" class="btn btn-tables" title="Ver desglose pedagógico sincronizado en las 13 tablas matriciales">
                     📊 Ver 13 Tablas
@@ -801,10 +808,6 @@
                         <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
                     </svg>
                     Descargar Excel con Fórmulas
-                </button>
-
-                <button id="cb-header-btn" class="btn btn-dev-btn" title="Panel Maestro de Control de Licencias y Alumnos">
-                    👑 Panel Licencias
                 </button>
             </div>
         </div>
@@ -1027,7 +1030,7 @@
 
     <!-- ══ PIE DE PÁGINA ════════════════════════════════════════════ -->
     <footer class="footer">
-        CEREBRO ESTRUCTURAL v6.0 • Desarrollado por Ingeniero Ulianov Cuba Valencia • Cátedra de Análisis Estructural II
+        CEREBRO ESTRUCTURAL v6.1 • Análisis Estructural II • Desarrollado por Ing. Ulianov Cuba Valencia • Cusco, Perú
         • <a href="https://github.com/72008081-pixel/Ulianov-Continental" target="_blank">Repositorio en GitHub</a>
     </footer>
 

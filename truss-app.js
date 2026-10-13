@@ -822,6 +822,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 13.2 BOTONES PARA MIS PROYECTOS GUARDADOS
+    const btnSaveTruss = document.getElementById('btnSaveTrussProject');
+    if (btnSaveTruss) {
+        btnSaveTruss.addEventListener('click', () => {
+            const name = prompt('Nombre para esta armadura:', 'Armadura 2D ' + (new Date().toLocaleDateString('es-PE') + ' ' + new Date().toLocaleTimeString('es-PE').slice(0, 5)));
+            if (!name) return;
+            window.CerebroDB.saveProject('truss', name, {
+                nodes: JSON.parse(JSON.stringify(state.nodes)),
+                bars: JSON.parse(JSON.stringify(state.bars))
+            });
+            alert('✔ ¡Armadura guardada exitosamente en Mis Proyectos!');
+        });
+    }
+    const btnOpenTruss = document.getElementById('btnOpenTrussProjects');
+    if (btnOpenTruss) {
+        btnOpenTruss.addEventListener('click', () => {
+            window.CerebroDB.showProjectsModal('truss', (data) => {
+                if (data && data.nodes && data.bars) {
+                    state.nodes = JSON.parse(JSON.stringify(data.nodes));
+                    state.bars = JSON.parse(JSON.stringify(data.bars));
+                    renderTables();
+                    recalculateAndRender(true);
+                }
+            }, () => ({
+                nodes: JSON.parse(JSON.stringify(state.nodes)),
+                bars: JSON.parse(JSON.stringify(state.bars))
+            }));
+        });
+    }
+
     // API de integración para Proyectos y Guardado
     window.CerebroApp = {
         getCurrentData: () => ({
@@ -829,10 +859,30 @@ document.addEventListener('DOMContentLoaded', () => {
             bars: JSON.parse(JSON.stringify(state.bars))
         }),
         loadProjectData: (newNodes, newBars) => {
-            state.nodes = JSON.parse(JSON.stringify(newNodes));
-            state.bars = JSON.parse(JSON.stringify(newBars));
+            if (newNodes && newNodes.nodes && newNodes.bars) {
+                state.nodes = JSON.parse(JSON.stringify(newNodes.nodes));
+                state.bars = JSON.parse(JSON.stringify(newNodes.bars));
+            } else {
+                state.nodes = JSON.parse(JSON.stringify(newNodes));
+                state.bars = JSON.parse(JSON.stringify(newBars));
+            }
             renderTables();
             recalculateAndRender(true);
+        }
+    };
+
+    window.TrussApp = {
+        getCurrentData: () => ({
+            nodes: JSON.parse(JSON.stringify(state.nodes)),
+            bars: JSON.parse(JSON.stringify(state.bars))
+        }),
+        loadProjectData: (data) => {
+            if (data && data.nodes && data.bars) {
+                state.nodes = JSON.parse(JSON.stringify(data.nodes));
+                state.bars = JSON.parse(JSON.stringify(data.bars));
+                renderTables();
+                recalculateAndRender(true);
+            }
         }
     };
 

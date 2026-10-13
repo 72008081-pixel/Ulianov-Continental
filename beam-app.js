@@ -210,17 +210,27 @@
             const lblP3 = document.getElementById('lblParamP3');
             const lblP4 = document.getElementById('lblParamP4');
 
-            if (currentState.sec_type === 'CIRCULAR') {
+            if (currentState.sec_type === 'T_SECTION' || currentState.sec_type === 'SECCION_T') {
+                if (lblB) lblB.textContent = 'b_alma (cm)';
+                if (lblH) lblH.textContent = 'h_alma (cm)';
+                if (lblP3) lblP3.textContent = 'b_ala (cm)';
+                if (lblP4) lblP4.textContent = 't_ala (cm)';
+            } else if (currentState.sec_type === 'I_SECTION' || currentState.sec_type === 'DOBLE_T') {
+                if (lblB) lblB.textContent = 'b_ala (cm)';
+                if (lblH) lblH.textContent = 'H_tot (cm)';
+                if (lblP3) lblP3.textContent = 't_ala (cm)';
+                if (lblP4) lblP4.textContent = 't_alma (cm)';
+            } else if (currentState.sec_type === 'CIRCULAR') {
                 if (lblB) lblB.textContent = 'Diámetro D (cm)';
                 if (lblH) lblH.textContent = '—';
+                if (lblP3) lblP3.textContent = '—';
+                if (lblP4) lblP4.textContent = '—';
             } else if (currentState.sec_type === 'TUBULAR_CIRCULAR') {
                 if (lblB) lblB.textContent = 'D_ext (cm)';
                 if (lblH) lblH.textContent = 'd_int (cm)';
-            } else if (currentState.sec_type === 'TRAPEZOIDAL') {
-                if (lblB) lblB.textContent = 'b_inf (cm)';
-                if (lblH) lblH.textContent = 'h (cm)';
-                if (lblP3) lblP3.textContent = 'b_sup (cm)';
-            } else if (currentState.sec_type === 'CAJON_HUECO') {
+                if (lblP3) lblP3.textContent = '—';
+                if (lblP4) lblP4.textContent = '—';
+            } else if (currentState.sec_type === 'CAJON_HUECO' || currentState.sec_type === 'BOX') {
                 if (lblB) lblB.textContent = 'B_ext (cm)';
                 if (lblH) lblH.textContent = 'H_ext (cm)';
                 if (lblP3) lblP3.textContent = 'b_int (cm)';
@@ -228,14 +238,16 @@
             } else if (currentState.sec_type === 'DIRECTO_A_I') {
                 if (lblB) lblB.textContent = 'Área A (cm²)';
                 if (lblH) lblH.textContent = 'Inercia Iz (cm⁴)';
+                if (lblP3) lblP3.textContent = '—';
+                if (lblP4) lblP4.textContent = '—';
             } else {
                 if (lblB) lblB.textContent = 'b (cm)';
                 if (lblH) lblH.textContent = 'h (cm)';
-                if (lblP3) lblP3.textContent = 'b_sup (cm)';
+                if (lblP3) lblP3.textContent = '—';
                 if (lblP4) lblP4.textContent = '—';
             }
 
-            if (currentState.sec_type === 'STEINER_COMPUESTA' && steinerWrap) {
+            if ((currentState.sec_type === 'STEINER_COMPUESTA' || currentState.sec_type === 'STEINER_CUSTOM') && steinerWrap) {
                 steinerWrap.style.display = 'block';
             }
 
@@ -1066,6 +1078,26 @@
         const btnMainXlsx = document.getElementById('btnDownloadExcelMain');
         if (btnTopXlsx) btnTopXlsx.addEventListener('click', triggerExcel);
         if (btnMainXlsx) btnMainXlsx.addEventListener('click', triggerExcel);
+
+        // Mis Proyectos Guardados
+        const btnSaveProj = document.getElementById('btnSaveBeamProject');
+        if (btnSaveProj) {
+            btnSaveProj.addEventListener('click', () => {
+                const name = prompt('Nombre para este proyecto de viga:', 'Viga Continua ' + (new Date().toLocaleDateString('es-PE') + ' ' + new Date().toLocaleTimeString('es-PE').slice(0, 5)));
+                if (!name) return;
+                window.CerebroDB.saveProject('beam', name, currentState);
+                alert('✔ ¡Viga guardada exitosamente en Mis Proyectos!');
+            });
+        }
+        const btnOpenProj = document.getElementById('btnOpenBeamProjects');
+        if (btnOpenProj) {
+            btnOpenProj.addEventListener('click', () => {
+                window.CerebroDB.showProjectsModal('beam', (data) => {
+                    currentState = JSON.parse(JSON.stringify(data));
+                    loadStateIntoUI();
+                }, () => currentState);
+            });
+        }
     }
 
     // API pública de la aplicación
@@ -1079,6 +1111,16 @@
             }
         },
         recompute: recomputeAll
+    };
+
+    window.BeamApp = {
+        getCurrentData: () => JSON.parse(JSON.stringify(currentState)),
+        loadProjectData: (data) => {
+            if (data) {
+                currentState = JSON.parse(JSON.stringify(data));
+                loadStateIntoUI();
+            }
+        }
     };
 
     if (document.readyState === 'loading') {

@@ -151,6 +151,72 @@
             Y_CG = p2 / 2.0;
             I = (p1 * Math.pow(p2, 3)) / 12.0;
             labels = { p1: 'b (Base)', p2: 'h (Altura)', p3: '- (Opcional)', p4: '- (Opcional)', u1: 'cm', u2: 'cm' };
+        } else if (secType === 'T_SECTION' || secType === 'SECCION_T') {
+            // p1 = b_alma (web width), p2 = h_alma (web height)
+            // p3 = b_ala (flange width), p4 = t_ala (flange thickness)
+            const b_web = Math.max(0.1, p1 || 15);
+            const h_web = Math.max(0.1, p2 || 30);
+            const b_flange = Math.max(0.1, p3 || 50);
+            const t_flange = Math.max(0.1, p4 || 10);
+            const H_tot = h_web + t_flange;
+
+            // Figura 1: Ala superior
+            const A1 = b_flange * t_flange;
+            const y1 = h_web + t_flange / 2.0;
+            const I01 = (b_flange * Math.pow(t_flange, 3)) / 12.0;
+
+            // Figura 2: Alma
+            const A2 = b_web * h_web;
+            const y2 = h_web / 2.0;
+            const I02 = (b_web * Math.pow(h_web, 3)) / 12.0;
+
+            A = A1 + A2;
+            Y_CG = (A1 * y1 + A2 * y2) / A;
+            const d1 = y1 - Y_CG;
+            const d2 = y2 - Y_CG;
+            I = (I01 + A1 * d1 * d1) + (I02 + A2 * d2 * d2);
+
+            steiner.rows = [
+                { idx: 1, tipo: 'RECTANGULO (Ala)', b: b_flange, h: t_flange, y_base: h_web, active: true, A: A1, y_i: y1, Ay: A1*y1, I0: I01, Ad2: A1*d1*d1, Itot: I01+A1*d1*d1 },
+                { idx: 2, tipo: 'RECTANGULO (Alma)', b: b_web, h: h_web, y_base: 0, active: true, A: A2, y_i: y2, Ay: A2*y2, I0: I02, Ad2: A2*d2*d2, Itot: I02+A2*d2*d2 }
+            ];
+            steiner.A_total = A;
+            steiner.Y_CG = Y_CG;
+            steiner.I_total = I;
+            labels = { p1: 'b_alma (Alma)', p2: 'h_alma (Alma)', p3: 'b_ala (Ala sup)', p4: 't_ala (Espesor ala)', u1: 'cm', u2: 'cm' };
+        } else if (secType === 'I_SECTION' || secType === 'DOBLE_T') {
+            // p1 = b_ala, p2 = H_tot, p3 = t_ala, p4 = t_alma
+            const b_ala = Math.max(0.1, p1 || 30);
+            const H_tot = Math.max(0.1, p2 || 50);
+            const t_ala = Math.max(0.1, p3 || 10);
+            const t_alma = Math.max(0.1, p4 || 8);
+            const h_web = Math.max(0.1, H_tot - 2 * t_ala);
+
+            const A_flange = b_ala * t_ala;
+            const A_web = t_alma * h_web;
+            A = 2 * A_flange + A_web;
+            Y_CG = H_tot / 2.0;
+
+            const y1 = H_tot - t_ala / 2.0;
+            const y2 = H_tot / 2.0;
+            const y3 = t_ala / 2.0;
+
+            const I0_flange = (b_ala * Math.pow(t_ala, 3)) / 12.0;
+            const I0_web = (t_alma * Math.pow(h_web, 3)) / 12.0;
+
+            const d1 = y1 - Y_CG;
+            const d3 = y3 - Y_CG;
+            I = 2 * (I0_flange + A_flange * d1 * d1) + I0_web;
+
+            steiner.rows = [
+                { idx: 1, tipo: 'RECTANGULO (Ala sup)', b: b_ala, h: t_ala, y_base: H_tot - t_ala, active: true, A: A_flange, y_i: y1, Ay: A_flange*y1, I0: I0_flange, Ad2: A_flange*d1*d1, Itot: I0_flange+A_flange*d1*d1 },
+                { idx: 2, tipo: 'RECTANGULO (Alma)', b: t_alma, h: h_web, y_base: t_ala, active: true, A: A_web, y_i: y2, Ay: A_web*y2, I0: I0_web, Ad2: 0, Itot: I0_web },
+                { idx: 3, tipo: 'RECTANGULO (Ala inf)', b: b_ala, h: t_ala, y_base: 0, active: true, A: A_flange, y_i: y3, Ay: A_flange*y3, I0: I0_flange, Ad2: A_flange*d3*d3, Itot: I0_flange+A_flange*d3*d3 }
+            ];
+            steiner.A_total = A;
+            steiner.Y_CG = Y_CG;
+            steiner.I_total = I;
+            labels = { p1: 'b_ala (Alas)', p2: 'H_tot (Alt. Total)', p3: 't_ala (Espesor alas)', p4: 't_alma (Espesor alma)', u1: 'cm', u2: 'cm' };
         } else if (secType === 'CIRCULAR') {
             A = (Math.PI * p1 * p1) / 4.0;
             Y_CG = p1 / 2.0;
@@ -171,12 +237,12 @@
             Y_CG = p2 / 3.0;
             I = (p1 * Math.pow(p2, 3)) / 36.0;
             labels = { p1: 'b (Base)', p2: 'h (Altura)', p3: '- (Opcional)', p4: '- (Opcional)', u1: 'cm', u2: 'cm' };
-        } else if (secType === 'CAJON_HUECO') {
+        } else if (secType === 'CAJON_HUECO' || secType === 'BOX') {
             A = (p1 * p2) - (p3 * p4);
             Y_CG = p2 / 2.0;
             I = ((p1 * Math.pow(p2, 3)) - (p3 * Math.pow(p4, 3))) / 12.0;
             labels = { p1: 'B_ext (Base Exterior)', p2: 'H_ext (Altura Exterior)', p3: 'b_int (Base Interior)', p4: 'h_int (Altura Interior)', u1: 'cm', u2: 'cm' };
-        } else if (secType === 'STEINER_COMPUESTA') {
+        } else if (secType === 'STEINER_COMPUESTA' || secType === 'STEINER_CUSTOM') {
             A = steiner.A_total;
             Y_CG = steiner.Y_CG;
             I = steiner.I_total;

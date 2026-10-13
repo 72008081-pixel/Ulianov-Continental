@@ -763,14 +763,14 @@
                 <div class="brand-logo">📐</div>
                 <div class="brand-title-wrap">
                     <h1>
-                        CEREBRO ESTRUCTURAL <span class="brand-badge">v6.0</span>
+                        CEREBRO ESTRUCTURAL <span class="brand-badge">v6.1</span>
                     </h1>
-                    <div class="brand-subtitle">Análisis Matricial de Vigas Continuas e Inclinadas • PLANTILLA ULIANOV v6.0</div>
+                    <div class="brand-subtitle">Análisis Matricial de Vigas Continuas e Inclinadas • PLANTILLA ULIANOV v6.1</div>
                 </div>
             </div>
 
             <div class="header-controls">
-                <button id="cb-header-btn" class="btn btn-dev-btn" title="Panel Maestro de Control de Licencias y Alumnos">
+                <button id="cb-header-btn" class="btn btn-dev-btn" title="Panel Maestro de Control de Licencias y Alumnos" style="display:none;">
                     👑 Panel Licencias
                 </button>
 
@@ -783,6 +783,13 @@
                         <option value="viga_steiner_t">4. Sección T Compuesta (Steiner)</option>
                     </select>
                 </div>
+
+                <button id="btnSaveBeamProject" class="btn btn-clear" style="background:#e0e7ff;border-color:#a5b4fc" title="Guardar viga actual en Mis Proyectos">
+                    💾 Guardar Viga
+                </button>
+                <button id="btnOpenBeamProjects" class="btn btn-clear" style="background:#ede9fe;border-color:#c4b5fd" title="Ver y cargar proyectos guardados de vigas">
+                    📂 Mis Proyectos
+                </button>
 
                 <a href="vigas-tablas.html" class="btn btn-tables" title="Ver desglose correlacional en todas las tablas de la Plantilla Ulianov">
                     📊 Ver Tablas de Vigas
@@ -892,10 +899,11 @@
                         <label class="form-label">Tipo Sección:</label>
                         <select id="inpSecType" class="cell-select" style="width: 140px;">
                             <option value="RECTANGULAR">Rectangular (b × h)</option>
-                            <option value="T_SECTION">Sección T (Alas y Almas)</option>
+                            <option value="T_SECTION">Sección T (Alas y Alma)</option>
                             <option value="I_SECTION">Sección I / Doble T</option>
-                            <option value="BOX">Cajón Hueco</option>
-                            <option value="STEINER_CUSTOM">Compuesta Steiner</option>
+                            <option value="CAJON_HUECO">Cajón Hueco / Tubular</option>
+                            <option value="CIRCULAR">Circular (D)</option>
+                            <option value="STEINER_COMPUESTA">Compuesta Steiner</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -1164,8 +1172,8 @@
 
     <!-- ══ PIE DE PÁGINA ════════════════════════════════════════════ -->
     <footer class="footer">
-        CEREBRO ESTRUCTURAL v6.0 • Cátedra de Análisis Estructural II • Desarrollado por el Ing. Ulianov Cuba Valencia • Huancayo, Perú
-        • <a href="https://github.com/72008081-pixel/Ulianov-Continental" target="_blank">Repositorio en GitHub</a>
+        CEREBRO ESTRUCTURAL v6.1 • Análisis Estructural II • Desarrollado por el Ing. Ulianov Cuba Valencia • Cusco, Perú
+        • <a href="https://github.com/72008081-pixel/Ulianov-Continental" target="_blank" rel="noopener">Repositorio en GitHub</a>
     </footer>
 
     <!-- Dependencias de cálculo y autenticación -->
