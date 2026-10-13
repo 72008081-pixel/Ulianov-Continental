@@ -1,824 +1,1050 @@
 /**
- * app.js
- * Controlador Principal y Enlace Reactivo para la Aplicación Web
- * Cátedra: Ing. Ulianov Cuba Valencia - Análisis Estructural II
+ * app.js — CEREBRO ESTRUCTURAL v4.0 (Edición Vigas — Plantilla Ulianov)
+ * Coordinador de interfaz clara, resolución reactiva en vivo,
+ * dibujo de la "6° Gráfica Final" y descarga de Excel (.xlsx) y PNG.
  */
 
-document.addEventListener('DOMContentLoaded', () => {
+(function () {
     'use strict';
 
-    // 1. Presets Oficiales de la Cátedra
-    const PRESETS = {
-        isostatic_3n: {
-            name: "Caso 1: Isostático (3 Nodos, 3 Barras - Cátedra Ulianov)",
-            description: "Armadura triangular isostática con apoyo móvil en nudo 1 y fijo en nudo 2. Carga puntual de 4000 Kgf en X y -5000 Kgf en Y en el nudo 3.",
-            nodes: [
-                { id: 1, x: 0,    y: 0,   support: "Móvil Y", px: 0,    py: 0 },
-                { id: 2, x: -700, y: 0,   support: "Fijo",    px: 0,    py: 0 },
-                { id: 3, x: -400, y: 500, support: "Libre",   px: 4000, py: -5000 },
-                { id: 4, x: null, y: null, support: "Libre",  px: null, py: null },
-                { id: 5, x: null, y: null, support: "Libre",  px: null, py: null },
-                { id: 6, x: null, y: null, support: "Libre",  px: null, py: null }
-            ],
-            bars: [
-                { id: 1, start: 1, end: 3, a: 10, e: 2100000 },
-                { id: 2, start: 2, end: 3, a: 10, e: 2100000 },
-                { id: 3, start: 2, end: 1, a: 10, e: 2100000 },
-                { id: 4, start: null, end: null, a: 10, e: 2100000 },
-                { id: 5, start: null, end: null, a: 10, e: 2100000 },
-                { id: 6, start: null, end: null, a: 10, e: 2100000 },
-                { id: 7, start: null, end: null, a: 10, e: 2100000 },
-                { id: 8, start: null, end: null, a: 10, e: 2100000 }
-            ]
-        },
-        hyperstatic_4n: {
-            name: "Caso 2: Hiperestático San Andrés (4 Nodos, 6 Barras - GH = 2)",
-            description: "Malla rectangular arriostrada en cruz (San Andrés). Dos apoyos fijos inferiores y cargas de 3500 Kgf en nudos superiores.",
-            nodes: [
-                { id: 1, x: 0,   y: 0,   support: "Fijo",  px: 0,    py: 0 },
-                { id: 2, x: 400, y: 0,   support: "Fijo",  px: 0,    py: 0 },
-                { id: 3, x: 400, y: 300, support: "Libre", px: 3500, py: -5000 },
-                { id: 4, x: 0,   y: 300, support: "Libre", px: 3500, py: 0 },
-                { id: 5, x: null, y: null, support: "Libre", px: null, py: null },
-                { id: 6, x: null, y: null, support: "Libre", px: null, py: null }
-            ],
-            bars: [
-                { id: 1, start: 1, end: 2, a: 12, e: 2100000 },
-                { id: 2, start: 2, end: 3, a: 12, e: 2100000 },
-                { id: 3, start: 3, end: 4, a: 12, e: 2100000 },
-                { id: 4, start: 4, end: 1, a: 12, e: 2100000 },
-                { id: 5, start: 1, end: 3, a: 12, e: 2100000 },
-                { id: 6, start: 2, end: 4, a: 12, e: 2100000 },
-                { id: 7, start: null, end: null, a: 12, e: 2100000 },
-                { id: 8, start: null, end: null, a: 12, e: 2100000 }
-            ]
-        },
-        warren_5n: {
-            name: "Caso 3: Armadura Warren (5 Nodos, 7 Barras)",
-            description: "Armadura tipo Warren de 2 tramos simétricos con apoyos en los extremos inferiores y carga nodal central en el nudo superior.",
-            nodes: [
-                { id: 1, x: 0,   y: 0,   support: "Fijo",    px: 0, py: 0 },
-                { id: 2, x: 300, y: 250, support: "Libre",   px: 0, py: -6000 },
-                { id: 3, x: 600, y: 0,   support: "Móvil Y", px: 0, py: 0 },
-                { id: 4, x: 150, y: 125, support: "Libre",   px: 0, py: 0 },
-                { id: 5, x: 450, y: 125, support: "Libre",   px: 0, py: 0 },
-                { id: 6, x: null, y: null, support: "Libre", px: null, py: null }
-            ],
-            bars: [
-                { id: 1, start: 1, end: 4, a: 15, e: 2100000 },
-                { id: 2, start: 4, end: 2, a: 15, e: 2100000 },
-                { id: 3, start: 2, end: 5, a: 15, e: 2100000 },
-                { id: 4, start: 5, end: 3, a: 15, e: 2100000 },
-                { id: 5, start: 1, end: 3, a: 15, e: 2100000 },
-                { id: 6, start: 4, end: 5, a: 15, e: 2100000 },
-                { id: 7, start: 1, end: 2, a: 15, e: 2100000 },
-                { id: 8, start: null, end: null, a: 15, e: 2100000 }
-            ]
-        },
-        roof_5n: {
-            name: "Caso 4: Armadura Tipo Techo Howe (5 Nodos, 7 Barras)",
-            description: "Armadura simétrica a dos aguas con tirante inferior y montante central. Apoyos fijo y móvil en los extremos inferiores.",
-            nodes: [
-                { id: 1, x: 0,   y: 0,   support: "Fijo",    px: 0, py: 0 },
-                { id: 2, x: 300, y: 0,   support: "Libre",   px: 0, py: 0 },
-                { id: 3, x: 600, y: 0,   support: "Móvil Y", px: 0, py: 0 },
-                { id: 4, x: 150, y: 150, support: "Libre",   px: 0, py: 0 },
-                { id: 5, x: 300, y: 220, support: "Libre",   px: 0, py: -5000 },
-                { id: 6, x: null, y: null, support: "Libre", px: null, py: null }
-            ],
-            bars: [
-                { id: 1, start: 1, end: 2, a: 10, e: 2100000 },
-                { id: 2, start: 2, end: 3, a: 10, e: 2100000 },
-                { id: 3, start: 1, end: 4, a: 10, e: 2100000 },
-                { id: 4, start: 4, end: 5, a: 10, e: 2100000 },
-                { id: 5, start: 5, end: 3, a: 10, e: 2100000 },
-                { id: 6, start: 4, end: 2, a: 10, e: 2100000 },
-                { id: 7, start: 5, end: 2, a: 10, e: 2100000 },
-                { id: 8, start: null, end: null, a: 10, e: 2100000 }
-            ]
-        },
-        blank: {
-            name: "Modelo en Blanco (Personalizado)",
-            description: "Armadura limpia para ingresar nodos y barras desde cero.",
-            nodes: [
-                { id: 1, x: 0, y: 0, support: "Fijo", px: 0, py: 0 },
-                { id: 2, x: null, y: null, support: "Libre", px: null, py: null },
-                { id: 3, x: null, y: null, support: "Libre", px: null, py: null },
-                { id: 4, x: null, y: null, support: "Libre", px: null, py: null },
-                { id: 5, x: null, y: null, support: "Libre", px: null, py: null },
-                { id: 6, x: null, y: null, support: "Libre", px: null, py: null }
-            ],
-            bars: [
-                { id: 1, start: null, end: null, a: 10, e: 2100000 },
-                { id: 2, start: null, end: null, a: 10, e: 2100000 },
-                { id: 3, start: null, end: null, a: 10, e: 2100000 },
-                { id: 4, start: null, end: null, a: 10, e: 2100000 },
-                { id: 5, start: null, end: null, a: 10, e: 2100000 },
-                { id: 6, start: null, end: null, a: 10, e: 2100000 },
-                { id: 7, start: null, end: null, a: 10, e: 2100000 },
-                { id: 8, start: null, end: null, a: 10, e: 2100000 }
-            ]
+    // Estado reactivo global de la viga
+    let currentState = BeamSolver.getPreset('presentacion_pdf');
+    let currentSolution = null;
+
+    // Inicialización del DOM
+    function init() {
+        setupPresetSelector();
+        setupQuickSpans();
+        setupSectionControls();
+        setupMatrixTabs();
+        setupDownloadButtons();
+
+        renderBarsTable();
+        renderNodesTable();
+        renderObliqueTable();
+        renderSteinerTable();
+
+        recomputeAll();
+    }
+
+    // ── GESTIÓN DE PRESETS ───────────────────────────────────────
+    function setupPresetSelector() {
+        const sel = document.getElementById('selectPreset');
+        const btnClear = document.getElementById('btnClearExercise');
+
+        if (sel) {
+            sel.addEventListener('change', () => {
+                const p = BeamSolver.getPreset(sel.value);
+                if (p) {
+                    currentState = p;
+                    loadStateIntoUI();
+                }
+            });
         }
-    };
 
-    // 2. Estado de la Aplicación
-    const state = {
-        currentPresetKey: 'isostatic_3n',
-        nodes: JSON.parse(JSON.stringify(PRESETS.isostatic_3n.nodes)),
-        bars: JSON.parse(JSON.stringify(PRESETS.isostatic_3n.bars)),
-        solution: null,
-        activeTab: 'tab-results'
-    };
+        if (btnClear) {
+            btnClear.addEventListener('click', () => {
+                if (confirm('¿Limpiar todos los datos para empezar una viga desde cero?')) {
+                    currentState = {
+                        name: 'Nueva Viga',
+                        E: 2100000.0,
+                        sec_type: 'RECTANGULAR',
+                        b: 15.0,
+                        h: 30.0,
+                        p3: 0.0,
+                        p4: 0.0,
+                        prop_mode: 'CONSTANTE',
+                        steiner_rows: [],
+                        bars: [
+                            { xi: 0.0, yi: 0.0, xf: 200.0, yf: 0.0, q: 0.0, P_tramo: 0.0, a_dist: 0.0 }
+                        ],
+                        oblique_loads: [],
+                        nodes: [
+                            { cond: 'FIJO', Px: 0.0, Py: 0.0, Mz: 0.0 },
+                            { cond: 'RODILLO', Px: 0.0, Py: 0.0, Mz: 0.0 }
+                        ]
+                    };
+                    loadStateIntoUI();
+                }
+            });
+        }
+    }
 
-    // 3. Inicializar Canvas 2D
-    const canvasElement = document.getElementById('trussCanvas');
-    const renderer = new TrussCanvas(canvasElement);
+    function loadStateIntoUI() {
+        // Cargar sección
+        document.getElementById('inpGlobalE').value = currentState.E || 2100000;
+        document.getElementById('inpSecType').value = currentState.sec_type || 'RECTANGULAR';
+        document.getElementById('inpSecB').value = currentState.b || 15;
+        document.getElementById('inpSecH').value = currentState.h || 30;
+        document.getElementById('inpSecP3').value = currentState.p3 || 0;
+        document.getElementById('inpSecP4').value = currentState.p4 || 0;
+        document.getElementById('inpPropMode').value = currentState.prop_mode || 'CONSTANTE';
 
-    // Redimensionar Canvas al cambiar tamaño de ventana
-    window.addEventListener('resize', () => {
-        renderer.resize();
-        renderer.fitView();
-    });
+        renderSteinerTable();
+        renderBarsTable();
+        renderNodesTable();
+        renderObliqueTable();
 
-    // 4. Renderizado Dinámico de Tablas de Entrada
-    const nodesTbody = document.getElementById('nodesTableBody');
-    const barsTbody = document.getElementById('barsTableBody');
+        recomputeAll();
+    }
 
-    function renderTables() {
-        // A. Tabla de Nodos
-        nodesTbody.innerHTML = '';
+    // ── ASISTENTE RÁPIDO DE LONGITUDES DE TRAMOS (L1, L2, L3...) ──
+    function setupQuickSpans() {
+        const numSel = document.getElementById('quickNumBars');
+        const unitSel = document.getElementById('quickDistUnit');
+        const container = document.getElementById('quickSpanInputsContainer');
+        const btnApply = document.getElementById('btnApplyQuickSpans');
+
+        function renderSpanInputs() {
+            if (!container || !numSel) return;
+            const n = parseInt(numSel.value, 10) || 3;
+            const unit = unitSel ? unitSel.value : 'm';
+            const scale = unit === 'm' ? 0.01 : 1.0;
+
+            let html = '';
+            for (let i = 0; i < n; i++) {
+                const b = currentState.bars && currentState.bars[i];
+                let defaultVal = 2;
+                if (b && (b.xf > b.xi)) {
+                    defaultVal = (b.xf - b.xi) * scale;
+                }
+                html += `
+                    <div class="span-pill">
+                        <span>L${i + 1}:</span>
+                        <input type="number" step="any" class="quick-span-val" data-idx="${i}" value="${defaultVal}">
+                        <span>${unit}</span>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        if (numSel) numSel.addEventListener('change', renderSpanInputs);
+        if (unitSel) unitSel.addEventListener('change', renderSpanInputs);
+        renderSpanInputs();
+
+        if (btnApply) {
+            btnApply.addEventListener('click', () => {
+                const n = parseInt(numSel.value, 10) || 3;
+                const unit = unitSel ? unitSel.value : 'm';
+                const mult = unit === 'm' ? 100.0 : 1.0;
+
+                const inputs = container.querySelectorAll('.quick-span-val');
+                let currentX = 0.0;
+                const newBars = [];
+
+                inputs.forEach((inp, i) => {
+                    if (i < n) {
+                        const len = parseFloat(inp.value) || 2.0;
+                        const lenCm = len * mult;
+                        const oldBar = currentState.bars && currentState.bars[i];
+                        newBars.push({
+                            xi: currentX,
+                            yi: 0.0,
+                            xf: currentX + lenCm,
+                            yf: 0.0,
+                            q: oldBar ? (oldBar.q || 0.0) : 0.0,
+                            P_tramo: oldBar ? (oldBar.P_tramo || 0.0) : 0.0,
+                            a_dist: oldBar ? (oldBar.a_dist || 0.0) : 0.0
+                        });
+                        currentX += lenCm;
+                    }
+                });
+
+                currentState.bars = newBars;
+                // Asegurar nodos correspondientes
+                const reqNodes = n + 1;
+                while (currentState.nodes.length < reqNodes) {
+                    currentState.nodes.push({ cond: 'LIBRE', Px: 0.0, Py: 0.0, Mz: 0.0 });
+                }
+
+                renderBarsTable();
+                renderNodesTable();
+                recomputeAll();
+            });
+        }
+    }
+
+    // ── CONTROL DE SECCIÓN TRANSVERSAL Y STEINER ────────────────
+    function setupSectionControls() {
+        const inpE = document.getElementById('inpGlobalE');
+        const inpType = document.getElementById('inpSecType');
+        const inpB = document.getElementById('inpSecB');
+        const inpH = document.getElementById('inpSecH');
+        const inpP3 = document.getElementById('inpSecP3');
+        const inpP4 = document.getElementById('inpSecP4');
+        const inpMode = document.getElementById('inpPropMode');
+        const btnToggleSteiner = document.getElementById('btnToggleSteiner');
+        const steinerWrap = document.getElementById('steinerWrap');
+
+        const updateSec = () => {
+            currentState.E = parseFloat(inpE.value) || 2100000;
+            currentState.sec_type = inpType.value;
+            currentState.b = parseFloat(inpB.value) || 0;
+            currentState.h = parseFloat(inpH.value) || 0;
+            currentState.p3 = parseFloat(inpP3.value) || 0;
+            currentState.p4 = parseFloat(inpP4.value) || 0;
+            currentState.prop_mode = inpMode.value;
+
+            // Actualizar etiquetas de parámetros según tipo
+            const lblB = document.getElementById('lblParamB');
+            const lblH = document.getElementById('lblParamH');
+            const lblP3 = document.getElementById('lblParamP3');
+            const lblP4 = document.getElementById('lblParamP4');
+
+            if (currentState.sec_type === 'CIRCULAR') {
+                if (lblB) lblB.textContent = 'Diámetro D (cm)';
+                if (lblH) lblH.textContent = '—';
+            } else if (currentState.sec_type === 'TUBULAR_CIRCULAR') {
+                if (lblB) lblB.textContent = 'D_ext (cm)';
+                if (lblH) lblH.textContent = 'd_int (cm)';
+            } else if (currentState.sec_type === 'TRAPEZOIDAL') {
+                if (lblB) lblB.textContent = 'b_inf (cm)';
+                if (lblH) lblH.textContent = 'h (cm)';
+                if (lblP3) lblP3.textContent = 'b_sup (cm)';
+            } else if (currentState.sec_type === 'CAJON_HUECO') {
+                if (lblB) lblB.textContent = 'B_ext (cm)';
+                if (lblH) lblH.textContent = 'H_ext (cm)';
+                if (lblP3) lblP3.textContent = 'b_int (cm)';
+                if (lblP4) lblP4.textContent = 'h_int (cm)';
+            } else if (currentState.sec_type === 'DIRECTO_A_I') {
+                if (lblB) lblB.textContent = 'Área A (cm²)';
+                if (lblH) lblH.textContent = 'Inercia Iz (cm⁴)';
+            } else {
+                if (lblB) lblB.textContent = 'b (cm)';
+                if (lblH) lblH.textContent = 'h (cm)';
+                if (lblP3) lblP3.textContent = 'b_sup (cm)';
+                if (lblP4) lblP4.textContent = '—';
+            }
+
+            if (currentState.sec_type === 'STEINER_COMPUESTA' && steinerWrap) {
+                steinerWrap.style.display = 'block';
+            }
+
+            recomputeAll();
+        };
+
+        [inpE, inpType, inpB, inpH, inpP3, inpP4, inpMode].forEach(el => {
+            if (el) el.addEventListener('input', updateSec);
+            if (el) el.addEventListener('change', updateSec);
+        });
+
+        if (btnToggleSteiner && steinerWrap) {
+            btnToggleSteiner.addEventListener('click', () => {
+                steinerWrap.style.display = steinerWrap.style.display === 'none' ? 'block' : 'none';
+            });
+        }
+    }
+
+    // ── RENDERIZADO Y EDICIÓN DE TABLA DE STEINER (7 PIEZAS) ─────
+    function renderSteinerTable() {
+        const tbody = document.getElementById('tbodySteiner');
+        if (!tbody) return;
+
+        if (!Array.isArray(currentState.steiner_rows)) {
+            currentState.steiner_rows = [];
+        }
+
+        let html = '';
+        for (let i = 0; i < 7; i++) {
+            const row = currentState.steiner_rows[i] || {
+                tipo: 'RECTANGULO',
+                b: 0.0,
+                b_sup: 0.0,
+                h: 0.0,
+                y_base: 0.0,
+                x_c: 0.0
+            };
+
+            html += `
+                <tr data-st-idx="${i}">
+                    <td><strong>Pieza ${i + 1}</strong></td>
+                    <td class="cell-input">
+                        <select class="st-inp" data-field="tipo">
+                            <option value="RECTANGULO" ${row.tipo === 'RECTANGULO' ? 'selected' : ''}>RECTÁNGULO</option>
+                            <option value="TRIANGULO" ${row.tipo === 'TRIANGULO' ? 'selected' : ''}>TRIÁNGULO</option>
+                            <option value="CIRCULO" ${row.tipo === 'CIRCULO' ? 'selected' : ''}>CÍRCULO</option>
+                            <option value="SEMICIRCULO" ${row.tipo === 'SEMICIRCULO' ? 'selected' : ''}>SEMICÍRCULO</option>
+                            <option value="HUECO_RECT" ${row.tipo === 'HUECO_RECT' ? 'selected' : ''}>HUECO RECT.</option>
+                            <option value="HUECO_CIRC" ${row.tipo === 'HUECO_CIRC' ? 'selected' : ''}>HUECO CIRC.</option>
+                        </select>
+                    </td>
+                    <td class="cell-input"><input type="number" step="any" class="st-inp" data-field="b" value="${row.b || 0}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="st-inp" data-field="b_sup" value="${row.b_sup || 0}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="st-inp" data-field="h" value="${row.h || 0}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="st-inp" data-field="y_base" value="${row.y_base || 0}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="st-inp" data-field="x_c" value="${row.x_c || 0}"></td>
+                    <td class="cell-auto-green st-out-a">0.00</td>
+                    <td class="st-out-y">0.00</td>
+                    <td class="st-out-ay">0.00</td>
+                    <td class="st-out-i0">0.00</td>
+                    <td class="st-out-dy">0.00</td>
+                    <td class="cell-auto-green st-out-iz">0.00</td>
+                </tr>
+            `;
+        }
+        tbody.innerHTML = html;
+
+        tbody.querySelectorAll('.st-inp').forEach(inp => {
+            inp.addEventListener('input', readSteinerInputs);
+            inp.addEventListener('change', readSteinerInputs);
+        });
+    }
+
+    function readSteinerInputs() {
+        const rows = [];
+        const tbody = document.getElementById('tbodySteiner');
+        if (!tbody) return;
+
+        tbody.querySelectorAll('tr').forEach((tr, i) => {
+            const tipo = tr.querySelector('[data-field="tipo"]').value;
+            const b = parseFloat(tr.querySelector('[data-field="b"]').value) || 0;
+            const b_sup = parseFloat(tr.querySelector('[data-field="b_sup"]').value) || 0;
+            const h = parseFloat(tr.querySelector('[data-field="h"]').value) || 0;
+            const y_base = parseFloat(tr.querySelector('[data-field="y_base"]').value) || 0;
+            const x_c = parseFloat(tr.querySelector('[data-field="x_c"]').value) || 0;
+            if (b > 0 || h > 0) {
+                rows.push({ tipo, b, b_sup, h, y_base, x_c });
+            }
+        });
+
+        currentState.steiner_rows = rows;
+        recomputeAll();
+    }
+
+    // ── RENDERIZADO Y EDICIÓN DE TABLA DE BARRAS (11 BARRAS) ────
+    function renderBarsTable() {
+        const tbody = document.getElementById('tbodyBars');
+        if (!tbody) return;
+
+        let html = '';
+        for (let i = 0; i < BeamSolver.MAX_BARS; i++) {
+            const b = currentState.bars && currentState.bars[i];
+            const hasData = b && (b.xf !== null && b.xf !== undefined && b.xf !== '' && b.xf > b.xi);
+
+            const xi = (b && b.xi !== null && b.xi !== undefined) ? b.xi : (i === 0 ? 0 : '');
+            const yi = (b && b.yi !== null && b.yi !== undefined) ? b.yi : (i === 0 ? 0 : '');
+            const xf = (b && b.xf !== null && b.xf !== undefined) ? b.xf : '';
+            const yf = (b && b.yf !== null && b.yf !== undefined) ? b.yf : '';
+            const q = (b && b.q !== null && b.q !== undefined) ? b.q : '';
+            const P_tramo = (b && b.P_tramo !== null && b.P_tramo !== undefined) ? b.P_tramo : '';
+            const a_dist = (b && b.a_dist !== null && b.a_dist !== undefined) ? b.a_dist : '';
+
+            const nI = i + 1;
+            const nF = i + 2;
+
+            html += `
+                <tr data-bar-idx="${i}" style="${hasData ? '' : 'opacity: 0.65;'}">
+                    <td><strong style="color: #b91c1c;">[${i + 1}]</strong></td>
+                    <td class="cell-auto-subhdr">${nI}</td>
+                    <td class="cell-auto-subhdr">${nF}</td>
+                    <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="xi" value="${xi}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="yi" value="${yi}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="xf" value="${xf}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="yf" value="${yf}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="q" value="${q}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="P_tramo" value="${P_tramo}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="a_dist" value="${a_dist}"></td>
+                    <td class="cell-auto-green bar-out-L">-</td>
+                    <td class="bar-out-cos">-</td>
+                    <td class="bar-out-sin">-</td>
+                    <td class="cell-auto-celeste bar-out-k1">-</td>
+                    <td class="bar-out-k2">-</td>
+                    <td class="bar-out-k3">-</td>
+                    <td class="bar-out-k4">-</td>
+                    <td class="bar-out-ea">-</td>
+                    <td class="cell-auto-peach" style="font-family: monospace;">U${nI}X, U${nI}Y, U${nI}θ</td>
+                    <td class="cell-auto-peach" style="font-family: monospace;">U${nF}X, U${nF}Y, U${nF}θ</td>
+                </tr>
+            `;
+        }
+        tbody.innerHTML = html;
+
+        tbody.querySelectorAll('.bar-inp').forEach(inp => {
+            inp.addEventListener('input', readBarsInputs);
+            inp.addEventListener('change', readBarsInputs);
+        });
+    }
+
+    function readBarsInputs() {
+        const tbody = document.getElementById('tbodyBars');
+        if (!tbody) return;
+
+        const newBars = [];
+        tbody.querySelectorAll('tr').forEach((tr, i) => {
+            const xiVal = tr.querySelector('[data-field="xi"]').value;
+            const yiVal = tr.querySelector('[data-field="yi"]').value;
+            const xfVal = tr.querySelector('[data-field="xf"]').value;
+            const yfVal = tr.querySelector('[data-field="yf"]').value;
+            const qVal = tr.querySelector('[data-field="q"]').value;
+            const pVal = tr.querySelector('[data-field="P_tramo"]').value;
+            const aVal = tr.querySelector('[data-field="a_dist"]').value;
+
+            if (xfVal !== '' && xfVal !== null && !isNaN(parseFloat(xfVal))) {
+                newBars.push({
+                    xi: parseFloat(xiVal) || 0.0,
+                    yi: parseFloat(yiVal) || 0.0,
+                    xf: parseFloat(xfVal),
+                    yf: parseFloat(yfVal) || 0.0,
+                    q: parseFloat(qVal) || 0.0,
+                    P_tramo: parseFloat(pVal) || 0.0,
+                    a_dist: parseFloat(aVal) || 0.0
+                });
+            }
+        });
+
+        currentState.bars = newBars;
+        recomputeAll();
+    }
+
+    // ── RENDERIZADO Y EDICIÓN DE TABLA DE EVALUACIÓN NODAL (12 NUDOS) ──
+    function renderNodesTable() {
+        const tbody = document.getElementById('tbodyNodes');
+        if (!tbody) return;
+
+        let html = '';
+        for (let i = 0; i < BeamSolver.MAX_NODES; i++) {
+            const nd = currentState.nodes && currentState.nodes[i];
+            const cond = (nd && nd.cond) ? nd.cond : 'LIBRE';
+            const px = (nd && nd.Px !== null && nd.Px !== undefined) ? nd.Px : 0;
+            const py = (nd && nd.Py !== null && nd.Py !== undefined) ? nd.Py : 0;
+            const mz = (nd && nd.Mz !== null && nd.Mz !== undefined) ? nd.Mz : 0;
+
+            html += `
+                <tr data-node-idx="${i}">
+                    <td><strong style="color: #15803d;">(${i + 1})</strong></td>
+                    <td class="node-out-active cell-auto-subhdr">-</td>
+                    <td class="cell-input">
+                        <select class="node-inp" data-field="cond">
+                            <option value="FIJO" ${cond === 'FIJO' ? 'selected' : ''}>FIJO</option>
+                            <option value="RODILLO" ${cond === 'RODILLO' ? 'selected' : ''}>RODILLO</option>
+                            <option value="LIBRE" ${cond === 'LIBRE' ? 'selected' : ''}>LIBRE</option>
+                            <option value="EMPOTRADO" ${cond === 'EMPOTRADO' ? 'selected' : ''}>EMPOTRADO</option>
+                            <option value="RODILLO_V" ${cond === 'RODILLO_V' ? 'selected' : ''}>RODILLO_V</option>
+                        </select>
+                    </td>
+                    <td class="node-out-has-dx">-</td>
+                    <td class="node-out-has-dy">-</td>
+                    <td class="node-out-has-dth">-</td>
+                    <td class="cell-auto-green node-out-dx font-mono">-</td>
+                    <td class="cell-auto-green node-out-dy font-mono">-</td>
+                    <td class="cell-auto-green node-out-dth font-mono">-</td>
+                    <td class="cell-input"><input type="number" step="any" class="node-inp" data-field="Px" value="${px}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="node-inp" data-field="Py" value="${py}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="node-inp" data-field="Mz" value="${mz}"></td>
+                </tr>
+            `;
+        }
+        tbody.innerHTML = html;
+
+        tbody.querySelectorAll('.node-inp').forEach(inp => {
+            inp.addEventListener('input', readNodesInputs);
+            inp.addEventListener('change', readNodesInputs);
+        });
+    }
+
+    function readNodesInputs() {
+        const tbody = document.getElementById('tbodyNodes');
+        if (!tbody) return;
+
+        const newNodes = [];
+        tbody.querySelectorAll('tr').forEach((tr, i) => {
+            const cond = tr.querySelector('[data-field="cond"]').value;
+            const px = parseFloat(tr.querySelector('[data-field="Px"]').value) || 0.0;
+            const py = parseFloat(tr.querySelector('[data-field="Py"]').value) || 0.0;
+            const mz = parseFloat(tr.querySelector('[data-field="Mz"]').value) || 0.0;
+            newNodes.push({ cond, Px: px, Py: py, Mz: mz });
+        });
+
+        currentState.nodes = newNodes;
+        recomputeAll();
+    }
+
+    // ── RENDERIZADO Y EDICIÓN DE DESCOMPONEDOR OBLICUO (6 FILAS) ──
+    function renderObliqueTable() {
+        const tbody = document.getElementById('tbodyOblique');
+        if (!tbody) return;
+
+        let html = '';
         for (let i = 0; i < 6; i++) {
-            const nd = state.nodes[i] || { id: i + 1, x: null, y: null, support: 'Libre', px: null, py: null };
-            const tr = document.createElement('tr');
+            const ob = currentState.oblique_loads && currentState.oblique_loads[i];
+            const nudo = (ob && ob.nudo) ? ob.nudo : '';
+            const P = (ob && ob.P) ? ob.P : '';
+            const modo = (ob && ob.modo) ? ob.modo : 'PENDIENTE_dx_dy';
+            const val1 = (ob && ob.val1 !== undefined) ? ob.val1 : '';
+            const val2 = (ob && ob.val2 !== undefined) ? ob.val2 : '';
+            const dirX = (ob && ob.dir_x) ? ob.dir_x : '+X (DER)';
+            const dirY = (ob && ob.dir_y) ? ob.dir_y : '-Y (ABAJO)';
 
-            tr.innerHTML = `
-                <td class="tbl-idx" style="color: var(--accent-sky);">${i + 1}</td>
-                <td>
-                    <input type="number" step="any" data-type="node" data-idx="${i}" data-field="x"
-                        class="cell-input" placeholder="cm" value="${nd.x !== null && nd.x !== undefined ? nd.x : ''}">
-                </td>
-                <td>
-                    <input type="number" step="any" data-type="node" data-idx="${i}" data-field="y"
-                        class="cell-input" placeholder="cm" value="${nd.y !== null && nd.y !== undefined ? nd.y : ''}">
-                </td>
-                <td>
-                    <select data-type="node" data-idx="${i}" data-field="support" class="cell-select">
-                        <option value="Libre" ${nd.support === 'Libre' ? 'selected' : ''}>Libre</option>
-                        <option value="Fijo" ${nd.support === 'Fijo' ? 'selected' : ''}>Fijo (Rx, Ry)</option>
-                        <option value="Móvil Y" ${nd.support === 'Móvil Y' ? 'selected' : ''}>Móvil Y (Apoyo Ry)</option>
-                        <option value="Móvil X" ${nd.support === 'Móvil X' ? 'selected' : ''}>Móvil X (Apoyo Rx)</option>
-                    </select>
-                </td>
-                <td>
-                    <input type="number" step="any" data-type="node" data-idx="${i}" data-field="px"
-                        class="cell-input cell-input-force" placeholder="0" value="${nd.px !== null && nd.px !== undefined ? nd.px : ''}">
-                </td>
-                <td>
-                    <input type="number" step="any" data-type="node" data-idx="${i}" data-field="py"
-                        class="cell-input cell-input-force" placeholder="0" value="${nd.py !== null && nd.py !== undefined ? nd.py : ''}">
-                </td>
+            html += `
+                <tr data-ob-idx="${i}">
+                    <td>${i + 1}</td>
+                    <td class="cell-input">
+                        <select class="ob-inp" data-field="nudo">
+                            <option value="">—</option>
+                            ${Array.from({ length: 12 }, (_, n) => `<option value="${n + 1}" ${nudo === n + 1 ? 'selected' : ''}>Nudo (${n + 1})</option>`).join('')}
+                        </select>
+                    </td>
+                    <td class="cell-input"><input type="number" step="any" class="ob-inp" data-field="P" value="${P}"></td>
+                    <td class="cell-input">
+                        <select class="ob-inp" data-field="modo">
+                            <option value="PENDIENTE_dx_dy" ${modo === 'PENDIENTE_dx_dy' ? 'selected' : ''}>PENDIENTE (dx:dy)</option>
+                            <option value="ANGULO_GRADOS" ${modo === 'ANGULO_GRADOS' ? 'selected' : ''}>ÁNGULO (α°)</option>
+                        </select>
+                    </td>
+                    <td class="cell-input"><input type="number" step="any" class="ob-inp" data-field="val1" value="${val1}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="ob-inp" data-field="val2" value="${val2}"></td>
+                    <td class="cell-input">
+                        <select class="ob-inp" data-field="dir_x">
+                            <option value="+X (DER)" ${dirX === '+X (DER)' ? 'selected' : ''}>+X (DER)</option>
+                            <option value="-X (IZQ)" ${dirX === '-X (IZQ)' ? 'selected' : ''}>-X (IZQ)</option>
+                        </select>
+                    </td>
+                    <td class="cell-input">
+                        <select class="ob-inp" data-field="dir_y">
+                            <option value="-Y (ABAJO)" ${dirY === '-Y (ABAJO)' ? 'selected' : ''}>-Y (ABAJO)</option>
+                            <option value="+Y (ARRIBA)" ${dirY === '+Y (ARRIBA)' ? 'selected' : ''}>+Y (ARRIBA)</option>
+                        </select>
+                    </td>
+                    <td class="cell-auto-green ob-out-fx">0.00</td>
+                    <td class="cell-auto-green ob-out-fy">0.00</td>
+                </tr>
             `;
-            nodesTbody.appendChild(tr);
         }
+        tbody.innerHTML = html;
 
-        // B. Tabla de Barras
-        barsTbody.innerHTML = '';
-        const BAR_PALETTE = TrussSolver.BAR_PALETTE;
-
-        for (let m = 0; m < 8; m++) {
-            const br = state.bars[m] || { id: m + 1, start: null, end: null, a: 10, e: 2100000 };
-            const pal = BAR_PALETTE[m % BAR_PALETTE.length];
-            const tr = document.createElement('tr');
-
-            // Opciones de nodos 1..6
-            let optStart = `<option value="">—</option>`;
-            let optEnd   = `<option value="">—</option>`;
-            for (let n = 1; n <= 6; n++) {
-                optStart += `<option value="${n}" ${br.start === n ? 'selected' : ''}>Nodo ${n}</option>`;
-                optEnd   += `<option value="${n}" ${br.end === n ? 'selected' : ''}>Nodo ${n}</option>`;
-            }
-
-            tr.innerHTML = `
-                <td class="tbl-idx" style="background:${pal.bg}; color:${pal.text};">${m + 1}</td>
-                <td>
-                    <select data-type="bar" data-idx="${m}" data-field="start" class="cell-select" style="font-weight:700">
-                        ${optStart}
-                    </select>
-                </td>
-                <td>
-                    <select data-type="bar" data-idx="${m}" data-field="end" class="cell-select" style="font-weight:700">
-                        ${optEnd}
-                    </select>
-                </td>
-                <td>
-                    <input type="number" step="any" data-type="bar" data-idx="${m}" data-field="a"
-                        class="cell-input" placeholder="10" value="${br.a || 10}">
-                </td>
-                <td>
-                    <input type="number" step="any" data-type="bar" data-idx="${m}" data-field="e"
-                        class="cell-input" placeholder="2100000" value="${br.e || 2100000}">
-                </td>
-                <td class="cell-calc" id="bar-len-${m}">—</td>
-                <td class="cell-calc" id="bar-ael-${m}">—</td>
-            `;
-            barsTbody.appendChild(tr);
-        }
+        tbody.querySelectorAll('.ob-inp').forEach(inp => {
+            inp.addEventListener('input', readObliqueInputs);
+            inp.addEventListener('change', readObliqueInputs);
+        });
     }
 
-    // 5. Escuchar cambios de entrada en vivo
-    function handleInputChange(e) {
-        const target = e.target;
-        const type = target.dataset.type;
-        const idx = parseInt(target.dataset.idx);
-        const field = target.dataset.field;
+    function readObliqueInputs() {
+        const tbody = document.getElementById('tbodyOblique');
+        if (!tbody) return;
 
-        if (type === 'node') {
-            let val = target.value.trim();
-            if (field === 'x' || field === 'y' || field === 'px' || field === 'py') {
-                state.nodes[idx][field] = val === '' ? null : parseFloat(val);
+        const newOb = [];
+        tbody.querySelectorAll('tr').forEach(tr => {
+            const nudoVal = tr.querySelector('[data-field="nudo"]').value;
+            const pVal = tr.querySelector('[data-field="P"]').value;
+            const modo = tr.querySelector('[data-field="modo"]').value;
+            const val1 = tr.querySelector('[data-field="val1"]').value;
+            const val2 = tr.querySelector('[data-field="val2"]').value;
+            const dirX = tr.querySelector('[data-field="dir_x"]').value;
+            const dirY = tr.querySelector('[data-field="dir_y"]').value;
+
+            if (nudoVal && pVal) {
+                newOb.push({
+                    nudo: parseInt(nudoVal, 10),
+                    P: parseFloat(pVal) || 0.0,
+                    modo: modo,
+                    val1: parseFloat(val1) || 0.0,
+                    val2: parseFloat(val2) || 0.0,
+                    dir_x: dirX,
+                    dir_y: dirY
+                });
+            }
+        });
+
+        currentState.oblique_loads = newOb;
+        recomputeAll();
+    }
+
+    // ── CÁLCULO Y ACTUALIZACIÓN GENERAL (RESOLUCIÓN MATRICIAL) ────
+    function recomputeAll() {
+        currentSolution = BeamSolver.solveBeam(currentState);
+
+        // 1. Actualizar indicador de salud de la estructura
+        const healthBadge = document.getElementById('beamHealthBadge');
+        if (healthBadge) {
+            if (currentSolution.success) {
+                healthBadge.className = 'status-pill-ok';
+                healthBadge.textContent = '🟢 VIGA ESTABLE (GH = 0 o HIPERESTÁTICA)';
             } else {
-                state.nodes[idx][field] = val;
-            }
-        } else if (type === 'bar') {
-            let val = target.value.trim();
-            if (field === 'start' || field === 'end') {
-                state.bars[idx][field] = val === '' ? null : parseInt(val);
-            } else if (field === 'a' || field === 'e') {
-                state.bars[idx][field] = val === '' ? 10 : parseFloat(val);
+                healthBadge.className = 'status-pill-err';
+                healthBadge.textContent = '🔴 ERROR: ' + (currentSolution.error || 'Viga inestable');
             }
         }
 
-        recalculateAndRender(false);
+        // 2. Actualizar etiquetas de sección A e Iz
+        const outA = document.getElementById('outGlobalA');
+        const outIz = document.getElementById('outGlobalIz');
+        if (outA && currentSolution.secProps) outA.textContent = currentSolution.secProps.A.toFixed(4);
+        if (outIz && currentSolution.secProps) outIz.textContent = currentSolution.secProps.Iz.toFixed(4);
+
+        // 3. Renderizar Canvas de Vista Previa de Sección
+        const cvSec = document.getElementById('canvasSectionPreview');
+        if (cvSec && window.BeamCanvas) {
+            BeamCanvas.renderCrossSectionPreview(cvSec, currentState, currentSolution.secProps);
+        }
+
+        // 4. Actualizar celdas de la tabla de Steiner si aplica
+        if (currentSolution.steinerResult && currentSolution.steinerResult.rows) {
+            const tbodySt = document.getElementById('tbodySteiner');
+            const tfootSt = document.getElementById('tfootSteiner');
+            if (tbodySt) {
+                currentSolution.steinerResult.rows.forEach((r, idx) => {
+                    const tr = tbodySt.children[idx];
+                    if (tr) {
+                        tr.querySelector('.st-out-a').textContent = r.A.toFixed(2);
+                        tr.querySelector('.st-out-y').textContent = r.y_c.toFixed(2);
+                        tr.querySelector('.st-out-ay').textContent = r.Ay.toFixed(2);
+                        tr.querySelector('.st-out-i0').textContent = r.I0.toFixed(2);
+                        tr.querySelector('.st-out-dy').textContent = r.dy.toFixed(2);
+                        tr.querySelector('.st-out-iz').textContent = r.Iz_total.toFixed(2);
+                    }
+                });
+            }
+            if (tfootSt) {
+                const tot = currentSolution.steinerResult;
+                tfootSt.innerHTML = `
+                    <tr style="background: var(--excel-yellow); font-weight: 900;">
+                        <td colspan="7" style="text-align: right;">TOTALES STEINER:</td>
+                        <td class="cell-auto-green">${tot.A_total.toFixed(4)}</td>
+                        <td>Ȳ = ${tot.y_centroid.toFixed(4)}</td>
+                        <td>${tot.Ay_total.toFixed(4)}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td class="cell-auto-green">${tot.Iz_total.toFixed(4)} cm⁴</td>
+                    </tr>
+                `;
+            }
+        }
+
+        // 5. Actualizar celdas calculadas en tabla de Barras
+        const tbodyBars = document.getElementById('tbodyBars');
+        if (tbodyBars && currentSolution.barsDetailed) {
+            tbodyBars.querySelectorAll('tr').forEach((tr, i) => {
+                const bd = currentSolution.barsDetailed[i];
+                if (bd && bd.active) {
+                    tr.style.opacity = '1';
+                    tr.querySelector('.bar-out-L').textContent = bd.L.toFixed(2);
+                    tr.querySelector('.bar-out-cos').textContent = bd.cosT.toFixed(4);
+                    tr.querySelector('.bar-out-sin').textContent = bd.sinT.toFixed(4);
+                    tr.querySelector('.bar-out-k1').textContent = bd.k1.toFixed(2);
+                    tr.querySelector('.bar-out-k2').textContent = bd.k2.toFixed(2);
+                    tr.querySelector('.bar-out-k3').textContent = bd.k3.toFixed(2);
+                    tr.querySelector('.bar-out-k4').textContent = bd.k4.toFixed(2);
+                    tr.querySelector('.bar-out-ea').textContent = bd.eaL.toFixed(2);
+                } else {
+                    tr.style.opacity = '0.5';
+                    tr.querySelector('.bar-out-L').textContent = '-';
+                    tr.querySelector('.bar-out-cos').textContent = '-';
+                    tr.querySelector('.bar-out-sin').textContent = '-';
+                    tr.querySelector('.bar-out-k1').textContent = '-';
+                    tr.querySelector('.bar-out-k2').textContent = '-';
+                    tr.querySelector('.bar-out-k3').textContent = '-';
+                    tr.querySelector('.bar-out-k4').textContent = '-';
+                    tr.querySelector('.bar-out-ea').textContent = '-';
+                }
+            });
+        }
+
+        // 6. Actualizar celdas calculadas en tabla de Nodos
+        const tbodyNodes = document.getElementById('tbodyNodes');
+        if (tbodyNodes && currentSolution.nodesDetailed) {
+            tbodyNodes.querySelectorAll('tr').forEach((tr, i) => {
+                const nd = currentSolution.nodesDetailed[i];
+                if (nd) {
+                    tr.querySelector('.node-out-active').textContent = nd.active ? 'SÍ' : 'NO';
+                    tr.querySelector('.node-out-has-dx').textContent = nd.hasDx;
+                    tr.querySelector('.node-out-has-dy').textContent = nd.hasDy;
+                    tr.querySelector('.node-out-has-dth').textContent = nd.hasDth;
+                    tr.querySelector('.node-out-dx').textContent = nd.dxBox;
+                    tr.querySelector('.node-out-dy').textContent = nd.dyBox;
+                    tr.querySelector('.node-out-dth').textContent = nd.dthBox;
+                }
+            });
+        }
+
+        // 7. Actualizar celdas calculadas en tabla de Cargas Oblicuas
+        const tbodyOb = document.getElementById('tbodyOblique');
+        if (tbodyOb && currentSolution.obliqueLoadsCalculated) {
+            tbodyOb.querySelectorAll('tr').forEach((tr, i) => {
+                const ob = currentSolution.obliqueLoadsCalculated[i];
+                if (ob) {
+                    tr.querySelector('.ob-out-fx').textContent = ob.Fx.toFixed(2);
+                    tr.querySelector('.ob-out-fy').textContent = ob.Fy.toFixed(2);
+                } else {
+                    tr.querySelector('.ob-out-fx').textContent = '0.00';
+                    tr.querySelector('.ob-out-fy').textContent = '0.00';
+                }
+            });
+        }
+
+        // 8. Renderizar "6° Gráfica Final" interactiva
+        renderGraficaFinal();
+
+        // 9. Renderizar Tablas de Resultados Directos
+        renderSummaryTables();
+
+        // 10. Renderizar Paneles de Matrices Detalladas
+        renderMatrixPanes();
     }
 
-    const inputContainer = document.getElementById('inputTablesContainer');
-    if (inputContainer) {
-        inputContainer.addEventListener('input', handleInputChange);
-        inputContainer.addEventListener('change', handleInputChange);
+    function renderGraficaFinal() {
+        const cv = document.getElementById('canvasGraficaFinal');
+        const unitSel = document.getElementById('selectDiagramUnit');
+        const unit = unitSel ? unitSel.value : 'm';
+        if (cv && window.BeamCanvas && currentSolution) {
+            BeamCanvas.renderGraficaFinalCanvas(cv, currentSolution, { unit: unit });
+        }
     }
 
-    // 6. Recalcular y Actualizar Todo el Dashboard
-    function recalculateAndRender(autoFit = false) {
-        // Resolver mediante TrussSolver
-        const solution = TrussSolver.solveTruss(state.nodes, state.bars);
-        state.solution = solution;
+    const unitSel = document.getElementById('selectDiagramUnit');
+    if (unitSel) unitSel.addEventListener('change', renderGraficaFinal);
 
-        // Actualizar Canvas
-        renderer.setData(state.nodes, state.bars, solution);
-        if (autoFit) {
-            renderer.fitView();
-        }
+    // ── RENDERIZADO DE TABLAS RESUMEN DE RESULTADOS ──────────────
+    function renderSummaryTables() {
+        const tbD = document.getElementById('tbodySummaryDisplacements');
+        const tbR = document.getElementById('tbodySummaryReactions');
 
-        // Actualizar previsualización de Longitud L y AE/L en tabla de barras
-        for (let m = 0; m < 8; m++) {
-            const lenEl = document.getElementById(`bar-len-${m}`);
-            const aelEl = document.getElementById(`bar-ael-${m}`);
-            if (solution && solution.success && solution.activeBars) {
-                const bSol = solution.activeBars.find(b => b.id === (m + 1));
-                if (bSol) {
-                    if (lenEl) lenEl.textContent = `${bSol.L.toFixed(1)} cm`;
-                    if (aelEl) aelEl.textContent = `${bSol.ael.toFixed(1)}`;
-                    continue;
-                }
-            }
-            if (lenEl) lenEl.textContent = "—";
-            if (aelEl) aelEl.textContent = "—";
-        }
-
-        // Actualizar Banner de Estado Estructural
-        const statusBadge = document.getElementById('structuralStatusBadge');
-        const eqBadge = document.getElementById('equilibriumBadge');
-
-        if (statusBadge) {
-            if (solution && solution.success) {
-                statusBadge.className = "badge " + (solution.gh === 0 ? "badge-green" : "badge-blue");
-                statusBadge.innerHTML = `Estructura: ${solution.structuralType}`;
-
-                if (eqBadge) {
-                    eqBadge.className = "badge " + (solution.equilibrium.isValid ? "badge-green" : "badge-red");
-                    eqBadge.style.display = "";
-                    eqBadge.innerHTML = solution.equilibrium.isValid
-                        ? `✔ Equilibrio Exacto (∑Fx=0, ∑Fy=0)`
-                        : `⚠ Error de Equilibrio: Fx=${solution.equilibrium.eqErrorX.toFixed(2)}, Fy=${solution.equilibrium.eqErrorY.toFixed(2)}`;
-                }
+        if (tbD && currentSolution && currentSolution.calculatedDisplacements) {
+            if (currentSolution.calculatedDisplacements.length === 0) {
+                tbD.innerHTML = `<tr><td colspan="7">No hay grados de libertad libres activos.</td></tr>`;
             } else {
-                statusBadge.className = "badge badge-amber";
-                statusBadge.innerHTML = solution && solution.error ? `⚠ ${solution.error}` : "Editando parámetros...";
-                if (eqBadge) eqBadge.style.display = "none";
+                tbD.innerHTML = currentSolution.calculatedDisplacements.map(d => `
+                    <tr>
+                        <td class="cell-auto-subhdr">${d.order}</td>
+                        <td class="cell-auto-peach" style="font-family: monospace;">${d.uLbl}</td>
+                        <td class="cell-auto-celeste" style="font-family: monospace;">${d.dLbl}</td>
+                        <td>${d.C_libre.toFixed(2)}</td>
+                        <td class="cell-auto-green" style="font-family: monospace; font-size: 13px;">${d.value.toFixed(8)}</td>
+                        <td><strong>${d.unit}</strong></td>
+                        <td>${d.desc}</td>
+                    </tr>
+                `).join('');
             }
         }
 
-        // Actualizar Pestañas de Resultados
-        renderResultsTab(solution);
-        renderPedagogicalTab(solution);
-        renderGlobalMatrixTab(solution);
-    }
-
-    // 7. Renderizado de Pestaña 1: Resumen de Resultados
-    function renderResultsTab(sol) {
-        const container = document.getElementById('resultsContainer');
-        if (!container) return;
-
-        if (!sol || !sol.success) {
-            container.innerHTML = `
-                <div style="padding: 30px; text-align: center; color: var(--text-muted);">
-                    <p style="font-size: 13px; font-weight: 700; color: var(--accent-amber); margin-bottom: 4px;">Estructura en Proceso de Edición</p>
-                    <p style="font-size: 12px;">${sol && sol.error ? sol.error : 'Ingrese coordenadas válidas y conecte al menos una barra.'}</p>
-                </div>
-            `;
-            return;
-        }
-
-        let reactionsRows = '';
-        for (const r of sol.reactions) {
-            reactionsRows += `
-                <tr>
-                    <td style="font-weight: 700; color: #34d399;">${r.label}</td>
-                    <td style="text-align: center;">Nudo ${r.nodeId}</td>
-                    <td style="text-align: center;">${r.direction}</td>
-                    <td style="text-align: right; font-weight: 700; color: var(--text-main);">${r.value.toFixed(2)} Kgf</td>
-                </tr>
-            `;
-        }
-
-        // Calcular desplazamiento máximo para resaltar nodo crítico
-        let maxDispVal = 0;
-        let maxDispNodeId = null;
-        for (const nd of sol.activeNodes) {
-            const uX = sol.totalDisplacements[nd.dofX] || 0;
-            const uY = sol.totalDisplacements[nd.dofY] || 0;
-            const tD = Math.hypot(uX, uY);
-            if (tD > maxDispVal) {
-                maxDispVal = tD;
-                maxDispNodeId = nd.id;
+        if (tbR && currentSolution && currentSolution.calculatedReactions) {
+            if (currentSolution.calculatedReactions.length === 0) {
+                tbR.innerHTML = `<tr><td colspan="7">No hay apoyos con reacciones activas.</td></tr>`;
+            } else {
+                tbR.innerHTML = currentSolution.calculatedReactions.map(r => `
+                    <tr>
+                        <td class="cell-auto-subhdr">${r.order}</td>
+                        <td class="cell-auto-peach" style="font-family: monospace;">${r.uLbl}</td>
+                        <td class="cell-auto-yellow" style="font-family: monospace;">${r.C_expr}</td>
+                        <td>${r.prod_KRL_D.toFixed(4)}</td>
+                        <td>${r.loadAtSupport.toFixed(2)}</td>
+                        <td class="cell-auto-green" style="font-family: monospace; font-size: 13px;">${r.reactionFinal.toFixed(4)}</td>
+                        <td><strong>${r.unit}</strong></td>
+                    </tr>
+                `).join('');
             }
         }
-
-        let dispRows = '';
-        for (const nd of sol.activeNodes) {
-            const uX = sol.totalDisplacements[nd.dofX] || 0;
-            const uY = sol.totalDisplacements[nd.dofY] || 0;
-            const totalD = Math.hypot(uX, uY);
-            const isMaxDeflection = (nd.id === maxDispNodeId && totalD > 1e-6);
-
-            const xColor = Math.abs(uX) < 1e-7 ? 'color:#64748b;' : (uX > 0 ? 'color:#38bdf8;' : 'color:#0284c7;');
-            const yColor = Math.abs(uY) < 1e-7 ? 'color:#64748b;' : (uY > 0 ? 'color:#34d399;' : 'color:#f43f5e;');
-
-            dispRows += `
-                <tr ${isMaxDeflection ? 'style="background: rgba(251, 191, 36, 0.08);"' : ''}>
-                    <td style="font-weight: 700; color: #f8fafc;">
-                        Nudo ${nd.id}
-                        ${isMaxDeflection ? '<span style="font-size:9px; font-weight:800; background:#f59e0b; color:#000; padding:1px 6px; border-radius:4px; margin-left:6px;">⭐ MÁXIMA DEFLEXIÓN</span>' : ''}
-                    </td>
-                    <td style="text-align: right; font-family: monospace; ${xColor}">
-                        <span style="font-size:10px; color:#94a3b8; margin-right:4px;">d${nd.id}x =</span>${(uX >= 0 ? '+' : '') + uX.toFixed(6)} cm
-                    </td>
-                    <td style="text-align: right; font-family: monospace; ${yColor}">
-                        <span style="font-size:10px; color:#94a3b8; margin-right:4px;">d${nd.id}y =</span>${(uY >= 0 ? '+' : '') + uY.toFixed(6)} cm
-                    </td>
-                    <td style="text-align: right; font-family: monospace; font-weight: 700; color: ${isMaxDeflection ? '#fbbf24' : '#f1f5f9'};">
-                        ${totalD.toFixed(6)} cm
-                    </td>
-                </tr>
-            `;
-        }
-
-        let barsRows = '';
-        for (const m of sol.memberForces) {
-            const badgeClass = m.axialForce > 0.01 ? 'force-tension' : (m.axialForce < -0.01 ? 'force-compress' : 'force-zero');
-            barsRows += `
-                <tr>
-                    <td style="text-align: center; font-weight: 700; color: ${m.color.border};">Barra ${m.barId}</td>
-                    <td style="text-align: center;">N${m.start} → N${m.end}</td>
-                    <td style="text-align: right;">${m.L.toFixed(1)} cm</td>
-                    <td style="text-align: right;">${m.a.toFixed(1)} cm²</td>
-                    <td style="text-align: right; font-weight: 700; color: ${m.axialForce >= 0 ? '#38bdf8' : '#f43f5e'};">
-                        ${m.axialForce >= 0 ? '+' : ''}${m.axialForce.toFixed(2)} Kgf
-                    </td>
-                    <td style="text-align: right;">${m.stress.toFixed(2)} Kgf/cm²</td>
-                    <td style="text-align: center;">
-                        <span class="force-badge ${badgeClass}">${m.state}</span>
-                    </td>
-                </tr>
-            `;
-        }
-
-        container.innerHTML = `
-            <div class="results-grid-2col">
-                <!-- Reacciones en Apoyos -->
-                <div class="mini-card">
-                    <div class="mini-card-head" style="color: var(--accent-emerald);">
-                        <span>Reacciones en Apoyos</span>
-                        <span class="mini-card-formula">{R} = [K₂₁] · {D}</span>
-                    </div>
-                    <div style="overflow-x: auto;">
-                        <table class="results-table">
-                            <thead>
-                                <tr>
-                                    <th style="text-align: left;">Reacción</th>
-                                    <th>Nudo</th>
-                                    <th>Eje</th>
-                                    <th style="text-align: right;">Magnitud</th>
-                                </tr>
-                            </thead>
-                            <tbody>${reactionsRows}</tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Desplazamientos Nodales y Deflexiones -->
-                <div class="mini-card">
-                    <div class="mini-card-head" style="color: var(--accent-sky);">
-                        <span>Desplazamientos Nodales y Deflexión</span>
-                        <span class="mini-card-formula">{D} = [K₁₁]⁻¹ · {C}</span>
-                    </div>
-                    <div style="overflow-x: auto;">
-                        <table class="results-table">
-                            <thead>
-                                <tr>
-                                    <th style="text-align: left;">Nudo</th>
-                                    <th style="text-align: right; color: #38bdf8;">d(i)x (Eje X)</th>
-                                    <th style="text-align: right; color: #34d399;">d(i)y (Deflexión Y)</th>
-                                    <th style="text-align: right; color: #fbbf24;">δ Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>${dispRows}</tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tabla de Resumen de Fuerzas en Barras -->
-            <div class="mini-card">
-                <div class="mini-card-head" style="color: #ffffff;">
-                    <span>Fuerzas Axiales Internas y Diagnóstico Estructural</span>
-                    <span class="mini-card-formula">Fₘ = (AE/L) · [-cx, -cy, cx, cy] · {D}</span>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="results-table">
-                        <thead>
-                            <tr>
-                                <th>Barra</th>
-                                <th>Conexión</th>
-                                <th style="text-align: right;">Longitud</th>
-                                <th style="text-align: right;">Área</th>
-                                <th style="text-align: right;">Fuerza Axial N</th>
-                                <th style="text-align: right;">Esfuerzo σ</th>
-                                <th>Diagnóstico</th>
-                            </tr>
-                        </thead>
-                        <tbody>${barsRows}</tbody>
-                    </table>
-                </div>
-            </div>
-        `;
     }
 
-    // 8. Renderizado de Pestaña 2: Paso a Paso Pedagógico
-    function renderPedagogicalTab(sol) {
-        const container = document.getElementById('pedagogicalContainer');
-        if (!container) return;
+    // ── RENDERIZADO DE PANELES MATRICIALES (PASO A PASO) ─────────
+    function setupMatrixTabs() {
+        document.querySelectorAll('.matrix-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.matrix-tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
 
-        if (!sol || !sol.success) {
-            container.innerHTML = `<p style="padding: 20px; text-align: center; color: var(--text-muted);">Resuelva la armadura para visualizar las submatrices de partición.</p>`;
-            return;
-        }
-
-        // Matriz K11
-        let k11Headers = sol.freeLabels.map(l => `<th style="padding: 4px; font-family: var(--font-mono); font-size: 10px; color: var(--accent-emerald);">${l}</th>`).join('');
-        let k11Rows = '';
-        for (let i = 0; i < sol.K11.length; i++) {
-            let cells = sol.K11[i].map(v => `<td style="padding: 4px 6px; text-align: right; font-family: var(--font-mono); font-size: 10px;">${v.toFixed(1)}</td>`).join('');
-            k11Rows += `
-                <tr>
-                    <td style="padding: 4px 6px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--accent-emerald);">${sol.freeLabels[i]}</td>
-                    ${cells}
-                </tr>
-            `;
-        }
-
-        // Matriz K21
-        let k21Headers = sol.freeLabels.map(l => `<th style="padding: 4px; font-family: var(--font-mono); font-size: 10px; color: var(--accent-indigo);">${l}</th>`).join('');
-        let k21Rows = '';
-        for (let i = 0; i < sol.K21.length; i++) {
-            let cells = sol.K21[i].map(v => `<td style="padding: 4px 6px; text-align: right; font-family: var(--font-mono); font-size: 10px;">${v.toFixed(1)}</td>`).join('');
-            k21Rows += `
-                <tr>
-                    <td style="padding: 4px 6px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--accent-indigo);">${sol.restLabels[i]}</td>
-                    ${cells}
-                </tr>
-            `;
-        }
-
-        container.innerHTML = `
-            <div style="display: flex; flex-direction: column; gap: 14px;">
-                <div style="background: var(--bg-panel); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle); font-size: 12px;">
-                    <strong style="color: var(--accent-sky); font-size: 12.5px; display: block; margin-bottom: 4px;">Partición Cinemática del Sistema Global</strong>
-                    <p style="color: var(--text-muted); line-height: 1.6;">
-                        El método de rigidez divide el sistema matricial eliminando los grados de libertad restringidos por apoyos (\(D = 0\)).
-                        Esto define directamente la submatriz libre <strong>[K₁₁]</strong> para hallar desplazamientos y la submatriz <strong>[K₂₁]</strong> para obtener reacciones.
-                    </p>
-                </div>
-
-                <div class="mini-card">
-                    <div class="mini-card-head" style="color: var(--accent-emerald);">
-                        <span>Submatriz Reducida de Rigidez [K₁₁] (${sol.K11.length} × ${sol.K11.length})</span>
-                        <span class="mini-card-formula">{D_libres} = [K₁₁]⁻¹ · {C_libres}</span>
-                    </div>
-                    <div style="overflow-x: auto; max-height: 250px;">
-                        <table class="results-table">
-                            <thead><tr><th style="text-align: left;">GDL</th>${k11Headers}</tr></thead>
-                            <tbody>${k11Rows}</tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="mini-card">
-                    <div class="mini-card-head" style="color: var(--accent-indigo);">
-                        <span>Submatriz de Apoyos y Reacciones [K₂₁] (${sol.K21.length} × ${sol.K11.length})</span>
-                        <span class="mini-card-formula">{R} = [K₂₁] · {D_libres}</span>
-                    </div>
-                    <div style="overflow-x: auto; max-height: 250px;">
-                        <table class="results-table">
-                            <thead><tr><th style="text-align: left;">Apoyo</th>${k21Headers}</tr></thead>
-                            <tbody>${k21Rows}</tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        `;
+                document.querySelectorAll('.matrix-pane').forEach(p => p.style.display = 'none');
+                const target = document.getElementById(btn.dataset.mtab);
+                if (target) target.style.display = 'block';
+            });
+        });
     }
 
-    // 9. Renderizado de Pestaña 3: Matriz Global Ensamblada (12x12)
-    function renderGlobalMatrixTab(sol) {
-        const container = document.getElementById('globalMatrixContainer');
-        if (!container) return;
+    function renderMatrixPanes() {
+        if (!currentSolution || !currentSolution.success) return;
 
-        if (!sol || !sol.success) {
-            container.innerHTML = `<p style="padding: 20px; text-align: center; color: var(--text-muted);">Resuelva la armadura para visualizar la matriz Karmadura completa.</p>`;
-            return;
+        // PANE 1: MATRICES LOCALES 6x6 Y EXTENDIDAS 6x36 POR TRAMO
+        const paneLocal = document.getElementById('paneLocalBars');
+        if (paneLocal && currentSolution.barsDetailed) {
+            const activeBars = currentSolution.barsDetailed.filter(b => b.active);
+            paneLocal.innerHTML = activeBars.map(bd => {
+                const bIdx = bd.idx;
+                const kl = bd.K_local;
+                const ke = bd.K_ext;
+                const labels = bd.dofLabels;
+
+                return `
+                    <div style="margin-bottom: 20px; background: #ffffff; border: 2px solid #cbd5e1; border-radius: 10px; padding: 12px;">
+                        <div style="font-size: 13.5px; font-weight: 900; color: #000000; margin-bottom: 8px;">
+                            Tramo Barra [${bIdx + 1}] (Nudo ${bd.nodeStart} ➔ Nudo ${bd.nodeEnd}): Longitud L = ${bd.L.toFixed(2)} cm, E = ${bd.E} kgf/cm²
+                        </div>
+                        <div class="grid-equal-2">
+                            <div>
+                                <div style="font-weight: 800; font-size: 12px; margin-bottom: 4px;">Matriz de Rigidez Local [k]₆ₓ₆ (kgf y cm):</div>
+                                <div class="table-scroll">
+                                    <table class="excel-table">
+                                        <thead>
+                                            <tr>
+                                                <th>GDL</th>
+                                                ${labels.map(l => `<th>${l}</th>`).join('')}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${kl.map((row, rI) => `
+                                                <tr>
+                                                    <td class="cell-auto-subhdr">${labels[rI]}</td>
+                                                    ${row.map((val, cI) => `<td style="${rI === cI ? 'background: #C6EFCE; font-weight:800;' : ''}">${val.toFixed(2)}</td>`).join('')}
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-weight: 800; font-size: 12px; margin-bottom: 4px;">Matriz Extendida [K_ext]₆ₓ₃₆ (Ensamblaje Global):</div>
+                                <div class="table-scroll" style="max-height: 220px;">
+                                    <table class="excel-table">
+                                        <thead>
+                                            <tr>
+                                                <th>GDL</th>
+                                                ${currentSolution.gdlAllLabels.map(l => `<th style="font-size:10px;">${l}</th>`).join('')}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${ke.map((row, rI) => `
+                                                <tr>
+                                                    <td class="cell-auto-subhdr">${labels[rI]}</td>
+                                                    ${row.map(val => `<td style="font-size:10px; ${val !== 0 ? 'background:#FFF2CC; font-weight:800;' : 'color:#94a3b8;'}">${val !== 0 ? val.toFixed(1) : '0'}</td>`).join('')}
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        const dofs = sol.allDofLabels;
-        let thHeaders = dofs.map(d => `<th>${d}</th>`).join('');
-
-        let matrixRows = '';
-        for (let i = 0; i < 12; i++) {
-            let cells = '';
-            for (let j = 0; j < 12; j++) {
-                const val = sol.Karmadura[i][j];
-                const isDiag = (i === j);
-                const isNonZero = Math.abs(val) > 1e-4;
-                const cellClass = isDiag ? 'matrix-diag' : (isNonZero ? '' : 'style="color: var(--text-dim);"');
-
-                cells += `<td ${isDiag ? 'class="matrix-diag"' : (isNonZero ? '' : 'style="color: var(--text-dim);"')}>${isNonZero ? val.toFixed(0) : '0'}</td>`;
-            }
-            matrixRows += `
-                <tr>
-                    <td style="background: var(--bg-panel); color: var(--accent-sky); font-weight: 700; text-align: center;">${dofs[i]}</td>
-                    ${cells}
-                </tr>
-            `;
-        }
-
-        container.innerHTML = `
-            <div class="mini-card">
-                <div class="mini-card-head" style="color: #ffffff;">
-                    <span>Matriz de Rigidez Ensamblada [Karmadura] (12 × 12)</span>
-                    <span class="mini-card-formula" style="color: #34d399;">Diagonal Principal Resaltada en Verde</span>
+        // PANE 2: MATRIZ GLOBAL 36x36
+        const paneGlobal = document.getElementById('paneGlobalK');
+        if (paneGlobal && currentSolution.K_global) {
+            const kg = currentSolution.K_global;
+            const labels = currentSolution.gdlAllLabels;
+            paneGlobal.innerHTML = `
+                <div style="font-weight: 800; font-size: 12px; margin-bottom: 6px;">
+                    Matriz de Rigidez Global Ensamblada [K]₃₆ₓ₃₆ (Diagonal principal resaltada en verde):
                 </div>
-                <div class="matrix-scroll-wrap">
-                    <table class="matrix-table">
+                <div class="table-scroll" style="max-height: 520px;">
+                    <table class="excel-table">
                         <thead>
                             <tr>
                                 <th>GDL</th>
-                                ${thHeaders}
+                                ${labels.map(l => `<th style="font-size: 10px;">${l}</th>`).join('')}
                             </tr>
                         </thead>
-                        <tbody>${matrixRows}</tbody>
+                        <tbody>
+                            ${kg.map((row, rI) => `
+                                <tr>
+                                    <td class="cell-auto-subhdr" style="font-size: 10px;">${labels[rI]}</td>
+                                    ${row.map((val, cI) => `
+                                        <td style="font-size: 10px; ${rI === cI ? 'background: #C6EFCE; font-weight:900;' : (val !== 0 ? 'background: #FFFFFF;' : 'color: #94a3b8;')}">
+                                            ${val !== 0 ? val.toFixed(1) : '0'}
+                                        </td>
+                                    `).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
                     </table>
                 </div>
-            </div>
-        `;
+            `;
+        }
+
+        // PANE 3: ECUACIÓN COMPLETA [C] = [K][D]
+        const paneFull = document.getElementById('paneFullEq');
+        if (paneFull && currentSolution.equationRows) {
+            paneFull.innerHTML = `
+                <div style="font-weight: 800; font-size: 12px; margin-bottom: 6px;">
+                    Ecuación Matricial Completa: [C] = [K] · [D] (Filas restringidas resaltadas en amarillo brillante):
+                </div>
+                <div class="table-scroll" style="max-height: 520px;">
+                    <table class="excel-table">
+                        <thead>
+                            <tr>
+                                <th>GDL</th>
+                                <th>[C]</th>
+                                <th>=</th>
+                                ${currentSolution.gdlAllLabels.map(l => `<th style="font-size: 10px;">${l}</th>`).join('')}
+                                <th>*</th>
+                                <th>[D]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${currentSolution.equationRows.map(er => `
+                                <tr style="${er.isRestricted ? 'background: #FFFF00; font-weight: 800;' : ''}">
+                                    <td class="cell-auto-subhdr">${er.uLbl}</td>
+                                    <td class="cell-auto-celeste">${er.C_expr}</td>
+                                    <td>=</td>
+                                    ${er.K_row.map((val, cI) => `
+                                        <td style="font-size: 10px; ${er.dofIndex === cI ? 'background: #C6EFCE; font-weight: 900;' : (val !== 0 ? '' : 'color: #94a3b8;')}">
+                                            ${val !== 0 ? val.toFixed(1) : '0'}
+                                        </td>
+                                    `).join('')}
+                                    <td>*</td>
+                                    <td class="cell-auto-green font-mono">${er.D_expr}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // PANE 4: REDUCIDA [K_LL] E INVERSA
+        const paneRedKLL = document.getElementById('paneReducedKLL');
+        if (paneRedKLL && currentSolution.K_LL) {
+            const kll = currentSolution.K_LL;
+            const kllInv = currentSolution.K_LL_inv;
+            const fDofs = currentSolution.freeDofs;
+            paneRedKLL.innerHTML = `
+                <div class="grid-equal-2">
+                    <div>
+                        <div style="font-weight: 800; font-size: 12px; margin-bottom: 6px;">
+                            Matriz Reducida de Grados Libres [K_LL] (${fDofs.length}×${fDofs.length}):
+                        </div>
+                        <div class="table-scroll">
+                            <table class="excel-table">
+                                <thead>
+                                    <tr>
+                                        <th>GDL</th>
+                                        ${fDofs.map(f => `<th>${f.uLbl}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${kll.map((row, rI) => `
+                                        <tr>
+                                            <td class="cell-auto-subhdr">${fDofs[rI].uLbl}</td>
+                                            ${row.map(val => `<td>${val.toFixed(2)}</td>`).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; font-size: 12px; margin-bottom: 6px;">
+                            Matriz Inversa [K_LL]⁻¹ (Equivalente a MINVERSE en Excel):
+                        </div>
+                        <div class="table-scroll">
+                            <table class="excel-table">
+                                <thead>
+                                    <tr>
+                                        <th>GDL</th>
+                                        ${fDofs.map(f => `<th>${f.uLbl}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${kllInv.map((row, rI) => `
+                                        <tr>
+                                            <td class="cell-auto-subhdr">${fDofs[rI].uLbl}</td>
+                                            ${row.map(val => `<td class="font-mono">${val.toExponential(4)}</td>`).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // PANE 5: REDUCIDA [K_RL]
+        const paneRedKRL = document.getElementById('paneReducedKRL');
+        if (paneRedKRL && currentSolution.K_RL) {
+            const krl = currentSolution.K_RL;
+            const fDofs = currentSolution.freeDofs;
+            const rDofs = currentSolution.restDofs;
+            paneRedKRL.innerHTML = `
+                <div style="font-weight: 800; font-size: 12px; margin-bottom: 6px;">
+                    Ecuación Matricial Reducida para Cargas y Reacciones: [C_restringidos] = [K_RL] · [D_libres]:
+                </div>
+                <div class="table-scroll">
+                    <table class="excel-table">
+                        <thead>
+                            <tr>
+                                <th>GDL APOYO</th>
+                                <th>[C_apoyo]</th>
+                                <th>=</th>
+                                ${fDofs.map(f => `<th>${f.uLbl}</th>`).join('')}
+                                <th>*</th>
+                                <th>[D_libres]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${krl.map((row, rI) => `
+                                <tr>
+                                    <td class="cell-auto-peach">${rDofs[rI].uLbl}</td>
+                                    <td class="cell-auto-yellow">${rDofs[rI].C_expr}</td>
+                                    <td>=</td>
+                                    ${row.map(val => `<td>${val.toFixed(2)}</td>`).join('')}
+                                    <td>*</td>
+                                    <td class="cell-auto-green font-mono">${currentSolution.calculatedDisplacements[rI] ? currentSolution.calculatedDisplacements[rI].value.toFixed(8) : ''}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
     }
 
-    // 10. Control de Pestañas
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetTab = btn.dataset.tab;
-            tabButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            document.querySelectorAll('.tab-content').forEach(tc => {
-                tc.classList.remove('active');
-                tc.style.display = 'none';
-            });
-            const targetEl = document.getElementById(targetTab);
-            if (targetEl) {
-                targetEl.classList.add('active');
-                targetEl.style.display = 'block';
+    // ── GESTIÓN DE DESCARGAS (PNG Y EXCEL .XLSX) ─────────────────
+    function setupDownloadButtons() {
+        // Descargar PNG
+        const triggerPNG = () => {
+            const cv = document.getElementById('canvasGraficaFinal');
+            if (cv && window.BeamCanvas) {
+                BeamCanvas.downloadGraficaFinalPNG(cv, '6TO_GRAFICA_FINAL_VIGA_ULIANOV.png');
             }
-        });
-    });
+        };
 
-    // 11. Carga de Presets Rápidos
-    const presetSelect = document.getElementById('presetSelect');
-    if (presetSelect) {
-        presetSelect.addEventListener('change', () => {
-            const key = presetSelect.value;
-            if (PRESETS[key]) {
-                state.currentPresetKey = key;
-                state.nodes = JSON.parse(JSON.stringify(PRESETS[key].nodes));
-                state.bars = JSON.parse(JSON.stringify(PRESETS[key].bars));
-                renderTables();
-                recalculateAndRender(true);
-            }
-        });
-    }
+        const btnTopPNG = document.getElementById('btnTopDownloadPNG');
+        const btnMainPNG = document.getElementById('btnDownloadPNGMain');
+        if (btnTopPNG) btnTopPNG.addEventListener('click', triggerPNG);
+        if (btnMainPNG) btnMainPNG.addEventListener('click', triggerPNG);
 
-    // 12. Controles de Barra de Herramientas del Canvas
-    const btnFitView = document.getElementById('btnFitView');
-    if (btnFitView) btnFitView.addEventListener('click', () => renderer.fitView());
-
-    const btnZoomIn = document.getElementById('btnZoomIn');
-    if (btnZoomIn) {
-        btnZoomIn.addEventListener('click', () => {
-            renderer.view.scale *= 1.25;
-            renderer.render();
-        });
-    }
-
-    const btnZoomOut = document.getElementById('btnZoomOut');
-    if (btnZoomOut) {
-        btnZoomOut.addEventListener('click', () => {
-            renderer.view.scale *= 0.8;
-            renderer.render();
-        });
-    }
-
-    const toggleDeform = document.getElementById('toggleDeformed');
-    if (toggleDeform) {
-        toggleDeform.addEventListener('change', (e) => {
-            renderer.options.showDeformed = e.target.checked;
-            renderer.render();
-        });
-    }
-
-    const deformSlider = document.getElementById('deformScaleSlider');
-    if (deformSlider) {
-        deformSlider.addEventListener('input', (e) => {
-            renderer.options.deformScale = parseFloat(e.target.value);
-            const lbl = document.getElementById('deformScaleVal');
-            if (lbl) lbl.textContent = `${e.target.value}x`;
-            if (renderer.options.showDeformed) renderer.render();
-        });
-    }
-
-    const toggleForces = document.getElementById('toggleForces');
-    if (toggleForces) {
-        toggleForces.addEventListener('change', (e) => {
-            renderer.options.colorByForce = e.target.checked;
-            renderer.render();
-        });
-    }
-
-    const toggleGrid = document.getElementById('toggleGrid');
-    if (toggleGrid) {
-        toggleGrid.addEventListener('change', (e) => {
-            renderer.options.showGrid = e.target.checked;
-            renderer.render();
-        });
-    }
-
-    const btnExportImg = document.getElementById('btnExportImg');
-    if (btnExportImg) {
-        btnExportImg.addEventListener('click', () => {
-            const dataUrl = renderer.exportImage();
-            const a = document.createElement('a');
-            a.href = dataUrl;
-            a.download = `Armadura_Grafica_${Date.now()}.png`;
-            a.click();
-        });
-    }
-
-    // 13. BOTÓN MAESTRO DE DESCARGA (PDF O EXCEL SEGÚN PERMISOS VIP)
-    const btnDownloadExcel = document.getElementById('btnDownloadExcel');
-    if (btnDownloadExcel) {
-        btnDownloadExcel.addEventListener('click', async () => {
-            try {
-                btnDownloadExcel.disabled = true;
-                const originalHtml = btnDownloadExcel.innerHTML;
-                const isIsostatic = (state.solution && state.solution.gh === 0);
-                const prefix = isIsostatic ? "Isostatica" : "Hiperestatica";
-                const hasExcel = window.CerebroAuth && window.CerebroAuth.hasExcelPermission();
-
-                if (hasExcel) {
-                    // DESCARGA DE EXCEL .XLSX (Solo para Dueño o Alumno con Permiso VIP)
-                    btnDownloadExcel.innerHTML = `
-                        <svg class="animate-spin" style="animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
-                            <path d="M12 2a10 10 0 0 1 10 10"></path>
-                        </svg> Generando Excel VIP...
-                    `;
-
-                    const filename = `Plantilla_Armaduras_${prefix}_Catedra_Ulianov_${Date.now().toString().slice(-4)}.xlsx`;
-                    await ExcelGenerator.downloadTrussExcel(state.nodes, state.bars, isIsostatic, filename, state.solverResult);
-
-                    btnDownloadExcel.innerHTML = `✔ ¡Excel VIP Descargado!`;
-                    btnDownloadExcel.style.background = "#047857";
-                } else {
-                    // DESCARGA DE INFORME TÉCNICO EN PDF (Para Alumno Normal - Protege Fórmulas)
-                    btnDownloadExcel.innerHTML = `
-                        <svg class="animate-spin" style="animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
-                            <path d="M12 2a10 10 0 0 1 10 10"></path>
-                        </svg> Generando Informe PDF...
-                    `;
-
-                    const canvasImg = renderer ? renderer.exportImage() : null;
-                    const pdfFilename = `Informe_Calculo_Armadura_${prefix}_Ulianov_${Date.now().toString().slice(-4)}.pdf`;
-                    await PDFGenerator.downloadTrussPDF(state.nodes, state.bars, state.solution, canvasImg, pdfFilename);
-
-                    btnDownloadExcel.innerHTML = `✔ ¡Informe PDF Descargado!`;
-                    btnDownloadExcel.style.background = "#0284c7";
-
-                    // Mostrar modal informativo de Licencia VIP de Excel al alumno
-                    if (window.CerebroAuth && window.CerebroAuth.showExcelVipNotice) {
-                        window.CerebroAuth.showExcelVipNotice();
-                    }
-                }
-
-                setTimeout(() => {
-                    btnDownloadExcel.disabled = false;
-                    btnDownloadExcel.innerHTML = originalHtml;
-                    btnDownloadExcel.style.background = "";
-                }, 2500);
-            } catch (err) {
-                console.error("Error al generar archivo:", err);
-                alert("Ocurrió un error al generar el archivo: " + err.message);
-                btnDownloadExcel.disabled = false;
-                btnDownloadExcel.innerHTML = `Descargar Reporte de Cálculo`;
-            }
-        });
-    }
-
-    // 13.1 BOTÓN DEDICADO PARA DESCARGA DE INFORME TÉCNICO EN PDF
-    const btnDownloadPDF = document.getElementById('btnDownloadPDF');
-    if (btnDownloadPDF) {
-        btnDownloadPDF.addEventListener('click', async () => {
-            if (!state.solution || !state.solution.success) {
-                alert("La estructura no es cinemáticamente estable o no se ha calculado.");
+        // Descargar Excel (.xlsx)
+        const triggerExcel = async () => {
+            if (window.CerebroAuth && !CerebroAuth.isAuthorized()) {
+                alert('🔒 Para descargar la PLANTILLA ULIANOV en Excel (.xlsx) debes iniciar sesión con tu cuenta.');
+                CerebroAuth.lock();
                 return;
             }
-            try {
-                btnDownloadPDF.disabled = true;
-                const originalHtml = btnDownloadPDF.innerHTML;
-                btnDownloadPDF.innerHTML = `
-                    <svg class="animate-spin" style="animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
-                        <path d="M12 2a10 10 0 0 1 10 10"></path>
-                    </svg> Generando PDF...
-                `;
 
-                const isIsostatic = (state.solution && state.solution.gh === 0);
-                const prefix = isIsostatic ? "Isostatica" : "Hiperestatica";
-                const canvasImg = renderer ? renderer.exportImage() : null;
-                const pdfFilename = `Informe_Calculo_Armadura_${prefix}_Ulianov_${Date.now().toString().slice(-4)}.pdf`;
-                await PDFGenerator.downloadTrussPDF(state.nodes, state.bars, state.solution, canvasImg, pdfFilename);
-
-                btnDownloadPDF.innerHTML = `✔ ¡Informe PDF Descargado!`;
-                btnDownloadPDF.style.background = "#0284c7";
-
-                setTimeout(() => {
-                    btnDownloadPDF.disabled = false;
-                    btnDownloadPDF.innerHTML = originalHtml;
-                    btnDownloadPDF.style.background = "";
-                }, 2500);
-            } catch (err) {
-                console.error("Error al generar PDF:", err);
-                alert("Ocurrió un error al generar el PDF: " + err.message);
-                btnDownloadPDF.disabled = false;
-                btnDownloadPDF.innerHTML = `Descargar PDF`;
+            if (window.BeamExcelGenerator) {
+                try {
+                    await BeamExcelGenerator.downloadBeamExcel(currentState, 'PLANTILLA_ULIANOV_VIGAS_12_NODOS_METODO_RIGIDEZ.xlsx');
+                } catch (e) {
+                    alert('Error generando Excel: ' + e.message);
+                }
+            } else {
+                alert('Generador Excel no disponible.');
             }
-        });
+        };
+
+        const btnTopXlsx = document.getElementById('btnTopDownloadExcel');
+        const btnMainXlsx = document.getElementById('btnDownloadExcelMain');
+        if (btnTopXlsx) btnTopXlsx.addEventListener('click', triggerExcel);
+        if (btnMainXlsx) btnMainXlsx.addEventListener('click', triggerExcel);
     }
 
-    // API de integración para Proyectos y Guardado
+    // API pública de la aplicación
     window.CerebroApp = {
-        getCurrentData: () => ({
-            nodes: JSON.parse(JSON.stringify(state.nodes)),
-            bars: JSON.parse(JSON.stringify(state.bars))
-        }),
-        loadProjectData: (newNodes, newBars) => {
-            state.nodes = JSON.parse(JSON.stringify(newNodes));
-            state.bars = JSON.parse(JSON.stringify(newBars));
-            renderTables();
-            recalculateAndRender(true);
-        }
+        getCurrentState: () => JSON.parse(JSON.stringify(currentState)),
+        getSolution: () => currentSolution,
+        loadState: (newState) => {
+            if (newState) {
+                currentState = JSON.parse(JSON.stringify(newState));
+                loadStateIntoUI();
+            }
+        },
+        recompute: recomputeAll
     };
 
-    // Inicialización inicial
-    renderTables();
-    recalculateAndRender(true);
-});
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();

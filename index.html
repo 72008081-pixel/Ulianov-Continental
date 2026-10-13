@@ -3,1029 +3,845 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEREBRO ESTRUCTURAL v3.0 | Armaduras Planas & Generador de Excel Automatizado (Parche 3.0)</title>
-    <!-- Google Identity Services (GIS) Oficial -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <title>CEREBRO ESTRUCTURAL v4.0 — Edición Vigas (PLANTILLA ULIANOV)</title>
     <style>
-        /* ── VARIABLES & DESIGN SYSTEM ───────────────────────────── */
         :root {
-            --bg-body:       #090d16;
-            --bg-card:       #111827;
-            --bg-panel:      #1a2333;
-            --bg-input:      #0d1424;
-            --border-subtle: #1e293b;
-            --border-muted:  #334155;
-            --border-focus:  #38bdf8;
-            --text-main:     #f8fafc;
-            --text-muted:    #94a3b8;
-            --text-dim:      #64748b;
-            --accent-sky:    #38bdf8;
-            --accent-emerald:#10b981;
-            --accent-rose:   #f43f5e;
-            --accent-amber:  #fbbf24;
-            --accent-indigo: #818cf8;
-            --radius-sm:     6px;
-            --radius-md:     10px;
-            --radius-lg:     14px;
-            --font-sans:     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            --font-mono:     "Consolas", "Courier New", monospace;
+            --bg-page: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #000000;
+            --text-dark: #0f172a;
+            --text-muted: #334155;
+            --border-dark: #64748b;
+            --border-light: #cbd5e1;
+            --excel-yellow: #FFF2CC;
+            --excel-yellow-bright: #FFFF00;
+            --excel-celeste: #CCECFF;
+            --excel-header: #B4C6E7;
+            --excel-subhdr: #D9E1F2;
+            --excel-green: #C6EFCE;
+            --excel-green-soft: #E2EFDA;
+            --excel-peach: #FCE4D6;
+            --excel-lavender: #EDEDFA;
+            --accent-blue: #1d4ed8;
+            --accent-green: #15803d;
+            --accent-purple: #742284;
         }
 
-        *, *::before, *::after {
+        * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
 
-        html, body {
-            min-height: 100vh;
-            background-color: var(--bg-body);
+        body {
+            background-color: var(--bg-page);
             color: var(--text-main);
-            font-family: var(--font-sans);
+            font-family: 'Segoe UI', Calibri, Arial, sans-serif;
             font-size: 13px;
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
+            line-height: 1.45;
+            padding-bottom: 60px;
         }
 
-        /* ── SCROLLBARS ─────────────────────────────────────────── */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-body); }
-        ::-webkit-scrollbar-thumb { background: var(--border-muted); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-
-        /* ── HEADER SUPERIOR ────────────────────────────────────── */
-        .header-nav {
-            background: rgba(17, 24, 39, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--border-subtle);
+        /* ── BARRA SUPERIOR CLARA ── */
+        .topbar {
             position: sticky;
             top: 0;
-            z-index: 50;
-            padding: 10px 20px;
-        }
-
-        .header-inner {
-            max-width: 1440px;
-            margin: 0 auto;
+            z-index: 1000;
+            background: #ffffff;
+            border-bottom: 2px solid #94a3b8;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+            padding: 10px 18px;
             display: flex;
-            align-items: center;
             justify-content: space-between;
+            align-items: center;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 10px;
         }
 
-        .brand-box {
+        .brand-wrap {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
         .brand-logo {
-            width: 38px;
-            height: 38px;
-            border-radius: var(--radius-md);
-            background: linear-gradient(135deg, #0284c7 0%, #10b981 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
-            flex-shrink: 0;
-        }
-
-        .brand-title-wrap h1 {
+            background: var(--excel-header);
+            border: 2px solid #000000;
+            color: #000000;
+            font-weight: 900;
             font-size: 15px;
-            font-weight: 800;
-            letter-spacing: -0.3px;
-            color: #ffffff;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            padding: 5px 10px;
+            border-radius: 8px;
         }
 
-        .brand-badge {
-            font-size: 10px;
+        .brand-title {
+            font-size: 16px;
+            font-weight: 900;
+            color: #000000;
+        }
+
+        .brand-sub {
+            font-size: 11.5px;
+            color: #334155;
             font-weight: 700;
-            color: #38bdf8;
-            background: rgba(56, 189, 248, 0.12);
-            padding: 2px 7px;
-            border-radius: 99px;
-            border: 1px solid rgba(56, 189, 248, 0.3);
         }
 
-        .brand-subtitle {
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-top: 1px;
-        }
-
-        .header-controls {
+        .topbar-actions {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
 
-        /* ── PRESET SELECTOR ────────────────────────────────────── */
-        .select-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: var(--bg-panel);
-            border: 1px solid var(--border-muted);
-            border-radius: var(--radius-sm);
-            padding: 4px 10px;
-        }
-
-        .select-label {
-            font-size: 11px;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        .preset-select {
-            background: transparent;
-            color: var(--accent-sky);
-            font-size: 12px;
-            font-weight: 700;
-            border: none;
-            outline: none;
-            cursor: pointer;
-            padding: 2px 4px;
-        }
-
-        .preset-select option {
-            background: var(--bg-card);
-            color: var(--text-main);
-        }
-
-        /* ── BUTTONS ────────────────────────────────────────────── */
         .btn {
             display: inline-flex;
             align-items: center;
-            gap: 7px;
+            gap: 6px;
+            padding: 7px 13px;
+            border-radius: 8px;
             font-size: 12px;
-            font-weight: 700;
-            padding: 7px 14px;
-            border-radius: var(--radius-sm);
-            border: 1px solid transparent;
+            font-weight: 800;
             cursor: pointer;
-            text-decoration: none;
+            border: 1.5px solid #000000;
+            color: #000000;
+            background: #ffffff;
             transition: all 0.15s ease;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.12);
         }
 
         .btn-excel {
-            background: #107c41;
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(16, 124, 65, 0.35);
-            border-color: rgba(255, 255, 255, 0.15);
+            background: var(--excel-green);
+            border-color: #15803d;
+            color: #000000;
         }
 
-        .btn-excel:hover {
-            background: #15934f;
-            transform: translateY(-1px);
+        .btn-png {
+            background: var(--excel-celeste);
+            border-color: #0284c7;
+            color: #000000;
         }
 
-        .btn-excel:active {
-            transform: translateY(0);
+        .btn-yellow {
+            background: var(--excel-yellow);
+            border-color: #ca8a04;
+            color: #000000;
         }
 
-        .btn-excel:disabled {
-            opacity: 0.6;
-            cursor: wait;
+        .btn-community {
+            background: #f3e8ff;
+            border-color: #7e22ce;
+            color: #000000;
         }
 
-        .btn-secondary {
-            background: var(--bg-panel);
-            color: var(--text-main);
-            border-color: var(--border-muted);
+        /* ── CONTENEDOR PRINCIPAL ── */
+        .container {
+            max-width: 1460px;
+            margin: 14px auto;
+            padding: 0 14px;
         }
 
-        .btn-secondary:hover {
-            border-color: var(--border-focus);
-            color: var(--accent-sky);
-        }
-
-        /* ── STATUS STRIP ───────────────────────────────────────── */
-        .status-strip {
-            background: var(--bg-body);
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 6px 20px;
-        }
-
-        .status-strip-inner {
-            max-width: 1440px;
-            margin: 0 auto;
+        /* ── BANNER ESTILO EXCEL ── */
+        .excel-banner {
+            background: var(--excel-celeste);
+            border: 2px solid #000000;
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin-bottom: 14px;
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .status-badges-group {
-            display: flex;
             align-items: center;
-            gap: 8px;
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 3px 10px;
-            border-radius: 99px;
-            font-size: 11px;
-            font-weight: 700;
-            border: 1px solid;
-            transition: all 0.2s ease;
-        }
-
-        .badge-green {
-            background: rgba(16, 185, 129, 0.12);
-            color: #34d399;
-            border-color: rgba(16, 185, 129, 0.4);
-        }
-
-        .badge-blue {
-            background: rgba(56, 189, 248, 0.12);
-            color: #38bdf8;
-            border-color: rgba(56, 189, 248, 0.4);
-        }
-
-        .badge-amber {
-            background: rgba(251, 191, 36, 0.12);
-            color: #fbbf24;
-            border-color: rgba(251, 191, 36, 0.4);
-        }
-
-        .badge-red {
-            background: rgba(244, 63, 94, 0.12);
-            color: #f43f5e;
-            border-color: rgba(244, 63, 94, 0.4);
-        }
-
-        .status-hint {
-            font-size: 11px;
-            color: var(--text-dim);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .status-hint-highlight {
-            color: var(--accent-sky);
-            font-family: var(--font-mono);
-            font-weight: 600;
-        }
-
-        /* ── WORKSPACE GRID ─────────────────────────────────────── */
-        .workspace {
-            max-width: 1440px;
-            margin: 0 auto;
-            padding: 16px 20px;
-            display: grid;
-            grid-template-columns: 1fr 440px;
-            gap: 16px;
-            align-items: start;
-        }
-
-        /* ── CANVAS CARD ────────────────────────────────────────── */
-        .canvas-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-        }
-
-        .canvas-toolbar {
-            background: var(--bg-panel);
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 8px 14px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .toolbar-group {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .tool-btn {
-            background: var(--bg-card);
-            color: var(--text-muted);
-            border: 1px solid var(--border-muted);
-            border-radius: var(--radius-sm);
-            padding: 4px 9px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-
-        .tool-btn:hover {
-            color: var(--text-main);
-            border-color: var(--border-focus);
-        }
-
-        .toolbar-divider {
-            width: 1px;
-            height: 14px;
-            background: var(--border-muted);
-            margin: 0 4px;
-        }
-
-        .canvas-options {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .chk-label {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 11px;
-            color: var(--text-muted);
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .chk-label:hover {
-            color: var(--text-main);
-        }
-
-        .chk-label input[type="checkbox"] {
-            accent-color: var(--accent-sky);
-            cursor: pointer;
-        }
-
-        .deform-control {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .deform-control input[type="range"] {
-            width: 65px;
-            accent-color: var(--accent-sky);
-            cursor: pointer;
-        }
-
-        .deform-value {
-            font-size: 10px;
-            font-family: var(--font-mono);
-            color: var(--text-dim);
-            min-width: 30px;
-        }
-
-        .canvas-stage {
-            position: relative;
-            width: 100%;
-            height: 520px;
-            background: radial-gradient(ellipse at 50% 50%, #162032 0%, #090d16 100%);
-        }
-
-        #trussCanvas {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            cursor: crosshair;
-        }
-
-        .canvas-footer-legend {
-            background: var(--bg-panel);
-            border-top: 1px solid var(--border-subtle);
-            padding: 8px 14px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
             flex-wrap: wrap;
             gap: 10px;
-            font-size: 11px;
-            color: var(--text-muted);
         }
 
-        .legend-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 11px;
+        .excel-banner h1 {
+            font-size: 16px;
+            font-weight: 900;
+            color: #000000;
         }
 
-        .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
+        .excel-banner p {
+            font-size: 12px;
+            color: #0f172a;
+            font-weight: 600;
         }
-        .dot-tension { background: #38bdf8; }
-        .dot-compress { background: #f43f5e; }
-        .dot-zero { background: #94a3b8; }
 
-        /* ── SIDEBAR TABLES ─────────────────────────────────────── */
-        .sidebar-container {
+        /* ── TARJETAS DE SECCIÓN ── */
+        .section-card {
+            background: var(--bg-card);
+            border: 2px solid #94a3b8;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        }
+
+        .section-header {
+            background: var(--excel-header);
+            border-bottom: 2px solid #000000;
+            padding: 9px 14px;
+            font-size: 13.5px;
+            font-weight: 900;
+            color: #000000;
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .section-header.yellow-hdr {
+            background: var(--excel-yellow-bright);
+        }
+
+        .section-header.celeste-hdr {
+            background: var(--excel-celeste);
+        }
+
+        .section-header.green-hdr {
+            background: var(--excel-green);
+        }
+
+        .section-body {
+            padding: 14px;
+        }
+
+        /* ── TABLAS ESTILO EXCEL CLÁSICO ── */
+        .table-scroll {
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        table.excel-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            color: #000000;
+        }
+
+        table.excel-table th {
+            background: var(--excel-header);
+            color: #000000;
+            font-weight: 800;
+            border: 1px solid #000000;
+            padding: 6px 8px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        table.excel-table td {
+            border: 1px solid #475569;
+            padding: 4px 6px;
+            text-align: center;
+            color: #000000;
+            white-space: nowrap;
+        }
+
+        .cell-input {
+            background-color: var(--excel-yellow) !important;
+            padding: 2px !important;
+        }
+
+        .cell-input input, .cell-input select {
+            width: 100%;
+            min-width: 68px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #000000;
+            font-weight: 800;
+            font-size: 12px;
+            font-family: inherit;
+            text-align: center;
+            padding: 4px 4px;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .cell-input input:focus, .cell-input select:focus {
+            background: #ffffff;
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.2);
+        }
+
+        .cell-auto-green {
+            background-color: var(--excel-green) !important;
+            font-weight: 800;
+        }
+
+        .cell-auto-softgreen {
+            background-color: var(--excel-green-soft) !important;
+            font-weight: 700;
+        }
+
+        .cell-auto-celeste {
+            background-color: var(--excel-celeste) !important;
+            font-weight: 800;
+        }
+
+        .cell-auto-peach {
+            background-color: var(--excel-peach) !important;
+            font-weight: 800;
+        }
+
+        .cell-auto-subhdr {
+            background-color: var(--excel-subhdr) !important;
+            font-weight: 800;
+        }
+
+        .cell-restricted-row td {
+            background-color: var(--excel-yellow-bright) !important;
+            font-weight: 800;
+        }
+
+        /* ── GRILLAS DE DISEÑO ── */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1.35fr 0.65fr;
             gap: 14px;
         }
 
-        .card-table {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-        }
-
-        .card-table-header {
-            background: var(--bg-panel);
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 9px 14px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .card-table-title {
-            font-size: 11.5px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #ffffff;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .card-table-units {
-            font-size: 10px;
-            font-family: var(--font-mono);
-            color: var(--text-dim);
-        }
-
-        .table-scroll {
-            max-height: 240px;
-            overflow-y: auto;
-            overflow-x: auto;
-        }
-
-        .interactive-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-        }
-
-        .interactive-table thead th {
-            background: rgba(13, 20, 36, 0.9);
-            color: var(--text-muted);
-            font-weight: 700;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            padding: 6px 4px;
-            text-align: center;
-            border-bottom: 1px solid var(--border-subtle);
-            position: sticky;
-            top: 0;
-            z-index: 2;
-        }
-
-        .interactive-table tbody tr {
-            border-bottom: 1px solid rgba(30, 41, 59, 0.6);
-            transition: background-color 0.1s ease;
-        }
-
-        .interactive-table tbody tr:hover {
-            background: rgba(255, 255, 255, 0.03);
-        }
-
-        .interactive-table td {
-            padding: 3px 4px;
-            vertical-align: middle;
-        }
-
-        .tbl-idx {
-            font-family: var(--font-mono);
-            font-weight: 800;
-            font-size: 11px;
-            text-align: center;
-            padding: 3px 6px;
-        }
-
-        /* ── INPUTS DENTRO DE TABLAS ────────────────────────────── */
-        .cell-input {
-            width: 100%;
-            background: var(--bg-input);
-            color: var(--text-main);
-            border: 1px solid var(--border-subtle);
-            border-radius: 4px;
-            padding: 4px 6px;
-            font-family: var(--font-mono);
-            font-size: 11px;
-            text-align: right;
-            outline: none;
-            transition: border-color 0.12s ease;
-        }
-
-        .cell-input:focus {
-            border-color: var(--border-focus);
-            background: #111a2e;
-        }
-
-        .cell-input-force {
-            color: #f59e0b;
-        }
-
-        .cell-input-force:focus {
-            border-color: #f59e0b;
-        }
-
-        .cell-select {
-            width: 100%;
-            background: #111a2e;
-            color: #38bdf8;
-            border: 1px solid #334155;
-            border-radius: 6px;
-            padding: 5px 6px;
-            font-size: 11.5px;
-            font-weight: 700;
-            outline: none;
-            cursor: pointer;
-            min-height: 28px;
-            transition: all 0.15s ease;
-        }
-
-        .cell-select:focus {
-            border-color: #38bdf8;
-            box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
-        }
-
-        .cell-calc {
-            text-align: right;
-            font-family: var(--font-mono);
-            font-size: 10px;
-            color: var(--text-muted);
-            padding: 3px 6px;
-            white-space: nowrap;
-        }
-
-        /* ── DETAILED RESULTS TABS SECTION ──────────────────────── */
-        .bottom-section {
-            max-width: 1440px;
-            margin: 0 auto;
-            padding: 0 20px 30px;
-        }
-
-        .tabs-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-        }
-
-        .tabs-header-bar {
-            background: var(--bg-panel);
-            border-bottom: 1px solid var(--border-subtle);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 6px 12px 0;
-            overflow-x: auto;
-        }
-
-        .tab-btn {
-            background: transparent;
-            color: var(--text-muted);
-            border: none;
-            border-bottom: 2px solid transparent;
-            padding: 8px 14px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            white-space: nowrap;
-        }
-
-        .tab-btn:hover {
-            color: var(--text-main);
-        }
-
-        .tab-btn.active {
-            color: var(--accent-sky);
-            border-bottom-color: var(--accent-sky);
-        }
-
-        .tab-content {
-            padding: 16px;
-        }
-
-        /* ── MINI TABLES DENTRO DE RESULTADOS ───────────────────── */
-        .results-grid-2col {
+        .grid-equal-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 16px;
+            gap: 14px;
         }
 
-        .mini-card {
-            background: var(--bg-panel);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-md);
-            overflow: hidden;
+        @media (max-width: 1024px) {
+            .grid-2, .grid-equal-2 {
+                grid-template-columns: 1fr;
+            }
         }
 
-        .mini-card-head {
-            background: rgba(255, 255, 255, 0.02);
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 8px 12px;
+        /* ── ASISTENTE RÁPIDO DE LONGITUDES ── */
+        .quick-spans-bar {
+            background: #f8fafc;
+            border: 1.5px solid #94a3b8;
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
-        .mini-card-formula {
-            font-size: 10px;
-            font-family: var(--font-mono);
-            color: var(--text-dim);
-            font-weight: 400;
+        .span-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--excel-yellow);
+            border: 1.5px solid #ca8a04;
+            border-radius: 8px;
+            padding: 3px 8px;
+            font-size: 11.5px;
+            font-weight: 800;
         }
 
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
+        .span-pill input {
+            width: 56px;
+            border: 1px solid #94a3b8;
+            background: #ffffff;
+            color: #000000;
+            font-weight: 800;
+            text-align: center;
+            padding: 3px;
+            border-radius: 4px;
+            font-size: 12px;
         }
 
-        .results-table th {
-            padding: 5px 8px;
-            font-size: 10px;
-            text-transform: uppercase;
-            color: var(--text-dim);
-            border-bottom: 1px solid var(--border-subtle);
-            font-weight: 700;
+        /* ── PESTAÑAS DE MATRICES ── */
+        .matrix-tabs {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #cbd5e1;
+            padding-bottom: 8px;
         }
 
-        .results-table td {
-            padding: 5px 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-            font-family: var(--font-mono);
+        .matrix-tab-btn {
+            background: #f1f5f9;
+            border: 1.5px solid #64748b;
+            color: #000000;
+            font-weight: 800;
+            font-size: 12px;
+            padding: 7px 14px;
+            border-radius: 8px;
+            cursor: pointer;
         }
 
-        .force-badge {
-            display: inline-block;
-            padding: 1px 7px;
+        .matrix-tab-btn.active {
+            background: var(--excel-yellow-bright);
+            border-color: #000000;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        }
+
+        .status-pill-ok {
+            background: var(--excel-green);
+            border: 1.5px solid #15803d;
+            color: #000000;
+            padding: 4px 10px;
             border-radius: 99px;
-            font-size: 10px;
-            font-weight: 700;
-            border: 1px solid;
+            font-weight: 900;
+            font-size: 12px;
         }
 
-        .force-tension  { background: rgba(56, 189, 248, 0.1); color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); }
-        .force-compress { background: rgba(244, 63, 94, 0.1); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); }
-        .force-zero     { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border-color: rgba(148, 163, 184, 0.3); }
-
-        /* ── MATRIX VIEW (12x12) ────────────────────────────────── */
-        .matrix-scroll-wrap {
-            overflow-x: auto;
-            max-height: 400px;
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-md);
-        }
-
-        .matrix-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-family: var(--font-mono);
-            font-size: 10px;
-        }
-
-        .matrix-table th, .matrix-table td {
-            padding: 4px 6px;
-            text-align: right;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-        }
-
-        .matrix-table th {
-            background: var(--bg-panel);
-            color: var(--text-dim);
-            text-align: center;
-        }
-
-        .matrix-diag {
-            background: rgba(16, 185, 129, 0.12);
-            color: #34d399;
-            font-weight: 700;
-        }
-
-        /* ── FOOTER ─────────────────────────────────────────────── */
-        .footer {
-            border-top: 1px solid var(--border-subtle);
-            padding: 16px 20px;
-            text-align: center;
-            font-size: 11px;
-            color: var(--text-dim);
-        }
-
-        .footer a {
-            color: var(--accent-sky);
-            text-decoration: none;
-        }
-
-        .footer a:hover {
-            text-decoration: underline;
-        }
-
-        /* ── RESPONSIVE ADAPTATIONS ─────────────────────────────── */
-        @media (max-width: 1100px) {
-            .workspace {
-                grid-template-columns: 1fr;
-            }
-            .canvas-stage {
-                height: 440px;
-            }
-            .results-grid-2col {
-                grid-template-columns: 1fr;
-            }
+        .status-pill-err {
+            background: #fee2e2;
+            border: 1.5px solid #dc2626;
+            color: #991b1b;
+            padding: 4px 10px;
+            border-radius: 99px;
+            font-weight: 900;
+            font-size: 12px;
         }
     </style>
 </head>
 <body>
 
-    <!-- ══ HEADER SUPERIOR ══════════════════════════════════════════ -->
-    <header class="header-nav">
-        <div class="header-inner">
-            <div class="brand-box">
-                <div class="brand-logo">⚡</div>
-                <div class="brand-title-wrap">
-                    <h1>
-                        CEREBRO ESTRUCTURAL <span class="brand-badge">v3.0</span>
-                    </h1>
-                    <div class="brand-subtitle">Desarrollado por Ingeniero Ulianov Cuba Valencia — Cálculo Matricial y Exportador de Excel Nativo (Parche 3.0)</div>
-                </div>
+    <!-- ══ BARRA SUPERIOR DE NAVEGACIÓN Y ACCIONES ══ -->
+    <header class="topbar">
+        <div class="brand-wrap">
+            <div class="brand-logo">PLANTILLA ULIANOV v4.0</div>
+            <div>
+                <div class="brand-title">CEREBRO ESTRUCTURAL — ANÁLISIS MATRICIAL DE VIGAS (12 NUDOS Y 11 BARRAS)</div>
+                <div class="brand-sub">Método Directo de la Rigidez • Basado 100% en la Pestaña "PLANTILLA ULIANOV" • Parche v4.0</div>
             </div>
+        </div>
 
-            <div class="header-controls">
-                <div class="select-wrapper">
-                    <span class="select-label">Caso:</span>
-                    <select id="presetSelect" class="preset-select">
-                        <option value="isostatic_3n">Caso 1: Isostático (3N, 3B)</option>
-                        <option value="hyperstatic_4n">Caso 2: Hiperestático (4N, 6B)</option>
-                        <option value="warren_5n">Caso 3: Warren (5N, 7B)</option>
-                        <option value="roof_5n">Caso 4: Howe (5N, 7B)</option>
-                        <option value="blank">Modelo en Blanco</option>
-                    </select>
-                </div>
+        <div class="topbar-actions">
+            <span id="activeUserHeaderBadge" style="background: #f1f5f9; border: 1.5px solid #cbd5e1; padding: 5px 10px; border-radius: 99px; font-weight: 800; font-size: 11.5px;">
+                👤 Participante
+            </span>
 
-                <button id="btnSaveProject" class="btn btn-secondary" style="display: none;" title="Guardar armadura actual con nombre">
-                    💾 Guardar
-                </button>
+            <button type="button" id="btnCommunityMembers" class="btn btn-community" title="Ver a todos los integrantes registrados y votar / botar">
+                👥 Integrantes / Votar (<span id="badgeCommunityCount">1</span>)
+            </button>
 
-                <button id="btnMyProjects" class="btn btn-secondary" style="display: none;" title="Mis proyectos guardados">
-                    📂 Mis Armaduras
-                </button>
+            <button type="button" id="btnMyProjects" class="btn">
+                📂 Ejercicios / Enlaces
+            </button>
 
-                <a href="WEB_ARMADURAS_ULIANOV/index.html" class="btn btn-secondary" title="Ver desglose pedagógico en 13 tablas matriciales">
-                    📊 Ver 13 Tablas
-                </a>
+            <button type="button" id="btnSaveProject" class="btn btn-yellow">
+                💾 Guardar Viga
+            </button>
 
-                <button id="btnRelock" class="btn btn-secondary" style="font-size: 11px; padding: 6px 10px; display: none;" title="Bloquear aplicación">
-                    🔒 Bloquear
-                </button>
+            <button type="button" id="btnTopDownloadPNG" class="btn btn-png">
+                📸 Descargar 6° Gráfica Final (.PNG)
+            </button>
 
-                <button id="btnDownloadExcel" class="btn btn-excel" title="Descargar archivo Excel con fórmulas matemáticas nativas">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-                    </svg>
-                    Descargar Excel con Fórmulas
-                </button>
+            <button type="button" id="btnTopDownloadExcel" class="btn btn-excel">
+                📥 Descargar Excel PLANTILLA ULIANOV (.XLSX)
+            </button>
 
-                <button id="btnDownloadPDF" class="btn btn-secondary" style="border-color: #38bdf8; color: #e0f2fe; background: linear-gradient(135deg, #0284c7, #0369a1); font-weight: 700; display: inline-flex; align-items: center; gap: 6px;" title="Descargar Informe Técnico de Armadura en PDF">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                    </svg>
-                    Descargar PDF
-                </button>
-            </div>
+            <button type="button" id="btnOwnerPanel" class="btn" style="display: none; background: #fef08a; border-color: #ca8a04;">
+                👑 Panel Ulianov
+            </button>
+
+            <button type="button" id="btnRelock" class="btn" style="background: #fee2e2; border-color: #dc2626;">
+                🔒 Salir
+            </button>
         </div>
     </header>
 
-    <!-- ══ STATUS STRIP (ESTADO & EQUILIBRIO) ═══════════════════════ -->
-    <section class="status-strip">
-        <div class="status-strip-inner">
-            <div class="status-badges-group">
-                <span id="structuralStatusBadge" class="badge badge-green">
-                    Cargando estructura...
-                </span>
-                <span id="equilibriumBadge" class="badge badge-blue">
-                    Verificando equilibrio...
-                </span>
+    <main class="container">
+
+        <!-- ══ BANNER DE SELECCIÓN DE EJERCICIO Y ASISTENTE DE DISTANCIAS ══ -->
+        <div class="excel-banner">
+            <div>
+                <h1>📐 RESOLUCIÓN UNIVERSAL DE VIGAS CONTINUAS E INCLINADAS — PLANTILLA ULIANOV</h1>
+                <p>Celdas <span style="background:#FFF2CC; padding:1px 6px; border:1px solid #000; font-weight:800;">AMARILLAS</span> = Datos de entrada • Celdas <span style="background:#C6EFCE; padding:1px 6px; border:1px solid #000; font-weight:800;">VERDES / CELESTES</span> = Cálculo automático en tiempo real y en Excel.</p>
             </div>
-            <div class="status-hint">
-                <span>🖱️ Arrastrar para mover · Rueda para zoom</span>
-                <span>•</span>
-                <span class="status-hint-highlight">Fórmulas 100% nativas en Excel (=MINVERSE, =MMULT)</span>
-            </div>
-        </div>
-    </section>
-
-    <!-- ══ ESPACIO DE TRABAJO PRINCIPAL: CANVAS + TABLAS ═══════════ -->
-    <main class="workspace">
-
-        <!-- ── COLUMNA IZQUIERDA: CANVAS 2D EN VIVO ──────────────── -->
-        <div class="canvas-card">
-            <div class="canvas-toolbar">
-                <div class="toolbar-group">
-                    <span style="font-size: 11.5px; font-weight: 700; color: #ffffff;">📐 Gráfica en Vivo</span>
-                    <div class="toolbar-divider"></div>
-                    <button id="btnFitView" class="tool-btn" title="Centrar armadura en el área de dibujo">⟲ Centrar</button>
-                    <button id="btnZoomIn" class="tool-btn" title="Acercar vista">+</button>
-                    <button id="btnZoomOut" class="tool-btn" title="Alejar vista">−</button>
-                    <button id="btnExportImg" class="tool-btn" title="Exportar dibujo en imagen PNG">📷 PNG</button>
-                </div>
-
-                <div class="canvas-options">
-                    <label class="chk-label">
-                        <input type="checkbox" id="toggleGrid" checked> Cuadrícula
-                    </label>
-                    <label class="chk-label">
-                        <input type="checkbox" id="toggleForces" checked> Esfuerzos
-                    </label>
-                    <label class="chk-label" style="color: var(--accent-sky); font-weight: 600;">
-                        <input type="checkbox" id="toggleDeformed"> Deformada
-                    </label>
-                    <div class="deform-control">
-                        <input type="range" id="deformScaleSlider" min="10" max="500" value="100">
-                        <span id="deformScaleVal" class="deform-value">100x</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="canvas-stage">
-                <canvas id="trussCanvas"></canvas>
-            </div>
-
-            <div class="canvas-footer-legend">
-                <span>Orientación local: La flecha indica el vector Inicio &rarr; Fin de la barra</span>
-                <div style="display: flex; align-items: center; gap: 14px;">
-                    <span class="legend-indicator"><span class="dot dot-tension"></span> Tracción (+)</span>
-                    <span class="legend-indicator"><span class="dot dot-compress"></span> Compresión (−)</span>
-                    <span class="legend-indicator"><span class="dot dot-zero"></span> Nula</span>
-                </div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <label style="font-weight: 900; font-size: 12.5px;">📚 Cargar Ejercicio Base:</label>
+                <select id="selectPreset" style="background: #FFF2CC; border: 2px solid #000000; padding: 6px 10px; border-radius: 8px; font-weight: 800; font-size: 12.5px; color: #000000; cursor: pointer;">
+                    <option value="presentacion_pdf">1. Ejemplo Presentación PDF — 4 Nudos, 3 Barras (P=1200, Oblicua 2500, M=800)</option>
+                    <option value="cuaderno_distribuidas">2. Ejemplo Cuaderno — Viga con Cargas Distribuidas q (4 Nudos, 3 Barras)</option>
+                    <option value="ejemplos_ingeniero">3. Ejemplos del Ingeniero — Viga Continua de 7 Nudos y 6 Barras</option>
+                    <option value="viga_steiner_t">4. Viga con Sección Compuesta T por Teorema de Steiner (5 Nudos, 4 Barras)</option>
+                </select>
+                <button type="button" id="btnClearExercise" class="btn" style="background: #ffffff;">
+                    🧹 Limpiar Datos
+                </button>
             </div>
         </div>
 
-        <!-- ── COLUMNA DERECHA: TABLAS DE ENTRADA REACTIVAS ───────── -->
-        <aside class="sidebar-container" id="inputTablesContainer">
-
-            <!-- TABLA 1: NODOS Y CONDICIONES DE APOYO -->
-            <div class="card-table">
-                <div class="card-table-header">
-                    <div class="card-table-title" style="color: var(--accent-sky);">
-                        <span>1. Coordenadas y Apoyos (Hasta 6 Nodos)</span>
+        <!-- ══ PASO 0: ASISTENTE RÁPIDO PARA CREAR VIGA POR DISTANCIAS (L1, L2, L3...) ══ -->
+        <div class="section-card">
+            <div class="section-header celeste-hdr">
+                <span>⚡ ASISTENTE RÁPIDO DE DISTANCIAS DE TRAMOS (AUTO-GENERA COORDENADAS Xi, Yi, Xf, Yf DE LA VIGA)</span>
+                <span style="font-size: 11.5px; font-weight: 700;">Pon cuántos tramos tiene tu viga y la longitud de cada tramo</span>
+            </div>
+            <div class="section-body">
+                <div class="quick-spans-bar">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <label style="font-weight: 800;">N° de Barras (Tramos):</label>
+                        <select id="quickNumBars" style="background: #FFF2CC; border: 1.5px solid #000; padding: 4px 8px; border-radius: 6px; font-weight: 800;">
+                            <option value="1">1 Barra (2 Nudos)</option>
+                            <option value="2">2 Barras (3 Nudos)</option>
+                            <option value="3" selected>3 Barras (4 Nudos)</option>
+                            <option value="4">4 Barras (5 Nudos)</option>
+                            <option value="5">5 Barras (6 Nudos)</option>
+                            <option value="6">6 Barras (7 Nudos)</option>
+                            <option value="7">7 Barras (8 Nudos)</option>
+                            <option value="8">8 Barras (9 Nudos)</option>
+                            <option value="9">9 Barras (10 Nudos)</option>
+                            <option value="10">10 Barras (11 Nudos)</option>
+                            <option value="11">11 Barras (12 Nudos)</option>
+                        </select>
                     </div>
-                    <span class="card-table-units">cm | Kgf</span>
+
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <label style="font-weight: 800;">Unidad de tus distancias:</label>
+                        <select id="quickDistUnit" style="background: #FFF2CC; border: 1.5px solid #000; padding: 4px 8px; border-radius: 6px; font-weight: 800;">
+                            <option value="m" selected>Metros (m) ➔ Convierte a cm automático</option>
+                            <option value="cm">Centímetros (cm) directo</option>
+                        </select>
+                    </div>
+
+                    <div id="quickSpanInputsContainer" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;"></div>
+
+                    <button type="button" id="btnApplyQuickSpans" class="btn btn-excel">
+                        ✔ Aplicar Distancias a las Barras
+                    </button>
                 </div>
+                <div style="font-size: 11.5px; color: #334155;">
+                    💡 <strong>Nota:</strong> El cálculo matricial interno de la <em>PLANTILLA ULIANOV</em> trabaja en <strong>kgf y cm</strong> (para que coincida con $E$ en $\text{kgf/cm}^2$ e $I_z$ en $\text{cm}^4$). Si escribes tus tramos arriba en <strong>metros (ej. 2 m, 2 m, 4 m)</strong>, se pasan automáticamente a <strong>200 cm, 200 cm, 400 cm</strong> en la tabla y la <strong>6° Gráfica Final</strong> te muestra tus cotas en metros tal como la pizarra del ingeniero.
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ BLOQUE 0: PROPIEDADES GEOMÉTRICAS DE LA SECCIÓN + CALCULADORA DE STEINER ══ -->
+        <div class="section-card">
+            <div class="section-header">
+                <span>0. PROPIEDADES DEL MATERIAL Y SECCIÓN TRANSVERSAL UNIVERSAL (RECTANGULAR, CIRCULAR, T, I, CAJÓN O STEINER)</span>
+                <button type="button" id="btnToggleSteiner" class="btn btn-yellow" style="padding: 4px 10px; font-size: 11.5px;">
+                    📐 Mostrar / Ocultar Tabla Teorema de Steiner (7 Piezas)
+                </button>
+            </div>
+            <div class="section-body">
+                <div class="grid-2">
+                    <div class="table-scroll">
+                        <table class="excel-table">
+                            <thead>
+                                <tr>
+                                    <th>E (kgf/cm²)</th>
+                                    <th>TIPO DE SECCIÓN</th>
+                                    <th id="lblParamB">b / D_ext (cm)</th>
+                                    <th id="lblParamH">h / d_int (cm)</th>
+                                    <th id="lblParamP3">b_sup / b_int (cm)</th>
+                                    <th id="lblParamP4">h_int (cm)</th>
+                                    <th>MODO</th>
+                                    <th>ÁREA A (cm²) [AUTO]</th>
+                                    <th>INERCIA Iz (cm⁴) [AUTO]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="cell-input"><input type="number" id="inpGlobalE" step="any" value="2100000"></td>
+                                    <td class="cell-input">
+                                        <select id="inpSecType">
+                                            <option value="RECTANGULAR">RECTANGULAR (b × h)</option>
+                                            <option value="CIRCULAR">CIRCULAR (Diámetro D)</option>
+                                            <option value="TUBULAR_CIRCULAR">TUBULAR CIRCULAR (D_ext, d_int)</option>
+                                            <option value="TRAPEZOIDAL">TRAPEZOIDAL (b_inf, h, b_sup)</option>
+                                            <option value="TRIANGULAR">TRIANGULAR (b × h)</option>
+                                            <option value="CAJON_HUECO">CAJÓN HUECO (B, H, b_int, h_int)</option>
+                                            <option value="STEINER_COMPUESTA">STEINER COMPUESTA (T, I, L, C...)</option>
+                                            <option value="DIRECTO_A_I">DIRECTO (Ingresar A e Iz directos)</option>
+                                        </select>
+                                    </td>
+                                    <td class="cell-input"><input type="number" id="inpSecB" step="any" value="15"></td>
+                                    <td class="cell-input"><input type="number" id="inpSecH" step="any" value="30"></td>
+                                    <td class="cell-input"><input type="number" id="inpSecP3" step="any" value="0"></td>
+                                    <td class="cell-input"><input type="number" id="inpSecP4" step="any" value="0"></td>
+                                    <td class="cell-input">
+                                        <select id="inpPropMode">
+                                            <option value="CONSTANTE">CONSTANTE</option>
+                                            <option value="POR_BARRA">POR_BARRA</option>
+                                        </select>
+                                    </td>
+                                    <td class="cell-auto-green" id="outGlobalA">450.0000</td>
+                                    <td class="cell-auto-green" id="outGlobalIz">33750.0000</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Tabla de Steiner desplegable -->
+                        <div id="steinerWrap" style="margin-top: 12px; display: none;">
+                            <div style="background: var(--excel-subhdr); border: 1px solid #000; padding: 6px 10px; font-weight: 900; font-size: 12px;">
+                                0B. CALCULADORA UNIVERSAL DE CENTROIDE E INERCia POR EL TEOREMA DE STEINER: Iz = Σ(I₀ᵢ + Aᵢ·dyᵢ²)
+                            </div>
+                            <table class="excel-table" id="tableSteiner">
+                                <thead>
+                                    <tr>
+                                        <th>PIEZA</th>
+                                        <th>TIPO DE FIGURA</th>
+                                        <th>b / D (cm)</th>
+                                        <th>b_sup (cm)</th>
+                                        <th>h (cm)</th>
+                                        <th>y_base (cm)</th>
+                                        <th>x_centro (cm)</th>
+                                        <th>Área Aᵢ (cm²)</th>
+                                        <th>yᵢ (cm)</th>
+                                        <th>Aᵢ·yᵢ (cm³)</th>
+                                        <th>I₀ᵢ (cm⁴)</th>
+                                        <th>dy = |yᵢ - Ȳ|</th>
+                                        <th>I₀ᵢ + Aᵢ·dy² (cm⁴)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodySteiner"></tbody>
+                                <tfoot id="tfootSteiner"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Vista Previa Gráfica de la Sección Transversal -->
+                    <div style="background: #ffffff; border: 1.5px solid #64748b; border-radius: 10px; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <div style="font-size: 11.5px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Vista de la Sección Transversal y Eje Neutro:</div>
+                        <canvas id="canvasSectionPreview" style="width: 100%; height: 155px; display: block;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ GRÁFICA FINAL 6° DEL EJERCICIO (INTERPRETACIÓN AUTOMÁTICA Y DESCARGA PNG) ══ -->
+        <div class="section-card" style="border-color: #0284c7; border-width: 2.5px;">
+            <div class="section-header celeste-hdr">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span style="font-size: 15px;">📊 6° GRÁFICA FINAL DEL EJERCICIO (CON BARRAS [1..11], NUDOS (1..12), COORDENADAS, GDL Y CARGAS)</span>
+                    <span id="beamHealthBadge" class="status-pill-ok">🟢 ESTRUCTURA ESTABLE</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <label style="font-size: 12px; font-weight: 800;">Unidades en la Gráfica:</label>
+                    <select id="selectDiagramUnit" style="background: #ffffff; border: 1.5px solid #000; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 12px; cursor: pointer;">
+                        <option value="m" selected>Mostrar en Metros (m y Kgf.m) — Igual a Pizarra</option>
+                        <option value="cm">Mostrar en Centímetros (cm y Kgf.cm)</option>
+                    </select>
+                    <button type="button" id="btnDownloadPNGMain" class="btn btn-png" style="background: #0284c7; color: #ffffff; border-color: #000000;">
+                        📸 Descargar "6° Gráfica Final" en PNG
+                    </button>
+                    <button type="button" id="btnDownloadExcelMain" class="btn btn-excel" style="background: #16a34a; color: #ffffff; border-color: #000000;">
+                        📥 Descargar Excel PLANTILLA ULIANOV (.xlsx)
+                    </button>
+                </div>
+            </div>
+            <div class="section-body" style="background: #ffffff; padding: 10px;">
+                <div style="width: 100%; overflow-x: auto; border: 1.5px solid #cbd5e1; border-radius: 10px; background: #ffffff;">
+                    <canvas id="canvasGraficaFinal" style="width: 100%; min-width: 960px; height: 470px; display: block;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ TABLA 1 Y TABLA 2: DATOS DE LAS 11 BARRAS Y GDL CORRELACIONALES AUTOMÁTICOS ══ -->
+        <div class="section-card">
+            <div class="section-header">
+                <span>1. TABLA DE DATOS DE LAS BARRAS (HASTA 11 BARRAS) + 2. CUADRO DE GRADOS DE LIBERTAD CORRELACIONALES AUTOMÁTICOS</span>
+                <span style="font-size: 11.5px;">Al ingresar Xi, Yi, Xf, Yf se activa el tramo; si lo dejas vacío, se limpia automáticamente</span>
+            </div>
+            <div class="section-body">
                 <div class="table-scroll">
-                    <table class="interactive-table">
+                    <table class="excel-table" id="tableBars">
                         <thead>
                             <tr>
-                                <th style="width: 26px;">#</th>
-                                <th>X (cm)</th>
-                                <th>Y (cm)</th>
-                                <th>Apoyo</th>
-                                <th>Px (Kgf)</th>
-                                <th>Py (Kgf)</th>
+                                <th>BARRA</th>
+                                <th>Nudo i [AUTO]</th>
+                                <th>Nudo f [AUTO]</th>
+                                <th>Xi (cm)</th>
+                                <th>Yi (cm)</th>
+                                <th>Xf (cm)</th>
+                                <th>Yf (cm)</th>
+                                <th>q dist. (kgf/cm)</th>
+                                <th>P_tramo (kgf)</th>
+                                <th>a_dist (cm)</th>
+                                <th>L (cm) [AUTO]</th>
+                                <th>cos θ</th>
+                                <th>sen θ</th>
+                                <th>12EI/L³</th>
+                                <th>6EI/L²</th>
+                                <th>4EI/L</th>
+                                <th>2EI/L</th>
+                                <th>EA/L</th>
+                                <th style="background:#D9E1F2;">GDL INICIO (Ux, Uy, Uθ)</th>
+                                <th style="background:#D9E1F2;">GDL FINAL (Ux, Uy, Uθ)</th>
                             </tr>
                         </thead>
-                        <tbody id="nodesTableBody">
-                            <!-- Inyectado dinámicamente -->
-                        </tbody>
+                        <tbody id="tbodyBars"></tbody>
                     </table>
                 </div>
             </div>
+        </div>
 
-            <!-- TABLA 2: CONECTIVIDAD DE BARRAS -->
-            <div class="card-table">
-                <div class="card-table-header">
-                    <div class="card-table-title" style="color: var(--accent-emerald);">
-                        <span>2. Barras y Conectividad (Hasta 8 Barras)</span>
-                    </div>
-                    <span class="card-table-units">cm² | Kgf/cm²</span>
+        <!-- ══ TABLA 3 Y 3B: EVALUACIÓN NODAL (12 NUDOS) + DESCOMPONEDOR DE CARGAS OBLICUAS ══ -->
+        <div class="grid-2">
+            <!-- Tabla 3: Evaluación Nodal -->
+            <div class="section-card">
+                <div class="section-header">
+                    <span>3. TABLA DE EVALUACIÓN NODAL (12 NUDOS) — CONDICIÓN Y CUADRO DE DESPLAZAMIENTOS</span>
                 </div>
-                <div class="table-scroll">
-                    <table class="interactive-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 26px;">#</th>
-                                <th style="width: 62px;">Inicio</th>
-                                <th style="width: 62px;">Fin</th>
-                                <th>Área</th>
-                                <th>Mód. E</th>
-                                <th>L (cm)</th>
-                                <th>AE/L</th>
-                            </tr>
-                        </thead>
-                        <tbody id="barsTableBody">
-                            <!-- Inyectado dinámicamente -->
-                        </tbody>
-                    </table>
+                <div class="section-body">
+                    <div class="table-scroll">
+                        <table class="excel-table" id="tableNodes">
+                            <thead>
+                                <tr>
+                                    <th>NUDO</th>
+                                    <th>ACTIVO</th>
+                                    <th>CONDICIÓN DE APOYO</th>
+                                    <th>¿Hay Dx?</th>
+                                    <th>¿Hay Dy?</th>
+                                    <th>¿Hay Dθ?</th>
+                                    <th>Dx [AUTO]</th>
+                                    <th>Dy [AUTO]</th>
+                                    <th>Dθ [AUTO]</th>
+                                    <th>Px Nodal (kgf)</th>
+                                    <th>Py Nodal (kgf)</th>
+                                    <th>Mz Nodal (kgf·cm)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyNodes"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-        </aside>
+            <!-- Tabla 3B: Descomponedor de Cargas Oblicuas -->
+            <div class="section-card">
+                <div class="section-header yellow-hdr">
+                    <span>3B. DESCOMPONEDOR DE CARGAS PUNTUALES OBLICUAS (6 FILAS)</span>
+                </div>
+                <div class="section-body">
+                    <div style="font-size: 11.5px; color: #0f172a; margin-bottom: 8px;">
+                        Descompone fuerzas inclinadas por <strong>PENDIENTE_dx_dy</strong> (ej. 3 y 4) o <strong>ANGULO_GRADOS</strong> y las suma automáticamente al nudo exacto:
+                    </div>
+                    <div class="table-scroll">
+                        <table class="excel-table" id="tableOblique">
+                            <thead>
+                                <tr>
+                                    <th>N°</th>
+                                    <th>NUDO</th>
+                                    <th>P Oblicua (kgf)</th>
+                                    <th>MODO</th>
+                                    <th>dx o α°</th>
+                                    <th>dy</th>
+                                    <th>Sentido X</th>
+                                    <th>Sentido Y</th>
+                                    <th>Fx (kgf)</th>
+                                    <th>Fy (kgf)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyOblique"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ RESUMEN INMEDIATO DE RESULTADOS: DESPLAZAMIENTOS [D] Y REACCIONES [R] ══ -->
+        <div class="grid-equal-2">
+            <div class="section-card">
+                <div class="section-header green-hdr">
+                    <span>9B. RESULTADOS FINALES DE LOS DESPLAZAMIENTOS DESPEJADOS [D_libres] = [K_LL]⁻¹ · [C_libres]</span>
+                </div>
+                <div class="section-body">
+                    <div class="table-scroll">
+                        <table class="excel-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>GDL</th>
+                                    <th>INCÓGNITA</th>
+                                    <th>CARGA NETA [C_libre]</th>
+                                    <th>DESPLAZAMIENTO / GIRO</th>
+                                    <th>UNIDAD</th>
+                                    <th>TIPO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodySummaryDisplacements"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header yellow-hdr">
+                    <span>11. RESULTADOS FINALES DE LAS REACCIONES EN LOS APOYOS [R] = [K_RL]·[D_libres] - [C_apoyo]</span>
+                </div>
+                <div class="section-body">
+                    <div class="table-scroll">
+                        <table class="excel-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>GDL APOYO</th>
+                                    <th>INCÓGNITA EN [C]</th>
+                                    <th>PRODUCTO [K_RL]·[D]</th>
+                                    <th>CARGA EN APOYO</th>
+                                    <th>REACCIÓN FINAL</th>
+                                    <th>UNIDAD</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodySummaryReactions"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ VISOR COMPLETO DE TODAS LAS MATRICES DE "PLANTILLA ULIANOV" ══ -->
+        <div class="section-card">
+            <div class="section-header celeste-hdr">
+                <span>🧮 DESARROLLO MATRICIAL COMPLETO DE LA PESTAÑA "PLANTILLA ULIANOV" (PASO A PASO)</span>
+                <span style="font-size: 11.5px;">Idéntico al archivo Excel descargable (.xlsx)</span>
+            </div>
+            <div class="section-body">
+                <div class="matrix-tabs">
+                    <button type="button" class="matrix-tab-btn active" data-mtab="paneLocalBars">
+                        4. Matrices por Tramo (6×6 Local y 6×36 Extendida)
+                    </button>
+                    <button type="button" class="matrix-tab-btn" data-mtab="paneGlobalK">
+                        5. Matriz Global [K] (36×36 con Diagonal Resaltada)
+                    </button>
+                    <button type="button" class="matrix-tab-btn" data-mtab="paneFullEq">
+                        6–8. Matriz de Cargas [C], [D] y Ecuación [C]=[K][D]
+                    </button>
+                    <button type="button" class="matrix-tab-btn" data-mtab="paneReducedKLL">
+                        9. Ecuación Reducida [K_LL] e Inversa [K_LL]⁻¹
+                    </button>
+                    <button type="button" class="matrix-tab-btn" data-mtab="paneReducedKRL">
+                        10. Ecuación Reducida de Reacciones [K_RL]·[D_libres]
+                    </button>
+                </div>
+
+                <!-- PANE 1: MATRICES POR TRAMO -->
+                <div id="paneLocalBars" class="matrix-pane" style="display: block;"></div>
+
+                <!-- PANE 2: MATRIZ GLOBAL 36x36 -->
+                <div id="paneGlobalK" class="matrix-pane" style="display: none;"></div>
+
+                <!-- PANE 3: ECUACIÓN COMPLETA [C] = [K][D] -->
+                <div id="paneFullEq" class="matrix-pane" style="display: none;"></div>
+
+                <!-- PANE 4: REDUCIDA [K_LL] E INVERSA -->
+                <div id="paneReducedKLL" class="matrix-pane" style="display: none;"></div>
+
+                <!-- PANE 5: REDUCIDA [K_RL] -->
+                <div id="paneReducedKRL" class="matrix-pane" style="display: none;"></div>
+            </div>
+        </div>
+
     </main>
 
-    <!-- ══ SECCIÓN INFERIOR: PESTAÑAS DE RESULTADOS & MATRICES ══════ -->
-    <section class="bottom-section">
-        <div class="tabs-card">
-            <!-- Barra de Pestañas -->
-            <div class="tabs-header-bar">
-                <button class="tab-btn active" data-tab="tab-results">📊 Resumen Ejecutivo y Fuerzas</button>
-                <button class="tab-btn" data-tab="tab-pedagogical">🧠 Paso a Paso Matricial (K₁₁, K₂₁)</button>
-                <button class="tab-btn" data-tab="tab-global-matrix">📐 Matriz Karmadura (12 × 12)</button>
-                <button class="tab-btn" data-tab="tab-theory">📖 Teoría y Fórmulas</button>
-            </div>
-
-            <!-- Contenidos -->
-            <div class="tab-content" id="tab-results">
-                <div id="resultsContainer"></div>
-            </div>
-
-            <div class="tab-content" id="tab-pedagogical" style="display: none;">
-                <div id="pedagogicalContainer"></div>
-            </div>
-
-            <div class="tab-content" id="tab-global-matrix" style="display: none;">
-                <div id="globalMatrixContainer"></div>
-            </div>
-
-            <div class="tab-content" id="tab-theory" style="display: none;">
-                <div style="line-height: 1.7; color: var(--text-muted); font-size: 12px;">
-                    <h3 style="color: var(--accent-sky); font-size: 14px; margin-bottom: 8px;">Fundamento Matemático del Método de la Rigidez Directa</h3>
-                    <p style="margin-bottom: 12px;">
-                        En el análisis matricial de armaduras planas 2D, cada nudo posee 2 grados de libertad traslacionales: \(U_{iX}\) y \(U_{iY}\).
-                        Para una armadura de hasta 6 nudos, el vector completo de desplazamientos tiene dimensión 12:
-                        \(\{D\} = [U_{1X}, U_{1Y}, U_{2X}, \dots, U_{6Y}]^T\).
-                    </p>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 14px;">
-                        <div style="background: var(--bg-panel); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-                            <strong style="color: var(--accent-emerald); display: block; margin-bottom: 4px;">1. Geometría y Cosenos Directores</strong>
-                            \(\Delta X = X_j - X_i, \quad \Delta Y = Y_j - Y_i\)<br>
-                            \(L = \sqrt{\Delta X^2 + \Delta Y^2}\)<br>
-                            \(C_x = \Delta X / L, \quad C_y = \Delta Y / L\)
-                        </div>
-                        <div style="background: var(--bg-panel); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-                            <strong style="color: var(--accent-sky); display: block; margin-bottom: 4px;">2. Matriz de Rigidez Local \(k_m\)</strong>
-                            \(k_m = \frac{AE}{L}\begin{bmatrix} C_x^2 & C_x C_y & -C_x^2 & -C_x C_y \\ C_x C_y & C_y^2 & -C_x C_y & -C_y^2 \\ -C_x^2 & -C_x C_y & C_x^2 & C_x C_y \\ -C_x C_y & -C_y^2 & C_x C_y & C_y^2 \end{bmatrix}\)
-                        </div>
-                        <div style="background: var(--bg-panel); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-                            <strong style="color: #f59e0b; display: block; margin-bottom: 4px;">3. Fuerza Axial Interna \(N_m\)</strong>
-                            \(N_m = \frac{AE}{L} [-C_x, -C_y, C_x, C_y] \{D\}\)<br>
-                            • Si \(N_m > 0\): Tracción (+)<br>
-                            • Si \(N_m < 0\): Compresión (−)
-                        </div>
-                    </div>
-                    <p>
-                        El archivo Excel generado contiene la implementación exacta con fórmulas nativas:
-                        <code style="color: #38bdf8;">=MINVERSE(...)</code> para la inversión de rigidez y <code style="color: #34d399;">=MMULT(...)</code> para productos matriciales.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ══ PIE DE PÁGINA ════════════════════════════════════════════ -->
-    <footer class="footer">
-        CEREBRO ESTRUCTURAL v3.0 (Parche 3.0: Matrices Estructurales & 0-Filling) • Desarrollado por Ingeniero Ulianov Cuba Valencia • Cálculo Matricial y Exportador de Excel Nativo
-        • <a href="https://github.com/72008081-pixel/Ulianov-Continental" target="_blank">Repositorio en GitHub</a>
-    </footer>
-
-    <!-- Dependencias de autenticación y cálculo -->
-    <script src="auth.js?v=3.0"></script>
-    <script src="truss-solver.js?v=3.0"></script>
-    <script src="assets/jspdf.umd.min.js"></script>
-    <script src="assets/jspdf.plugin.autotable.min.js"></script>
-    <script src="pdf-generator.js?v=3.0"></script>
+    <!-- Librería ExcelJS y Módulos de CEREBRO ESTRUCTURAL v4.0 -->
     <script src="assets/exceljs.min.js"></script>
-    <script src="truss-canvas.js?v=3.0"></script>
-    <script src="excel-generator.js?v=3.0"></script>
-    <script src="app.js?v=3.0"></script>
+    <script src="beam-solver.js"></script>
+    <script src="beam-canvas.js"></script>
+    <script src="beam-excel-generator.js"></script>
+    <script src="auth.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
