@@ -357,6 +357,7 @@
             const xf = (b && b.xf !== null && b.xf !== undefined) ? b.xf : '';
             const yf = (b && b.yf !== null && b.yf !== undefined) ? b.yf : '';
             const q = (b && b.q !== null && b.q !== undefined) ? b.q : '';
+            const qUnit = b && b.q_unit === 'kgf/m' ? 'kgf/m' : 'kgf/cm';
             const P_tramo = (b && b.P_tramo !== null && b.P_tramo !== undefined) ? b.P_tramo : '';
             const a_dist = (b && b.a_dist !== null && b.a_dist !== undefined) ? b.a_dist : '';
 
@@ -372,7 +373,7 @@
                     <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="yi" value="${yi}"></td>
                     <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="xf" value="${xf}"></td>
                     <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="yf" value="${yf}"></td>
-                    <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="q" value="${q}"></td>
+                    <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="q" value="${q}" title="Carga uniforme: positiva hacia abajo"></td><td><select class="bar-inp" data-field="q_unit" title="Unidad de la carga distribuida"><option value="kgf/cm" ${qUnit === "kgf/cm" ? "selected" : ""}>kgf/cm</option><option value="kgf/m" ${qUnit === "kgf/m" ? "selected" : ""}>kgf/m</option></select></td>
                     <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="P_tramo" value="${P_tramo}"></td>
                     <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="a_dist" value="${a_dist}"></td>
                     <td class="cell-auto-green bar-out-L">-</td>
@@ -407,6 +408,7 @@
             const xfVal = tr.querySelector('[data-field="xf"]').value;
             const yfVal = tr.querySelector('[data-field="yf"]').value;
             const qVal = tr.querySelector('[data-field="q"]').value;
+            const qUnit = tr.querySelector('[data-field="q_unit"]').value;
             const pVal = tr.querySelector('[data-field="P_tramo"]').value;
             const aVal = tr.querySelector('[data-field="a_dist"]').value;
 
@@ -417,6 +419,7 @@
                     xf: parseFloat(xfVal),
                     yf: parseFloat(yfVal) || 0.0,
                     q: parseFloat(qVal) || 0.0,
+                    q_unit: qUnit,
                     P_tramo: parseFloat(pVal) || 0.0,
                     a_dist: parseFloat(aVal) || 0.0
                 });
