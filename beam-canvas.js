@@ -327,7 +327,7 @@
             if (Math.abs(b.q) > 1e-9) {
                 ctx.save();
                 const qColor = '#0070c0';
-                const qH = 38;
+                const qH = 38 * Math.sign(b.q);
                 const topY1 = p1.y - qH;
                 const topY2 = p2.y - qH;
 
@@ -353,14 +353,15 @@
                     const ax = p1.x + t * (p2.x - p1.x);
                     const ayTop = topY1 + t * (topY2 - topY1);
                     const ayBot = p1.y + t * (p2.y - p1.y) - 4;
-                    drawLineArrow(ctx, ax, ayTop, ax, ayBot, qColor, 1.6, 7);
+                    if (b.q > 0) drawLineArrow(ctx, ax, ayTop, ax, ayBot, qColor, 1.6, 7);
+                    else drawLineArrow(ctx, ax, ayBot, ax, ayTop, qColor, 1.6, 7);
                 }
 
-                const qDisp = unitMode === 'm' ? fmtClean(b.q * 100, 2) + ' Kgf/m' : fmtClean(b.q, 2) + ' Kgf/cm';
+                const qDisp = b.q_unit === 'kgf/m' ? fmtClean(b.q_input, 2) + ' kgf/m' : (unitMode === 'm' ? fmtClean(b.q * 100, 2) + ' kgf/m' : fmtClean(b.q, 2) + ' kgf/cm');
                 ctx.font = 'bold 12.5px "Calibri", "Segoe UI", sans-serif';
                 ctx.fillStyle = qColor;
                 ctx.textAlign = 'center';
-                ctx.fillText(`q = ${qDisp}`, (p1.x + p2.x) / 2, Math.min(topY1, topY2) - 7);
+                ctx.fillText(`q = ${qDisp}`, (p1.x + p2.x) / 2, (b.q > 0 ? Math.min(topY1, topY2) - 7 : Math.max(topY1, topY2) + 18));
                 ctx.restore();
             }
 
