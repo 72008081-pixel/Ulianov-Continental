@@ -1170,6 +1170,33 @@
         </div>
     </section>
 
+
+    <!-- CURVA ELÁSTICA: visualización de desplazamientos y giros nodales -->
+    <section class="results-section" id="curvaElasticaSection" aria-label="Curva elástica de la viga">
+        <div class="input-card" style="padding:18px">
+            <div class="mini-card-head"><span>📈 7. Curva elástica — deformada nodal y suavizada con θ</span></div>
+            <div class="form-row" style="padding:8px 0 14px;gap:12px">
+                <label class="form-label" for="elasticAmplification">Amplificación visual:</label>
+                <input id="elasticAmplification" type="range" min="1" max="100" value="25" style="accent-color:#38bdf8;flex:1;max-width:250px">
+                <strong id="elasticAmplificationValue" style="color:#bae6fd">25×</strong>
+                <span style="font-size:11px;color:var(--text-muted)">Escala gráfica ilustrativa; los valores del cálculo no se modifican</span>
+            </div>
+            <div class="results-grid-2col" style="margin:0">
+                <div class="mini-card">
+                    <div class="mini-card-head" style="color:#38bdf8">1. Curva poligonal — rectas entre nudos</div>
+                    <svg id="elasticPolygon" role="img" aria-label="Curva elástica recta entre nodos" viewBox="0 0 760 310" style="width:100%;height:auto;display:block;background:#080f1e;border-radius:8px"></svg>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:7px">Une los desplazamientos de cada nudo sin suavizado. No representa la curvatura dentro de los tramos.</div>
+                </div>
+                <div class="mini-card">
+                    <div class="mini-card-head" style="color:#34d399">2. Curva suavizada — interpolación con θ</div>
+                    <svg id="elasticSmooth" role="img" aria-label="Curva elástica suavizada con giros nodales" viewBox="0 0 760 310" style="width:100%;height:auto;display:block;background:#080f1e;border-radius:8px"></svg>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:7px">Interpolación de Hermite por tramo, con Ux, Uy y giro θ de cada extremo; aproxima la deformada del elemento de viga.</div>
+                </div>
+            </div>
+            <div id="elasticInfo" style="padding-top:12px;font-size:11px;color:var(--text-muted)" aria-live="polite"></div>
+        </div>
+    </section>
+
     <!-- ══ PIE DE PÁGINA ════════════════════════════════════════════ -->
     <footer class="footer">
         CEREBRO ESTRUCTURAL v6.1 • Análisis Estructural II • Desarrollado por el Ing. Ulianov Cuba Valencia • Cusco, Perú
@@ -1207,5 +1234,92 @@
     <script src="assets/exceljs.min.js"></script>
     <script src="beam-excel-generator.js?v=6.0"></script>
     <script src="beam-app.js?v=6.0"></script>
+
+    <script>
+    // Gráficas pedagógicas de la deformada; Ux, Uy [cm] y theta [rad] proceden del solucionador.
+    (function () {
+        'use strict';
+        const NS = 'http://www.w3.org/2000/svg';
+        const $ = id => document.getElementById(id);
+        const num = n => Number.isFinite(+n) ? +n : 0;
+        const fmt = n => num(n).toFixed(4);
+        function element(tag,attrs,txt) {
+            const el = document.createElementNS(NS,tag);
+            Object.entries(attrs||{}).forEach(([k,v])=>el.setAttribute(k,String(v)));
+            if(txt!==undefined)el.textContent=txt;
+            return el;
+        }
+        function render() {
+            const sol=window.CerebroApp && CerebroApp.getSolution();
+            const state=window.CerebroApp && CerebroApp.getCurrentState();
+            const info=$('elasticInfo');
+            const charts=[$('elasticPolygon'),$('elasticSmooth')];
+            if(charts.some(c=>!c))return;
+            charts.forEach(c=>c.replaceChildren());
+            if(!sol || !sol.success || !state || !Array.isArray(sol.D_full)){
+                info.textContent='No hay una solución estructural válida para graficar.';
+                return;
+            }
+            const bars=(state.bars||[]).slice(0,sol.activeBarsCount||0).filter(b=>num(b.xf)!==num(b.xi)||num(b.yf)!==num(b.yi));
+            if(!bars.length){info.textContent='Agrega tramos con longitud distinta de cero.';return;}
+            const positions=[{x:num(bars[0].xi),y:num(bars[0].yi)}];
+            bars.forEach(b=>positions.push({x:num(b.xf),y:num(b.yf)}));
+            const dofs=positions.map((p,i)=>({ux:num(sol.D_full[3*i]),uy:num(sol.D_full[3*i+1]),theta:num(sol.D_full[3*i+2])}));
+            const strength=num($('elasticAmplification').value)||1;
+            $('elasticAmplificationValue').textContent=strength+'×';
+            const allPoints=[];
+            const orig=positions.map(p=>({x:p.x,y:p.y}));
+            const deformed=positions.map((p,i)=>({x:p.x+strength*dofs[i].ux,y:p.y+strength*dofs[i].uy}));
+            const smooth=[];
+            for(let i=0;i<bars.length;i++){
+                const a=positions[i],b=positions[i+1],d0=dofs[i],d1=dofs[i+1];
+                const L=Math.hypot(b.x-a.x,b.y-a.y);
+                if(L<1e-10)continue;
+                const c=(b.x-a.x)/L,s=(b.y-a.y)/L;
+                const axial0=c*d0.ux+s*d0.uy,axial1=c*d1.ux+s*d1.uy;
+                const trans0=-s*d0.ux+c*d0.uy,trans1=-s*d1.ux+c*d1.uy;
+                for(let j=0;j<=36;j++){
+                    const t=j/36,t2=t*t,t3=t2*t;
+                    const h1=2*t3-3*t2+1,h2=t3-2*t2+t,h3=-2*t3+3*t2,h4=t3-t2;
+                    const v=h1*trans0+h2*L*d0.theta+h3*trans1+h4*L*d1.theta;
+                    const axial=(1-t)*axial0+t*axial1;
+                    const x=a.x+(b.x-a.x)*t+strength*(c*axial-s*v);
+                    const y=a.y+(b.y-a.y)*t+strength*(s*axial+c*v);
+                    smooth.push({x,y});
+                }
+            }
+            allPoints.push(...orig,...deformed,...smooth);
+            let minX=Math.min(...allPoints.map(p=>p.x)),maxX=Math.max(...allPoints.map(p=>p.x));
+            let minY=Math.min(...allPoints.map(p=>p.y)),maxY=Math.max(...allPoints.map(p=>p.y));
+            const width=Math.max(maxX-minX,1),height=Math.max(maxY-minY,1);
+            const scale=Math.min(670/width,205/height);
+            const xOffset=380-scale*(minX+maxX)/2;
+            const yOffset=157+scale*(minY+maxY)/2;
+            const screen=p=>({x:xOffset+scale*p.x,y:yOffset-scale*p.y});
+            const path=points=>points.map((p,i)=>{const q=screen(p);return (i?'L':'M')+q.x.toFixed(2)+' '+q.y.toFixed(2);}).join(' ');
+            for(let ci=0;ci<charts.length;ci++){
+                const svg=charts[ci];
+                svg.appendChild(element('path',{d:path(orig),stroke:'#64748b','stroke-width':2,'stroke-dasharray':'6 6',fill:'none'}));
+                svg.appendChild(element('path',{d:path(ci===0?deformed:smooth),stroke:ci===0?'#38bdf8':'#34d399','stroke-width':3,fill:'none','stroke-linecap':'round','stroke-linejoin':'round'}));
+                for(let i=0;i<positions.length;i++){
+                    const p=screen(deformed[i]);
+                    svg.appendChild(element('circle',{cx:p.x,cy:p.y,r:4.4,fill:'#fbbf24',stroke:'#0f172a','stroke-width':1.2}));
+                    const label=(ci===1?'θ'+(i+1)+'='+fmt(dofs[i].theta):'N'+(i+1));
+                    const tx=Math.max(5,Math.min(650,p.x+7)),ty=Math.max(13,Math.min(297,p.y-9-(i%2)*14));
+                    svg.appendChild(element('text',{x:tx,y:ty,fill:'#e2e8f0','font-size':'11'},label));
+                }
+                svg.appendChild(element('text',{x:14,y:285,fill:'#94a3b8','font-size':'11'},'Gris: viga original  •  Amarillo: nudos  •  Deformada: '+strength+'×'));
+            }
+            const maxDisp=Math.max(...dofs.map(d=>Math.hypot(d.ux,d.uy)));
+            info.textContent='Nudos: '+positions.length+'  |  Tramos: '+bars.length+'  |  Desplazamiento nodal máximo: '+fmt(maxDisp)+' cm  |  Giros θ en radianes. La curva suavizada es una interpolación cinemática de elementos finitos, no un cálculo adicional de esfuerzos.';
+        }
+        document.addEventListener('beam:recomputed',render);
+        document.addEventListener('DOMContentLoaded',()=>{
+            $('elasticAmplification')?.addEventListener('input',render);
+            render();
+        });
+    })();
+    </script>
+
 </body>
 </html>
