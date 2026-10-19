@@ -1197,6 +1197,7 @@
         </div>
     </section>
 
+<section class="results-section" id="beamInternalDiagramSection"><div class="input-card" style="padding:18px"><div class="mini-card-head">📉 Diagramas automáticos de esfuerzos internos</div><div class="results-grid-2col"><div class="mini-card"><div class="mini-card-head" style="color:#38bdf8">3. Diagrama de fuerza cortante V</div><svg id="beamShearDiagram" viewBox="0 0 900 300" style="display:block;width:100%;background:#0b1423;border-radius:10px"></svg></div><div class="mini-card"><div class="mini-card-head" style="color:#fbbf24">4. Diagrama de momento flector M</div><svg id="beamMomentDiagram" viewBox="0 0 900 300" style="display:block;width:100%;background:#0b1423;border-radius:10px"></svg></div></div><p style="font-size:11px;color:#94a3b8;margin-top:10px">Resultados en ejes locales de cada tramo; carga distribuida: cortante lineal y momento parabólico; carga puntual: salto de cortante. M positivo: flexión sagante.</p></div></section>
     <!-- ══ PIE DE PÁGINA ════════════════════════════════════════════ -->
     <footer class="footer">
         CEREBRO ESTRUCTURAL v6.1 • Análisis Estructural II • Desarrollado por el Ing. Ulianov Cuba Valencia • Cusco, Perú
@@ -1234,6 +1235,8 @@
     <script src="assets/exceljs.min.js"></script>
     <script src="beam-excel-generator.js?v=6.0"></script>
     <script src="beam-app.js?v=6.2"></script>
+<script src="beam-diagrams.js?v=1.0"></script>
+<script>(function(){const draw=()=>{const sol=window.CerebroApp?.getSolution();const spans=window.BeamDiagrams?.calculate(sol)||[];BeamDiagrams.render(document.getElementById('beamShearDiagram'),spans,'V');BeamDiagrams.render(document.getElementById('beamMomentDiagram'),spans,'M');};document.addEventListener('beam:recomputed',draw);document.addEventListener('DOMContentLoaded',draw);})();</script>
 
     <script>
     // Gráficas pedagógicas de la deformada; Ux, Uy [cm] y theta [rad] proceden del solucionador.
