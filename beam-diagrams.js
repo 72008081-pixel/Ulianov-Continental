@@ -16,9 +16,14 @@ function calculate(sol){
   const end=K.map((row,idx)=>row.reduce((sum,v,col)=>sum+v*u[col],0)-f[idx]);
   const V0=end[1],M0=-end[2];const points=[];
   const at=(x,after=false)=>({x:station+x,V:V0-q*x-(P!==0&&(x>a||after&&x===a)?P:0),M:M0+V0*x-q*x*x/2-P*Math.max(0,x-a)});
-  for(let j=0;j<=60;j++){const x=L*j/60;points.push(at(x));if(P!==0&&j<60&&x<a&&(j+1)*L/60>a){points.push(at(a),at(a,true));}}
-  if(P!==0&&a===L)points.push(at(L,true));
-  if(P!==0&&a===0)points.unshift(at(0),at(0,true));
+  const cuts=Array.from({length:61},(_,j)=>L*j/60);
+  if(P!==0)cuts.push(a);
+  cuts.sort((x,y)=>x-y);
+  const unique=cuts.filter((x,i)=>i===0||Math.abs(x-cuts[i-1])>L*1e-10);
+  for(const x of unique){
+   if(P!==0&&Math.abs(x-a)<L*1e-10){points.push(at(a,false),at(a,true));}
+   else points.push(at(x));
+  }
   out.push({bar:b.barNum,start:station,L,points,V0,M0,Vend:end[4],Mend:end[5],q,P,a});
   station+=L;
  }
