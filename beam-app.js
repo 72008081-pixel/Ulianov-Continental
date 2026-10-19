@@ -162,6 +162,7 @@
                             xf: currentX + lenCm,
                             yf: 0.0,
                             q: oldBar ? (oldBar.q || 0.0) : 0.0,
+                            q_unit: oldBar ? (oldBar.q_unit || "kgf/cm") : "kgf/cm",
                             P_tramo: oldBar ? (oldBar.P_tramo || 0.0) : 0.0,
                             a_dist: oldBar ? (oldBar.a_dist || 0.0) : 0.0
                         });
@@ -740,44 +741,15 @@
 
     // ── RENDERIZADO DE TABLAS RESUMEN DE RESULTADOS ──────────────
     function renderSummaryTables() {
-        const tbD = document.getElementById('tbodySummaryDisplacements');
-        const tbR = document.getElementById('tbodySummaryReactions');
-
-        if (tbD && currentSolution && currentSolution.calculatedDisplacements) {
-            if (currentSolution.calculatedDisplacements.length === 0) {
-                tbD.innerHTML = `<tr><td colspan="7">No hay grados de libertad libres activos.</td></tr>`;
-            } else {
-                tbD.innerHTML = currentSolution.calculatedDisplacements.map(d => `
-                    <tr>
-                        <td class="cell-auto-subhdr">${d.order}</td>
-                        <td class="cell-auto-peach" style="font-family: monospace;">${d.uLbl}</td>
-                        <td class="cell-auto-celeste" style="font-family: monospace;">${d.dLbl}</td>
-                        <td>${d.C_libre.toFixed(2)}</td>
-                        <td class="cell-auto-green" style="font-family: monospace; font-size: 13px;">${d.value.toFixed(8)}</td>
-                        <td><strong>${d.unit}</strong></td>
-                        <td>${d.desc}</td>
-                    </tr>
-                `).join('');
-            }
-        }
-
-        if (tbR && currentSolution && currentSolution.calculatedReactions) {
-            if (currentSolution.calculatedReactions.length === 0) {
-                tbR.innerHTML = `<tr><td colspan="7">No hay apoyos con reacciones activas.</td></tr>`;
-            } else {
-                tbR.innerHTML = currentSolution.calculatedReactions.map(r => `
-                    <tr>
-                        <td class="cell-auto-subhdr">${r.order}</td>
-                        <td class="cell-auto-peach" style="font-family: monospace;">${r.uLbl}</td>
-                        <td class="cell-auto-yellow" style="font-family: monospace;">${r.C_expr}</td>
-                        <td>${r.prod_KRL_D.toFixed(4)}</td>
-                        <td>${r.loadAtSupport.toFixed(2)}</td>
-                        <td class="cell-auto-green" style="font-family: monospace; font-size: 13px;">${r.reactionFinal.toFixed(4)}</td>
-                        <td><strong>${r.unit}</strong></td>
-                    </tr>
-                `).join('');
-            }
-        }
+        const tbD=document.getElementById('tbodySummaryDisplacements');
+        const tbR=document.getElementById('tbodySummaryReactions');
+        const fmt=v=>Number.isFinite(v)?(Math.abs(v)<1e-9?'0':v.toFixed(6)):'—';
+        if(tbD)tbD.innerHTML=(currentSolution?.calculatedDisplacements||[]).map(d=>
+            '<tr><td><strong>'+d.uLbl+'</strong></td><td class="cell-auto-green">'+fmt(d.value)+'</td><td>'+d.unit+'</td></tr>'
+        ).join('')||'<tr><td colspan="3">Sin desplazamientos libres</td></tr>';
+        if(tbR)tbR.innerHTML=(currentSolution?.calculatedReactions||[]).map(r=>
+            '<tr><td><strong>'+r.uLbl+'</strong></td><td class="cell-auto-green">'+fmt(r.reactionFinal)+'</td><td>'+r.unit+'</td></tr>'
+        ).join('')||'<tr><td colspan="3">Sin reacciones</td></tr>';
     }
 
     // ── RENDERIZADO DE PANELES MATRICIALES (PASO A PASO) ─────────
