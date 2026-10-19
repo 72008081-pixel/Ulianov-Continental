@@ -275,6 +275,37 @@
         ctx.textAlign = 'left';
         ctx.fillText('6° Grafica final', 65, 62);
 
+        // Distribuidor anticolisiones: recoloca textos sin alterar geometría ni resultados.
+        const baseFillText = ctx.fillText.bind(ctx);
+        const occupiedLabels = [];
+        ctx.fillText = function (value, x, y, maxWidth) {
+            const label = String(value);
+            const metrics = ctx.measureText(label);
+            const w = Math.max(1, Math.min(metrics.width, typeof maxWidth === 'number' ? maxWidth : metrics.width));
+            const fs = parseFloat(ctx.font.match(/([0-9.]+)px/)?.[1] || '15');
+            const hh = fs * 1.28;
+            const align = ctx.textAlign;
+            const estimate = (px, py) => ({
+                x: px - (align === 'center' ? w / 2 : align === 'right' || align === 'end' ? w : 0) - 3,
+                y: py - hh * .88 - 3, w: w + 6, h: hh + 6
+            });
+            const overlaps = (a,b) => a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+            const offsets = [[0,0],[0,-24],[0,24],[0,-48],[0,48],[-36,-24],[36,-24],[-36,24],[36,24],[0,-72],[0,72],[-70,0],[70,0],[-70,-48],[70,-48],[-105,24],[105,24]];
+            let chosen = null, cost = Infinity;
+            for (const [dx,dy] of offsets) {
+                const p=estimate(x+dx,y+dy);
+                const collision=occupiedLabels.reduce((n,b)=>n+(overlaps(p,b)?1:0),0);
+                const outside=p.x<8||p.x+p.w>logicalW-8||p.y<78||p.y+p.h>logicalH-8;
+                const score=collision*10000+(outside?20000:0)+Math.abs(dx)+Math.abs(dy);
+                if(score<cost){cost=score;chosen={dx,dy,p};}
+                if(score===0)break;
+            }
+            if(chosen){
+                occupiedLabels.push(chosen.p);
+                return maxWidth === undefined ? baseFillText(label,x+chosen.dx,y+chosen.dy) :
+                    baseFillText(label,x+chosen.dx,y+chosen.dy,maxWidth);
+            }
+        };
         const activeBars = solverResult.barsTable.filter(b => b.active);
         const activeNodes = solverResult.nodesTable.filter(n => n.active);
 
@@ -691,6 +722,7 @@
             ctx.restore();
         }
 
+        ctx.fillText = baseFillText;
         ctx.restore();
     }
 
