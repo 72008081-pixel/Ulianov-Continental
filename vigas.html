@@ -763,7 +763,7 @@
                 <div class="brand-logo">📐</div>
                 <div class="brand-title-wrap">
                     <h1>
-                        CEREBRO ESTRUCTURAL <span class="brand-badge">v6.1</span>
+                        CEREBRO ESTRUCTURAL <span class="brand-badge">Gratis · Código abierto</span>
                     </h1>
                     <div class="brand-subtitle">Análisis Matricial de Vigas Continuas e Inclinadas • PLANTILLA ULIANOV v6.1</div>
                 </div>
@@ -1177,7 +1177,31 @@
     </footer>
 
     <!-- Dependencias de cálculo y autenticación -->
+    <!-- Modo gratuito y abierto de Vigas: se conserva auth.js para proyectos guardados,
+         pero su interfaz de licencias/pagos y sus controles de acceso quedan desactivados. -->
     <script src="auth.js?v=6.0"></script>
+    <script>
+        // Aplicar únicamente al módulo de Vigas, sin alterar otros módulos del sitio.
+        (function () {
+            const estilo = document.createElement('style');
+            estilo.textContent = '#cb-overlay,#cb-header-btn,#cb-floating-admin-btn,[id^="cb-admin-floating"]{display:none!important}';
+            document.head.appendChild(estilo);
+            if (window.CerebroAuth) {
+                CerebroAuth.isAuthorized = () => true;
+                CerebroAuth.hasExcelPermission = () => true;
+                CerebroAuth.showAuthModal = () => {};
+                CerebroAuth.openAuthModal = () => {};
+                CerebroAuth.lock = () => {};
+                CerebroAuth.showExcelVipNotice = () => {};
+            }
+            const ocultarPago = () => {
+                document.getElementById('cb-overlay')?.classList.add('cb-hidden');
+                document.getElementById('cb-header-btn')?.setAttribute('hidden', '');
+            };
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ocultarPago);
+            else ocultarPago();
+        })();
+    </script>
     <script src="beam-solver.js?v=6.0"></script>
     <script src="beam-canvas.js?v=6.0"></script>
     <script src="assets/exceljs.min.js"></script>
