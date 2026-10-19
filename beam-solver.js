@@ -401,7 +401,10 @@
             const k2  = (2.0 * E * I) / L;
             const kEA = (E * A) / L;
 
-            const q = parseFloat(bd.q) || 0;
+            // El motor calcula exclusivamente en cm: q [kgf/cm].
+            // Los valores ingresados en kgf/m se convierten antes de ensamblar las cargas.
+            const qInput = parseFloat(bd.q) || 0;
+            const q = bd.q_unit === 'kgf/m' ? qInput / 100 : qInput;
             const P_tramo = parseFloat(bd.P_tramo) || 0;
             const a_raw = parseFloat(bd.a_dist) || 0;
             const a_eff = a_raw > 0 ? a_raw : (L / 2.0);
@@ -418,7 +421,7 @@
                 Dx, Dy, L, Cosx, Cosy,
                 A, E, I,
                 k12, k6, k4, k2, kEA,
-                q, P_tramo, a_dist: a_raw,
+                q, q_input: qInput, q_unit: bd.q_unit || 'kgf/cm', P_tramo, a_dist: a_raw,
                 V_ini, M_ini, V_fin, M_fin
             });
 
