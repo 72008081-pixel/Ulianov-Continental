@@ -711,6 +711,9 @@
         // 10. Renderizar Paneles de Matrices Detalladas
         renderMatrixPanes();
 
+        // Sincronizar las dos gráficas de curva elástica con cada recálculo.
+        document.dispatchEvent(new CustomEvent('beam:recomputed'));
+
         // Sincronizar estado en vivo con las tablas pedagógicas
         try {
             localStorage.setItem('cerebro_active_beam_sync', JSON.stringify(currentState));
