@@ -998,7 +998,7 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>#</th><th>Nudo i</th><th>Nudo j</th><th>Xi (cm)</th><th>Yi (cm)</th><th>Xf (cm)</th><th>Yf (cm)</th><th>q distribuida ↓</th><th>Unidad q</th><th>P puntual tramo (kgf) ↓</th><th>a (cm)</th><th>L (cm)</th><th>cos θ</th><th>sen θ</th><th>12EI/L³</th><th>6EI/L²</th><th>4EI/L</th><th>2EI/L</th><th>EA/L</th><th>GDL inicio</th><th>GDL final</th>
+                                <th>#</th><th>Nudo i</th><th>Nudo j</th><th>Xi (cm)</th><th>Yi (cm)</th><th>Xf (cm)</th><th>Yf (cm)</th><th>q distribuida ↓</th><th>Unidad q</th><th>P interior (kgf) ↓ · opcional</th><th>a (cm)</th><th>L (cm)</th><th>cos θ</th><th>sen θ</th><th>12EI/L³</th><th>6EI/L²</th><th>4EI/L</th><th>2EI/L</th><th>EA/L</th><th>GDL inicio</th><th>GDL final</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyBars"></tbody>
@@ -1208,7 +1208,7 @@
         // Aplicar únicamente al módulo de Vigas, sin alterar otros módulos del sitio.
         (function () {
             const estilo = document.createElement('style');
-            estilo.textContent = '#cb-overlay,#cb-header-btn,#cb-floating-admin-btn,[id^="cb-admin-floating"]{display:none!important}';
+            estilo.textContent = '#cb-overlay,#cb-header-btn,#cb-floating-admin,#cb-floating-admin-btn,[id^="cb-admin-floating"]{display:none!important}';
             document.head.appendChild(estilo);
             if (window.CerebroAuth) {
                 CerebroAuth.isAuthorized = () => true;
@@ -1229,7 +1229,7 @@
     <script src="beam-solver.js?v=6.4"></script>
     <script src="beam-canvas.js?v=6.3"></script>
     <script src="assets/exceljs.min.js"></script>
-    <script src="beam-excel-generator.js?v=6.5"></script>
+    <script src="beam-excel-generator.js?v=7.0"></script>
     <script src="beam-app.js?v=7.0"></script>
 <script src="beam-diagrams.js?v=1.1"></script>
 <script>(function(){const draw=()=>{const sol=window.CerebroApp?.getSolution();const spans=window.BeamDiagrams?.calculate(sol)||[];BeamDiagrams.render(document.getElementById('beamShearDiagram'),spans,'V');BeamDiagrams.render(document.getElementById('beamMomentDiagram'),spans,'M');};document.addEventListener('beam:recomputed',draw);document.addEventListener('DOMContentLoaded',draw);})();</script>
