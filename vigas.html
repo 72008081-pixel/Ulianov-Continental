@@ -1230,7 +1230,7 @@
         })();
     </script>
     <script src="beam-solver.js?v=6.2"></script>
-    <script src="beam-canvas.js?v=6.2"></script>
+    <script src="beam-canvas.js?v=6.3"></script>
     <script src="assets/exceljs.min.js"></script>
     <script src="beam-excel-generator.js?v=6.0"></script>
     <script src="beam-app.js?v=6.2"></script>
@@ -1304,14 +1304,14 @@
                 for(let i=0;i<positions.length;i++){
                     const p=screen(deformed[i]);
                     svg.appendChild(element('circle',{cx:p.x,cy:p.y,r:4.4,fill:'#fbbf24',stroke:'#0f172a','stroke-width':1.2}));
-                    const label=(ci===1?'θ'+(i+1)+'='+fmt(dofs[i].theta):'N'+(i+1));
+                    const label='N'+(i+1);
                     const tx=Math.max(5,Math.min(650,p.x+7)),ty=Math.max(13,Math.min(297,p.y-9-(i%2)*14));
                     svg.appendChild(element('text',{x:tx,y:ty,fill:'#e2e8f0','font-size':'11'},label));
                 }
                 svg.appendChild(element('text',{x:14,y:285,fill:'#94a3b8','font-size':'11'},'Gris: viga original  •  Amarillo: nudos  •  Deformada: '+strength+'×'));
             }
             const maxDisp=Math.max(...dofs.map(d=>Math.hypot(d.ux,d.uy)));
-            info.textContent='Nudos: '+positions.length+'  |  Tramos: '+bars.length+'  |  Desplazamiento nodal máximo: '+fmt(maxDisp)+' cm  |  Giros θ en radianes. La curva suavizada es una interpolación cinemática de elementos finitos, no un cálculo adicional de esfuerzos.';
+            info.textContent='Nudos: '+positions.length+'  |  Tramos: '+bars.length+'  |  Desplazamiento máximo: '+fmt(maxDisp)+' cm  |  Giros (rad): '+dofs.map((d,i)=>'θ'+(i+1)+'='+fmt(d.theta)).join(' · ')+'  |  Curva suavizada: interpolación de Hermite.';
         }
         document.addEventListener('beam:recomputed',render);
         document.addEventListener('DOMContentLoaded',()=>{
