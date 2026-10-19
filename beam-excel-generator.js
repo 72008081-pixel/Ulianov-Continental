@@ -1230,6 +1230,50 @@
      */
     async function downloadBeamExcel(config, filename = 'PLANTILLA_ULIANOV_VIGAS_AUTOMATIZADA.xlsx') {
         const wb = await generateBeamWorkbook(config);
+        // Hoja visual independiente: cuatro diagramas exportados tal como aparecen en pantalla.
+        if (typeof document !== 'undefined') {
+            const defs = [
+                ['elasticPolygon','CURVA ELÁSTICA POLIGONAL'],
+                ['elasticSmooth','CURVA ELÁSTICA SUAVIZADA CON GIROS θ'],
+                ['beamShearDiagram','DIAGRAMA DE FUERZA CORTANTE V (kgf)'],
+                ['beamMomentDiagram','DIAGRAMA DE MOMENTO FLECTOR M (kgf·cm)']
+            ];
+            const sheet = wb.addWorksheet('GRÁFICAS');
+            sheet.columns = Array.from({length:18},()=>({width:13}));
+            sheet.getCell('B2').value='CEREBRO ESTRUCTURAL — 4 GRÁFICAS DE VIGAS';
+            sheet.getCell('B2').font={bold:true,size:18,color:{argb:'FF174F79'}};
+            sheet.getCell('B3').value='Los diagramas corresponden al análisis en el instante de descargar el archivo.';
+            async function svgPngData(svg){
+                const clone=svg.cloneNode(true);
+                clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+                const view=svg.viewBox.baseVal;
+                const width=view&&view.width?view.width:900;
+                const height=view&&view.height?view.height:310;
+                clone.setAttribute('width',width);clone.setAttribute('height',height);
+                const blob=new Blob([new XMLSerializer().serializeToString(clone)],{type:'image/svg+xml;charset=utf-8'});
+                const url=URL.createObjectURL(blob);
+                try {
+                    const im=new Image();
+                    await new Promise((resolve,reject)=>{im.onload=resolve;im.onerror=reject;im.src=url;});
+                    const canvas=document.createElement('canvas');canvas.width=width*2;canvas.height=height*2;
+                    const cx=canvas.getContext('2d');cx.fillStyle='#0b1423';cx.fillRect(0,0,canvas.width,canvas.height);
+                    cx.drawImage(im,0,0,canvas.width,canvas.height);
+                    return canvas.toDataURL('image/png');
+                } finally {URL.revokeObjectURL(url);}
+            }
+            for(let i=0;i<defs.length;i++){
+                const [id,title]=defs[i],top=5+i*22;
+                sheet.getCell('B'+top).value=(i+1)+'. '+title;
+                sheet.getCell('B'+top).font={bold:true,size:14,color:{argb:'FF174F79'}};
+                const svg=document.getElementById(id);
+                if(!svg)continue;
+                try{
+                    const base64=await svgPngData(svg);
+                    const imageId=wb.addImage({base64,extension:'png'});
+                    sheet.addImage(imageId,{tl:{col:1,row:top},ext:{width:900,height:340}});
+                }catch(error){sheet.getCell('B'+(top+1)).value='No se pudo convertir la gráfica: '+error.message;}
+            }
+        }
         const buffer = await wb.xlsx.writeBuffer();
         if (typeof window !== 'undefined' && window.Blob && window.URL) {
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
