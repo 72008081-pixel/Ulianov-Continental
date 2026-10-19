@@ -970,9 +970,9 @@
             <div class="input-card">
                 <div class="input-card-head">
                     <div class="input-card-title">
-                        <span>2. Tramos, Longitudes y Cargas (Hasta 11 Barras)</span>
+                        <span>2. Tramos · Cargas distribuidas y puntuales interiores</span>
                     </div>
-                    <div class="input-card-units">cm | Kgf/cm | Kgf</div>
+                    <div class="input-card-units">Longitud cm · q kgf/cm o kgf/m · P kgf</div>
                 </div>
 
                 <!-- Asistente rápido por distancias L1, L2, L3... -->
@@ -998,11 +998,7 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Xi</th><th>Yi</th><th>Xf</th><th>Yf</th>
-                                <th>L (cm)</th>
-                                <th>cos θ</th><th>sen θ</th>
-                                <th>q (kgf/cm o kgf/m)</th><th>Unidad q</th><th>P (Kgf)</th><th>a (cm)</th>
+                                <th>#</th><th>Nudo i</th><th>Nudo j</th><th>Xi (cm)</th><th>Yi (cm)</th><th>Xf (cm)</th><th>Yf (cm)</th><th>q distribuida ↓</th><th>Unidad q</th><th>P puntual tramo (kgf) ↓</th><th>a (cm)</th><th>L (cm)</th><th>cos θ</th><th>sen θ</th><th>12EI/L³</th><th>6EI/L²</th><th>4EI/L</th><th>2EI/L</th><th>EA/L</th><th>GDL inicio</th><th>GDL final</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyBars"></tbody>
@@ -1093,7 +1089,7 @@
                                 <table class="results-table">
                                     <thead>
                                         <tr>
-                                            <th>GL #</th><th>Nudo</th><th>Componente</th><th>Reacción</th><th>Unidad</th>
+                                            <th>Grado de libertad</th><th>Reacción</th><th>Unidad</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tbodySummaryReactions"></tbody>
@@ -1111,7 +1107,7 @@
                                 <table class="results-table">
                                     <thead>
                                         <tr>
-                                            <th>GL #</th><th>Nudo</th><th>Dirección</th><th>Valor</th><th>Unidad</th>
+                                            <th>Grado de libertad</th><th>Desplazamiento / giro</th><th>Unidad</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tbodySummaryDisplacements"></tbody>
@@ -1234,7 +1230,7 @@
     <script src="beam-canvas.js?v=6.3"></script>
     <script src="assets/exceljs.min.js"></script>
     <script src="beam-excel-generator.js?v=6.5"></script>
-    <script src="beam-app.js?v=6.5"></script>
+    <script src="beam-app.js?v=7.0"></script>
 <script src="beam-diagrams.js?v=1.1"></script>
 <script>(function(){const draw=()=>{const sol=window.CerebroApp?.getSolution();const spans=window.BeamDiagrams?.calculate(sol)||[];BeamDiagrams.render(document.getElementById('beamShearDiagram'),spans,'V');BeamDiagrams.render(document.getElementById('beamMomentDiagram'),spans,'M');};document.addEventListener('beam:recomputed',draw);document.addEventListener('DOMContentLoaded',draw);})();</script>
 
