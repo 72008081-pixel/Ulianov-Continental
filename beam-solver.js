@@ -670,30 +670,23 @@
             // Carga puntual en nudo
             const P_nudo = rem === 0 ? node.Px_tot : (rem === 1 ? node.Py_tot : node.Mz_tot);
 
-            // Carga equivalente de tramos (empotradas cambiadas de signo)
-            let C_tramo = 0.0;
-            if (rem === 1) {
-                // Fuerza vertical Y: -V_ini de barra nIdx (si existe) - V_fin de barra nIdx-1 (si existe)
-                if (nIdx === 0) {
-                    C_tramo = barsTable[0].active ? -barsTable[0].V_ini : 0;
-                } else if (nIdx === MAX_NODES - 1) {
-                    C_tramo = barsTable[MAX_BARS - 1].active ? -barsTable[MAX_BARS - 1].V_fin : 0;
-                } else {
-                    const v1 = barsTable[nIdx - 1].active ? -barsTable[nIdx - 1].V_fin : 0;
-                    const v2 = barsTable[nIdx].active ? -barsTable[nIdx].V_ini : 0;
-                    C_tramo = v1 + v2;
-                }
-            } else if (rem === 2) {
-                // Momento θ: -M_ini de barra nIdx - M_fin de barra nIdx-1
-                if (nIdx === 0) {
-                    C_tramo = barsTable[0].active ? -barsTable[0].M_ini : 0;
-                } else if (nIdx === MAX_NODES - 1) {
-                    C_tramo = barsTable[MAX_BARS - 1].active ? -barsTable[MAX_BARS - 1].M_fin : 0;
-                } else {
-                    const m1 = barsTable[nIdx - 1].active ? -barsTable[nIdx - 1].M_fin : 0;
-                    const m2 = barsTable[nIdx].active ? -barsTable[nIdx].M_ini : 0;
-                    C_tramo = m1 + m2;
-                }
+            // Cargas equivalentes globales mediante integración de funciones de forma.
+            // q positivo y P_tramo positivo: fuerzas verticales hacia abajo.
+            let C_tramo = 0;
+            for (const bi of [nIdx - 1, nIdx]) {
+                const bar = barsTable[bi];
+                if (!bar || !bar.active) continue;
+                const first = bi === nIdx;
+                const L = bar.L, c = bar.Cosx, sn = bar.Cosy;
+                const a = Math.max(0, Math.min(L, bar.a_dist > 0 ? bar.a_dist : L/2));
+                const t = a/L, P = bar.P_tramo, q = bar.q;
+                const H1 = 1-3*t*t+2*t*t*t, H2 = L*(t-2*t*t+t*t*t);
+                const H3 = 3*t*t-2*t*t*t, H4 = L*(-t*t+t*t*t);
+                const axial = -sn*(q*L/2+P*(first?1-t:t));
+                const trans = -c*(q*L/2+P*(first?H1:H3));
+                const fx = c*axial-sn*trans, fy = sn*axial+c*trans;
+                const moment = first ? (-c*q*L*L/12-c*P*H2) : (c*q*L*L/12-c*P*H4);
+                C_tramo += rem===0 ? fx : rem===1 ? fy : moment;
             }
 
             const C_num = P_nudo + C_tramo;
