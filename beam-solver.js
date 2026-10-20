@@ -410,10 +410,29 @@
             const a_eff = a_raw > 0 ? a_raw : (L / 2.0);
             const b_eff = L - a_eff;
 
-            const V_ini = (q * L) / 2.0 + (P_tramo !== 0 ? (P_tramo * b_eff * b_eff * (3.0 * a_eff + b_eff)) / Math.pow(L, 3) : 0);
-            const M_ini = (q * L * L) / 12.0 + (P_tramo !== 0 ? (P_tramo * a_eff * b_eff * b_eff) / (L * L) : 0);
-            const V_fin = (q * L) / 2.0 + (P_tramo !== 0 ? (P_tramo * a_eff * a_eff * (a_eff + 3.0 * b_eff)) / Math.pow(L, 3) : 0);
-            const M_fin = -(q * L * L) / 12.0 - (P_tramo !== 0 ? (P_tramo * a_eff * a_eff * b_eff) / (L * L) : 0);
+            // Longitud cargada de la carga distribuida (L_dist puede ser parcial o total)
+            const L_dist_raw = parseFloat(bd.L_dist);
+            const c_load = (!isNaN(L_dist_raw) && L_dist_raw > 0) ? Math.min(L, L_dist_raw) : L;
+
+            let V_ini_q = 0, M_ini_q = 0, V_fin_q = 0, M_fin_q = 0;
+            if (Math.abs(q) > 1e-12 && L > 0) {
+                if (Math.abs(c_load - L) < 1e-6) {
+                    V_ini_q = (q * L) / 2.0;
+                    M_ini_q = (q * L * L) / 12.0;
+                    V_fin_q = (q * L) / 2.0;
+                    M_fin_q = -(q * L * L) / 12.0;
+                } else if (c_load > 0) {
+                    M_ini_q = (q * c_load * c_load / (12.0 * L * L)) * (6.0 * L * L - 8.0 * L * c_load + 3.0 * c_load * c_load);
+                    M_fin_q = -(q * Math.pow(c_load, 3) / (12.0 * L * L)) * (4.0 * L - 3.0 * c_load);
+                    V_ini_q = (q * c_load * (L - c_load / 2.0)) / L + (M_ini_q + M_fin_q) / L;
+                    V_fin_q = q * c_load - V_ini_q;
+                }
+            }
+
+            const V_ini = V_ini_q + (P_tramo !== 0 ? (P_tramo * b_eff * b_eff * (3.0 * a_eff + b_eff)) / Math.pow(L, 3) : 0);
+            const M_ini = M_ini_q + (P_tramo !== 0 ? (P_tramo * a_eff * b_eff * b_eff) / (L * L) : 0);
+            const V_fin = V_fin_q + (P_tramo !== 0 ? (P_tramo * a_eff * a_eff * (a_eff + 3.0 * b_eff)) / Math.pow(L, 3) : 0);
+            const M_fin = M_fin_q - (P_tramo !== 0 ? (P_tramo * a_eff * a_eff * b_eff) / (L * L) : 0);
 
             barsTable.push({
                 barNum: bNum, active: true,
@@ -421,7 +440,7 @@
                 Dx, Dy, L, Cosx, Cosy,
                 A, E, I,
                 k12, k6, k4, k2, kEA,
-                q, q_input: qInput, q_unit: bd.q_unit || 'kgf/cm', P_tramo, a_dist: a_raw,
+                q, q_input: qInput, q_unit: bd.q_unit || 'kgf/cm', L_dist: c_load, P_tramo, a_dist: a_raw,
                 V_ini, M_ini, V_fin, M_fin
             });
 
@@ -670,23 +689,23 @@
             // Carga puntual en nudo
             const P_nudo = rem === 0 ? node.Px_tot : (rem === 1 ? node.Py_tot : node.Mz_tot);
 
-            // Cargas equivalentes globales mediante integración de funciones de forma.
-            // q positivo y P_tramo positivo: fuerzas verticales hacia abajo.
+            // Cargas equivalentes globales mediante acciones de empotramiento perfecto.
+            // Las reacciones fijas V_ini/V_fin y momentos M_ini/M_fin ya incorporan q (con su L_dist cargada) y P_tramo.
             let C_tramo = 0;
             for (const bi of [nIdx - 1, nIdx]) {
                 const bar = barsTable[bi];
                 if (!bar || !bar.active) continue;
                 const first = bi === nIdx;
-                const L = bar.L, c = bar.Cosx, sn = bar.Cosy;
-                const a = Math.max(0, Math.min(L, bar.a_dist > 0 ? bar.a_dist : L/2));
-                const t = a/L, P = bar.P_tramo, q = bar.q;
-                const H1 = 1-3*t*t+2*t*t*t, H2 = L*(t-2*t*t+t*t*t);
-                const H3 = 3*t*t-2*t*t*t, H4 = L*(-t*t+t*t*t);
-                const axial = -sn*(q*L/2+P*(first?1-t:t));
-                const trans = -c*(q*L/2+P*(first?H1:H3));
-                const fx = c*axial-sn*trans, fy = sn*axial+c*trans;
-                const moment = first ? (-c*q*L*L/12-c*P*H2) : (c*q*L*L/12-c*P*H4);
-                C_tramo += rem===0 ? fx : rem===1 ? fy : moment;
+                const c = bar.Cosx, sn = bar.Cosy;
+
+                const V_fixed = first ? bar.V_ini : bar.V_fin;
+                const M_fixed = first ? bar.M_ini : bar.M_fin;
+                const axial = -sn * V_fixed;
+                const trans = -c * V_fixed;
+                const fx = c * axial - sn * trans;
+                const fy = sn * axial + c * trans;
+                const moment = -c * M_fixed;
+                C_tramo += rem === 0 ? fx : rem === 1 ? fy : moment;
             }
 
             const C_num = P_nudo + C_tramo;

@@ -347,15 +347,25 @@
                 ctx.save();
                 const qColor = '#0070c0';
                 const qH = 38 * Math.sign(b.q);
+
+                const L_span = Math.hypot(b.xf - b.xi, b.yf - b.yi);
+                const L_dist_eff = (b.L_dist !== undefined && b.L_dist !== null && b.L_dist > 0) ? Math.min(b.L_dist, L_span) : L_span;
+                const t_dist = L_span > 0 ? (L_dist_eff / L_span) : 1;
+
+                const p2_load = {
+                    x: p1.x + t_dist * (p2.x - p1.x),
+                    y: p1.y + t_dist * (p2.y - p1.y)
+                };
+
                 const topY1 = p1.y - qH;
-                const topY2 = p2.y - qH;
+                const topY2 = p2_load.y - qH;
 
                 ctx.fillStyle = 'rgba(0, 112, 192, 0.08)';
                 ctx.beginPath();
                 ctx.moveTo(p1.x, p1.y - 3);
                 ctx.lineTo(p1.x, topY1);
-                ctx.lineTo(p2.x, topY2);
-                ctx.lineTo(p2.x, p2.y - 3);
+                ctx.lineTo(p2_load.x, topY2);
+                ctx.lineTo(p2_load.x, p2_load.y - 3);
                 ctx.closePath();
                 ctx.fill();
 
@@ -363,24 +373,25 @@
                 ctx.lineWidth = 2.0;
                 ctx.beginPath();
                 ctx.moveTo(p1.x, topY1);
-                ctx.lineTo(p2.x, topY2);
+                ctx.lineTo(p2_load.x, topY2);
                 ctx.stroke();
 
-                const numArrows = Math.max(4, Math.min(9, Math.floor(Math.abs(p2.x - p1.x) / 22)));
+                const numArrows = Math.max(3, Math.min(9, Math.floor(Math.abs(p2_load.x - p1.x) / 22)));
                 for (let k = 0; k <= numArrows; k++) {
-                    const t = k / numArrows;
-                    const ax = p1.x + t * (p2.x - p1.x);
+                    const t = k / (numArrows || 1);
+                    const ax = p1.x + t * (p2_load.x - p1.x);
                     const ayTop = topY1 + t * (topY2 - topY1);
-                    const ayBot = p1.y + t * (p2.y - p1.y) - 4;
+                    const ayBot = p1.y + t * (p2_load.y - p1.y) - 4;
                     if (b.q > 0) drawLineArrow(ctx, ax, ayTop, ax, ayBot, qColor, 1.6, 7);
                     else drawLineArrow(ctx, ax, ayBot, ax, ayTop, qColor, 1.6, 7);
                 }
 
                 const qDisp = b.q_unit === 'kgf/m' ? fmtClean(b.q_input, 2) + ' kgf/m' : (unitMode === 'm' ? fmtClean(b.q * 100, 2) + ' kgf/m' : fmtClean(b.q, 2) + ' kgf/cm');
+                const lenDisp = (L_dist_eff < L_span) ? ` (L=${fmtClean(L_dist_eff, 0)}cm)` : '';
                 ctx.font = 'bold 12.5px "Calibri", "Segoe UI", sans-serif';
                 ctx.fillStyle = qColor;
                 ctx.textAlign = 'center';
-                ctx.fillText(`q = ${qDisp}`, (p1.x + p2.x) / 2, (b.q > 0 ? Math.min(topY1, topY2) - 7 : Math.max(topY1, topY2) + 18));
+                ctx.fillText(`q = ${qDisp}${lenDisp}`, (p1.x + p2_load.x) / 2, (b.q > 0 ? Math.min(topY1, topY2) - 7 : Math.max(topY1, topY2) + 18));
                 ctx.restore();
             }
 

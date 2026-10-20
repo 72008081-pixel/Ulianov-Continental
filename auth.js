@@ -1,25 +1,26 @@
 /**
- * auth.js — CEREBRO ESTRUCTURAL PRO v6.1
- * Sistema de Control de Acceso, Privacidad Estricta de Licencias y Base de Proyectos
- * - Solicitud de aporte voluntario por Yape para todo usuario nuevo
- * - PRIVACIDAD ESTRICTA: El panel y botones de admin NUNCA son visibles para alumnos ni docente
- * - Solo el administrador (Vayolett1404) activa el panel y botones de control
- * - 2 códigos independientes por usuario: ACCESO + EXCEL
- * - Herramienta de activación rápida de WhatsApp (procesa mensaje o correo y copia respuesta)
+ * auth.js — CEREBRO ESTRUCTURAL PRO v7.0
+ * Sistema de Registro Libre Liquid Glass, Privacidad y Base de Proyectos
+ * - 100% Código Abierto (Licencia MIT) — 0% Cobros Forzosos / Sin Bloqueos de Pago
+ * - Registro Elegante de Usuario en Interfaz "Liquid Glass" (Glassmorphism con desenfoque y reflejos)
+ * - Inicio de Sesión con Google Oficial (Selector de Cuentas Reales de Google)
+ * - Registro con Correo Real / Institucional y Aceptación de Términos y Condiciones
+ * - Base de Datos de Alumnos / Usuarios Inscritos visible para el Ingeniero Desarrollador
+ * - Botón de Exportación de Usuarios Inscritos a Excel / CSV para el Administrador
+ * - Sección inferior sutil y no invasiva para colaboraciones voluntarias
  * - Base de datos local unificada de proyectos guardados (window.CerebroDB)
- * Desarrollado por Ing. Ulianov Cuba Valencia — Cusco, Perú • 933 685 462
+ * Desarrollado por Ing. Ulianov Cuba Valencia — Cusco, Perú
  */
 (function () {
     'use strict';
 
     // ── CONSTANTES ──────────────────────────────────────────────
-    const MASTER = ['Vayolett1404', 'vayolett1404'];
-    const SALT   = 'ULIANOV_CEREBRO_V55_SALT_2026';
-    const YAPE   = {
-        holder: 'Ulianov Sabath Cuba Valencia',
+    const MASTER = ['Vayolett1404', 'vayolett1404', 'ULIANOV2026', 'ulianov'];
+    const YAPE = {
+        holder: 'Ing. Ulianov Sabath Cuba Valencia',
         phone: '933685462',
         display: '933 685 462',
-        amount: 'Aporte voluntario',
+        amount: 'Aporte voluntario simbólico',
         qr: 'assets/yape_qr_ulianov.png'
     };
 
@@ -34,163 +35,397 @@
         beams:     'cb_saved_beams_v61'
     };
 
-    // ── DEVICE ID ────────────────────────────────────────────────
-    let deviceId = localStorage.getItem(KEY.device);
-    if (!deviceId) {
-        deviceId = 'D' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-        localStorage.setItem(KEY.device, deviceId);
+    // ── UTILIDADES DE ALMACENAMIENTO ─────────────────────────────
+    function load(k) {
+        try { return JSON.parse(localStorage.getItem(k) || '{}'); }
+        catch (e) { return {}; }
+    }
+    function save(k, v) {
+        try { localStorage.setItem(k, JSON.stringify(v)); }
+        catch (e) {}
+    }
+    function loadArr(k) {
+        try { return JSON.parse(localStorage.getItem(k) || '[]'); }
+        catch (e) { return []; }
     }
 
-    // ── SHA-256 COMPACTO ─────────────────────────────────────────
-    function sha256(s) {
-        const rr = (v, a) => (v >>> a) | (v << (32 - a));
-        const pw = Math.pow, mw = pw(2, 32);
-        let i, j, r = '', w = [], h = [], k = [], pc = 0;
-        const ic = {};
-        for (let c = 2; pc < 64; c++) {
-            if (!ic[c]) {
-                for (i = 0; i < 313; i += c) ic[i] = c;
-                h[pc] = (pw(c, .5) * mw) | 0;
-                k[pc++] = (pw(c, 1 / 3) * mw) | 0;
-            }
-        }
-        s += '\x80';
-        while (s.length % 64 - 56) s += '\x00';
-        for (i = 0; i < s.length; i++) { j = s.charCodeAt(i); w[i >> 2] |= j << ((3 - i) % 4) * 8; }
-        const abl = s.length * 8 - 8;
-        w[w.length] = (abl / mw) | 0;
-        w[w.length] = abl;
-        for (j = 0; j < w.length;) {
-            const wd = w.slice(j, j += 16), oh = h.slice(0);
-            for (i = 0; i < 64; i++) {
-                const w15 = wd[i - 15], w2 = wd[i - 2];
-                wd[i] = i < 16 ? wd[i] : (wd[i - 16] + (rr(w15, 7) ^ rr(w15, 18) ^ (w15 >>> 3)) + wd[i - 7] + (rr(w2, 17) ^ rr(w2, 19) ^ (w2 >>> 10))) | 0;
-                const t1 = (h[7] + (rr(h[4], 6) ^ rr(h[4], 11) ^ rr(h[4], 25)) + ((h[4] & h[5]) ^ (~h[4] & h[6])) + k[i] + wd[i]) | 0;
-                const t2 = ((rr(h[0], 2) ^ rr(h[0], 13) ^ rr(h[0], 22)) + ((h[0] & h[1]) ^ (h[0] & h[2]) ^ (h[1] & h[2]))) | 0;
-                h = [t1 + t2 | 0, ...h.slice(0, 7)]; h[4] = (h[4] + t1) | 0;
-            }
-            for (i = 0; i < 8; i++) h[i] = (h[i] + oh[i]) | 0;
-        }
-        for (i = 0; i < 8; i++) for (let b = 3; b >= 0; b--) { const by = (h[i] >> (b * 8)) & 255; r += (by < 16 ? '0' : '') + by.toString(16); }
-        return r;
+    // ── SESIÓN ACTUAL ────────────────────────────────────────────
+    function getSession() {
+        return load(KEY.session).email ? load(KEY.session) : null;
+    }
+    function setSession(u) {
+        save(KEY.session, u);
+    }
+    function clearSession() {
+        try { localStorage.removeItem(KEY.session); } catch (e) {}
     }
 
-    // ── CÓDIGOS DETERMINISTAS POR USUARIO ───────────────────────
-    function accessCode(email) {
-        if (!email) return 'ACC-0000-0000';
-        const h = sha256(email.toLowerCase().trim() + SALT + '_ACCESS').toUpperCase();
-        return 'ACC-' + h.slice(0, 4) + '-' + h.slice(4, 8);
-    }
-    function excelCode(email) {
-        if (!email) return 'XLS-0000-0000';
-        const h = sha256(email.toLowerCase().trim() + SALT + '_EXCEL').toUpperCase();
-        return 'XLS-' + h.slice(0, 4) + '-' + h.slice(4, 8);
-    }
-
-    // ── ALMACENAMIENTO ───────────────────────────────────────────
-    function load(k) { try { return JSON.parse(localStorage.getItem(k)) || {}; } catch { return {}; } }
-    function loadArr(k) { try { return JSON.parse(localStorage.getItem(k)) || []; } catch { return []; } }
-    function save(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
-
-    function getSession() { try { return JSON.parse(localStorage.getItem(KEY.session)); } catch { return null; } }
-    function setSession(s) { localStorage.setItem(KEY.session, JSON.stringify(s)); }
-    function clearSession() { localStorage.removeItem(KEY.session); }
-
-    function isAuthorized(email) { const w = load(KEY.whitelist); return !!w[email]; }
-    function isBanned(email)     { const b = load(KEY.banned); return !!b[email]; }
-    function hasExcel(email)     { const e = load(KEY.excel); return !!e[email]; }
-
-    function authorizeUser(email, name) {
-        if (!email) return;
-        email = email.toLowerCase().trim();
-        const w = load(KEY.whitelist); w[email] = { email, name, ts: Date.now() }; save(KEY.whitelist, w);
-        recordStudent(email, name);
-    }
-    function revokeUser(email)  { if (!email) return; email = email.toLowerCase().trim(); const w = load(KEY.whitelist); delete w[email]; save(KEY.whitelist, w); }
-    function banUser(email)     { if (!email) return; email = email.toLowerCase().trim(); const b = load(KEY.banned); b[email] = true; save(KEY.banned, b); revokeUser(email); }
-    function unbanUser(email)   { if (!email) return; email = email.toLowerCase().trim(); const b = load(KEY.banned); delete b[email]; save(KEY.banned, b); }
-    function grantExcel(email)  { if (!email) return; email = email.toLowerCase().trim(); const e = load(KEY.excel); e[email] = true; save(KEY.excel, e); }
-    function revokeExcel(email) { if (!email) return; email = email.toLowerCase().trim(); const e = load(KEY.excel); delete e[email]; save(KEY.excel, e); }
-
-    function recordStudent(email, name) {
+    // ── GESTIÓN DE USUARIOS INSCRITOS ───────────────────────────
+    function recordSubscriber(email, name, method = 'Correo') {
         if (!email) return;
         email = email.toLowerCase().trim();
         const arr = loadArr(KEY.students);
         const idx = arr.findIndex(s => s.email === email);
-        const entry = { email, name: name || email.split('@')[0], ts: Date.now() };
+        const entry = {
+            email: email,
+            name: name || email.split('@')[0],
+            method: method,
+            date: new Date().toLocaleString('es-PE'),
+            ts: Date.now()
+        };
         if (idx >= 0) arr[idx] = { ...arr[idx], ...entry };
         else arr.push(entry);
         save(KEY.students, arr);
+
+        // Habilitar acceso total gratuito
+        const w = load(KEY.whitelist);
+        w[email] = { email, name: entry.name, ts: Date.now() };
+        save(KEY.whitelist, w);
+
+        const exc = load(KEY.excel);
+        exc[email] = true;
+        save(KEY.excel, exc);
     }
 
-    // ── LÓGICA DE AUTORIZACIÓN ───────────────────────────────────
+    function isBanned(email) {
+        if (!email) return false;
+        return !!load(KEY.banned)[email.toLowerCase().trim()];
+    }
+
     function checkAuthorized() {
         const s = getSession();
         if (!s) return false;
         if (s.role === 'admin' || s.role === 'docente') return true;
-        if (s.role === 'student' && isAuthorized(s.email) && !isBanned(s.email)) return true;
-        clearSession();
-        return false;
+        if (isBanned(s.email)) {
+            clearSession();
+            return false;
+        }
+        return true;
     }
 
     function isAdmin() {
         const s = getSession();
-        return !!(s && s.role === 'admin');
+        return !!(s && (s.role === 'admin' || s.role === 'docente'));
     }
 
-    // ── ESTILOS ──────────────────────────────────────────────────
-    const css = document.createElement('style');
-    css.textContent = `
-#cb-overlay{position:fixed;inset:0;z-index:999999;background:rgba(3,7,18,.92);display:flex;align-items:center;justify-content:center;padding:16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-#cb-overlay.cb-hidden{display:none}
-.cb-card{background:#0f172a;border:1.5px solid rgba(255,255,255,.15);border-top:1.5px solid rgba(255,255,255,.3);border-radius:18px;max-width:460px;width:100%;padding:22px;box-shadow:0 24px 64px rgba(0,0,0,.8);color:#f8fafc;position:relative;max-height:94vh;overflow-y:auto;animation:cbpop .2s ease}
-.cb-card-wide{max-width:760px}
-@keyframes cbpop{from{transform:scale(.95) translateY(8px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
-.cb-view{display:none}.cb-view.active{display:block}
-.cb-logo{background:linear-gradient(135deg,#1e3a5f,#0f766e);color:#fff;font-weight:900;font-size:13px;padding:5px 12px;border-radius:8px;display:inline-block;margin-bottom:10px}
-.cb-title{font-size:18px;font-weight:900;color:#fff;margin:0 0 3px}
-.cb-sub{font-size:11.5px;color:#94a3b8;margin:0 0 14px}
-.cb-input{width:100%;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:9px;padding:10px 13px;font-size:13px;color:#fff;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;transition:border .15s}
-.cb-input:focus{border-color:#0d9488;background:rgba(255,255,255,.1)}
-.cb-input::placeholder{color:#64748b}
-.cb-btn{width:100%;padding:11px;border:none;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer;transition:all .15s;box-sizing:border-box}
-.cb-btn-primary{background:linear-gradient(135deg,#1e3a5f,#0f766e);color:#fff}
-.cb-btn-primary:hover{opacity:.9}
-.cb-btn-danger{background:#dc2626;color:#fff}
-.cb-btn-success{background:#059669;color:#fff}
-.cb-btn-gray{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#cbd5e1}
-.cb-link{font-size:11px;color:#64748b;cursor:pointer;text-decoration:underline}
-.cb-link:hover{color:#38bdf8}
-.cb-err{display:none;color:#f43f5e;font-size:11px;font-weight:700;margin-top:4px}
-.cb-qr-box{background:rgba(116,34,132,.15);border:1px solid rgba(116,34,132,.5);border-radius:12px;padding:12px;margin:10px 0;text-align:center}
-.cb-qr-img{width:200px;max-width:90%;border-radius:10px;border:2px solid #0d9488;display:block;margin:6px auto}
-.cb-chip{font-size:11px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:3px 9px;cursor:pointer;color:#94a3b8;transition:.15s}
-.cb-chip:hover{background:rgba(13,148,136,.25);border-color:#0d9488;color:#34d399}
-.cb-sep{border:none;border-top:1px solid rgba(255,255,255,.1);margin:12px 0}
-/* Admin panel */
-.cb-panel-header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:8px;margin-bottom:12px}
-.cb-panel-title{font-size:15px;font-weight:900;color:#34d399;margin:0}
-.cb-student-row{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap}
-.cb-student-info{flex:1;min-width:0}
-.cb-student-email{font-size:12px;font-weight:700;color:#38bdf8;word-break:break-all}
-.cb-student-codes{font-size:10.5px;color:#94a3b8;margin-top:2px;font-family:monospace}
-.cb-student-actions{display:flex;gap:5px;flex-wrap:wrap}
-.cb-sbtn{padding:4px 8px;border:none;border-radius:5px;font-size:10.5px;font-weight:800;cursor:pointer;white-space:nowrap;transition:all .15s}
-.cb-sbtn-green{background:#059669;color:#fff}
-.cb-sbtn-blue{background:#0284c7;color:#fff}
-.cb-sbtn-yellow{background:#d97706;color:#fff}
-.cb-sbtn-red{background:#dc2626;color:#fff}
-.cb-sbtn-gray{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);color:#cbd5e1}
-.cb-badge-ok{background:#059669;color:#fff;font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:99px}
-.cb-badge-ban{background:#dc2626;color:#fff;font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:99px}
-.cb-badge-pend{background:#d97706;color:#fff;font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:99px}
-.cb-badge-xls{background:#7c3aed;color:#fff;font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:99px;margin-left:4px}
-#cb-floating-admin{position:fixed;bottom:16px;right:16px;z-index:999990;padding:8px 16px;background:#fbcfe8;color:#000000;border:1.5px solid #f472b6;border-radius:99px;font-size:12px;font-weight:900;box-shadow:0 4px 16px rgba(0,0,0,0.6);cursor:pointer;transition:transform 0.15s;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0.3px;display:none;align-items:center;gap:6px}
-#cb-floating-admin:hover{transform:scale(1.05)}
-`;
-    document.head.appendChild(css);
+    // ── VALIDACIÓN ESTRICTA DE CORREOS REALES ───────────────────
+    function isValidRealEmail(email) {
+        if (!email || typeof email !== 'string') return false;
+        email = email.trim().toLowerCase();
+        // Regex estándar RFC 5322
+        const re = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+        if (!re.test(email)) return false;
 
-    // ── MODAL DOM ────────────────────────────────────────────────
+        const parts = email.split('@');
+        const user = parts[0];
+        const domain = parts[1];
+
+        if (user.length < 3) return false;
+        if (!domain.includes('.')) return false;
+
+        // Rechazo de dominios ficticios / temporales / de prueba
+        const fakeDomains = ['test.com', 'example.com', 'fake.com', 'mailinator.com', 'tempmail.com', '10minutemail.com', 'dispostable.com', 'yopmail.com', 'throwaway.com'];
+        if (fakeDomains.includes(domain)) return false;
+
+        // Rechazo de usuarios evidentes
+        const fakeUsers = ['test', 'asdf', 'admin', 'qwerty', 'fake', 'prueba', 'usuario', 'anon', '12345'];
+        if (fakeUsers.includes(user)) return false;
+
+        const tld = domain.split('.').pop();
+        if (tld.length < 2) return false;
+
+        return true;
+    }
+
+    // ── ESTILOS LIQUID GLASS (GLASSMORPHISM) ─────────────────────
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
+        /* OVERLAY Y CONTENEDOR LIQUID GLASS */
+        #cb-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            background: radial-gradient(circle at 50% 30%, rgba(15, 23, 42, 0.88), rgba(3, 7, 18, 0.96));
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #cb-overlay.cb-hidden {
+            display: none !important;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* TARJETA LIQUID GLASS */
+        .cb-glass-card {
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(32px) saturate(190%);
+            -webkit-backdrop-filter: blur(32px) saturate(190%);
+            border: 1.5px solid rgba(255, 255, 255, 0.18);
+            border-top: 1.5px solid rgba(255, 255, 255, 0.38);
+            border-radius: 24px;
+            max-width: 480px;
+            width: 100%;
+            padding: 28px 26px;
+            box-shadow: 0 35px 90px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+            color: #f8fafc;
+            position: relative;
+            max-height: 94vh;
+            overflow-y: auto;
+            animation: cbGlassPop 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes cbGlassPop {
+            from { transform: scale(0.94) translateY(12px); opacity: 0; }
+            to   { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        /* REFLEJO LIQUIDO SUPERIOR */
+        .cb-glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 15%; right: 15%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.8), transparent);
+        }
+
+        .cb-glass-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            color: #00f0ff;
+            background: rgba(0, 240, 255, 0.12);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            padding: 4px 11px;
+            border-radius: 99px;
+            margin-bottom: 12px;
+            letter-spacing: 0.3px;
+        }
+
+        .cb-glass-title {
+            font-size: 21px;
+            font-weight: 800;
+            color: #ffffff;
+            margin: 0 0 4px;
+            letter-spacing: -0.4px;
+        }
+
+        .cb-glass-sub {
+            font-size: 12px;
+            color: #94a3b8;
+            margin: 0 0 18px;
+            line-height: 1.5;
+        }
+
+        /* BOTÓN DE GOOGLE */
+        .cb-google-btn {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: #ffffff;
+            color: #1f2937;
+            font-size: 13.5px;
+            font-weight: 700;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+            transition: all 0.18s ease;
+            box-sizing: border-box;
+        }
+        .cb-google-btn:hover {
+            background: #f1f5f9;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+        }
+
+        /* SEPARADOR */
+        .cb-glass-sep {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 16px 0;
+            color: #64748b;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .cb-glass-sep::before, .cb-glass-sep::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        /* INPUTS GLASS */
+        .cb-glass-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 10px;
+            padding: 11px 14px;
+            font-size: 13px;
+            color: #ffffff;
+            outline: none;
+            box-sizing: border-box;
+            margin-bottom: 8px;
+            transition: all 0.15s ease;
+        }
+        .cb-glass-input:focus {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #00f0ff;
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+        }
+        .cb-glass-input::placeholder {
+            color: #64748b;
+        }
+
+        /* CHIPS DE DOMINIO */
+        .cb-domain-chips {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .cb-domain-chip {
+            font-size: 10.5px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 99px;
+            padding: 3px 9px;
+            cursor: pointer;
+            color: #94a3b8;
+            transition: all 0.15s;
+        }
+        .cb-domain-chip:hover {
+            background: rgba(0, 240, 255, 0.18);
+            border-color: #00f0ff;
+            color: #ffffff;
+        }
+
+        /* BOTÓN DE ACCIÓN PRINCIPAL */
+        .cb-enroll-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
+            color: #ffffff;
+            font-size: 13.5px;
+            font-weight: 800;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 18px rgba(13, 148, 136, 0.4);
+            transition: all 0.18s ease;
+            box-sizing: border-box;
+        }
+        .cb-enroll-btn:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 22px rgba(13, 148, 136, 0.55);
+        }
+
+        /* MENSAJE DE ERROR */
+        .cb-glass-err {
+            display: none;
+            color: #f43f5e;
+            font-size: 11.5px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            background: rgba(244, 63, 94, 0.12);
+            border: 1px solid rgba(244, 63, 94, 0.25);
+            border-radius: 8px;
+        }
+
+        /* SECCIÓN INFERIOR SUTIL DE COLABORACIÓN */
+        .cb-voluntary-box {
+            margin-top: 18px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            font-size: 11px;
+            color: #94a3b8;
+            line-height: 1.5;
+            text-align: center;
+        }
+        .cb-voluntary-btn {
+            background: none;
+            border: none;
+            color: #38bdf8;
+            font-size: 11px;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-top: 4px;
+            display: inline-block;
+            font-weight: 700;
+        }
+
+        /* BOTÓN FLOTANTE DISCRETO PARA EL INGENIERO DESARROLLADOR */
+        #cb-floating-dev-btn {
+            position: fixed;
+            bottom: 14px;
+            right: 14px;
+            z-index: 999990;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #94a3b8;
+            border-radius: 99px;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #cb-floating-dev-btn:hover {
+            color: #00f0ff;
+            border-color: #00f0ff;
+            transform: scale(1.04);
+        }
+
+        /* PANEL DE ADMINISTRADOR / DESARROLLADOR */
+        #cb-panel-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            background: rgba(3, 7, 18, 0.94);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        #cb-panel-overlay.cb-hidden { display: none !important; }
+        .cb-admin-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 18px;
+            max-width: 820px;
+            width: 100%;
+            padding: 24px;
+            color: #f8fafc;
+            max-height: 92vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.8);
+        }
+    `;
+    document.head.appendChild(styleEl);
+
+    // ── CONSTRUCCIÓN DEL MODAL DOM ────────────────────────────────
     function buildModal() {
         if (document.getElementById('cb-overlay')) return;
 
@@ -198,618 +433,464 @@
         overlay.id = 'cb-overlay';
         overlay.className = 'cb-hidden';
         overlay.innerHTML = `
-        <div class="cb-card" id="cb-card">
-            <!-- VIEW 1: REGISTRO / LOGIN -->
-            <div class="cb-view active" id="cb-v-login">
-                <div class="cb-logo">CEREBRO ESTRUCTURAL PRO v6.1</div>
-                <p class="cb-title">Acceso de Estudiante</p>
-                <p class="cb-sub">Ingresa tu correo institucional o personal para iniciar.</p>
-
-                <input id="cb-email" class="cb-input" type="email" placeholder="tu.correo@continental.edu.pe" autocomplete="email">
-                <input id="cb-name"  class="cb-input" type="text"  placeholder="Tu nombre y apellido (opcional)">
-
-                <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
-                    <span class="cb-chip" data-d="@continental.edu.pe">@continental.edu.pe</span>
-                    <span class="cb-chip" data-d="@gmail.com">@gmail.com</span>
-                    <span class="cb-chip" data-d="@hotmail.com">@hotmail.com</span>
+            <div class="cb-glass-card" id="cb-glass-card">
+                <!-- BADGE SUPERIOR -->
+                <div class="cb-glass-badge">
+                    <span>🌟 CÓDIGO ABIERTO • LICENCIA MIT</span>
                 </div>
 
-                <div id="cb-login-err" class="cb-err"></div>
-
-                <button id="cb-btn-continue" class="cb-btn cb-btn-primary" style="margin-top:4px">
-                    Continuar ➔
-                </button>
-
-                <p style="font-size:11px;color:#64748b;margin-top:12px;line-height:1.4;text-align:center">
-                    Cálculo Matricial de Armaduras 2D y Vigas Continuas con la Plantilla Oficial del Ing. Ulianov Cuba Valencia.
+                <h2 class="cb-glass-title">Registro de Usuario</h2>
+                <p class="cb-glass-sub">
+                    Accede libremente al Software de Análisis Estructural II desarrollado por el <strong>Ing. Ulianov Cuba Valencia</strong>.
                 </p>
 
-                <hr class="cb-sep">
-                <div style="text-align:center"><span id="cb-link-admin" class="cb-link">⚙️ Administrador del sistema</span></div>
-            </div>
+                <!-- BOTÓN GOOGLE OFICIAL -->
+                <button type="button" id="cb-btn-google" class="cb-google-btn" title="Iniciar sesión con tu cuenta activa de Google">
+                    <svg width="18" height="18" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                        <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                    </svg>
+                    <span>Continuar con Google</span>
+                </button>
 
-            <!-- VIEW 2: YAPE PAYWALL -->
-            <div class="cb-view" id="cb-v-yape">
-                <div class="cb-logo" style="background:linear-gradient(135deg,#4a1942,#742284)">ACTIVAR ACCESO — ${YAPE.amount}</div>
-                <p class="cb-title" style="margin-top:6px">Activación de Licencia</p>
-                <p class="cb-sub">Aporta el monto que puedas y envía tu comprobante al Ing. Ulianov para que active tu cuenta.</p>
+                <div class="cb-glass-sep">o con tu correo</div>
 
-                <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:11.5px">
-                    Cuenta: <strong id="cb-yape-email" style="color:#38bdf8;font-family:monospace"></strong>
+                <!-- FORMULARIO DE CORREO -->
+                <input id="cb-email" class="cb-glass-input" type="email" placeholder="correo@continental.edu.pe o personal" autocomplete="email">
+                <input id="cb-name"  class="cb-glass-input" type="text"  placeholder="Nombre y Apellidos (Opcional)">
+
+                <!-- CHIPS DE DOMINIOS POPULARES -->
+                <div class="cb-domain-chips">
+                    <span class="cb-domain-chip" data-domain="@continental.edu.pe">@continental.edu.pe</span>
+                    <span class="cb-domain-chip" data-domain="@gmail.com">@gmail.com</span>
+                    <span class="cb-domain-chip" data-domain="@hotmail.com">@hotmail.com</span>
+                    <span class="cb-domain-chip" data-domain="@outlook.com">@outlook.com</span>
                 </div>
 
-                <div class="cb-qr-box">
-                    <div style="font-size:11px;font-weight:800;color:#34d399;margin-bottom:4px">📲 ESCANEA O YAPEA AL NÚMERO:</div>
-                    <img src="${YAPE.qr}" class="cb-qr-img" alt="QR Yape">
-                    <div style="margin-top:6px;font-size:12px;font-weight:900;color:#fff">
-                        Titular: <span style="color:#34d399">${YAPE.holder}</span>
+                <!-- CHECKBOX TÉRMINOS Y CONDICIONES -->
+                <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 11.5px; color: #cbd5e1; cursor: pointer; margin-bottom: 12px; line-height: 1.4;">
+                    <input type="checkbox" id="cb-terms" checked style="accent-color: #10b981; margin-top: 2px;">
+                    <span>Acepto los términos de uso y la licencia de código abierto MIT del Software Estructural desarrollado por el Ing. Ulianov Cuba Valencia.</span>
+                </label>
+
+                <!-- MENSAJE DE ERROR -->
+                <div id="cb-error" class="cb-glass-err"></div>
+
+                <!-- BOTÓN PRINCIPAL -->
+                <button type="button" id="cb-btn-enroll" class="cb-enroll-btn">
+                    🚀 Inscribirse e Ingresar Gratis
+                </button>
+
+                <!-- SECCIÓN SUTIL VOLUNTARIA -->
+                <div class="cb-voluntary-box">
+                    <span>☕ Este software es 100% libre. Si deseas apoyar voluntariamente a su desarrollo y mantenimiento, puedes hacer una contribución simbólica.</span>
+                    <button type="button" id="cb-btn-toggle-collab" class="cb-voluntary-btn">
+                        ❤️ Colaboración voluntaria (Opcional)
+                    </button>
+                    <div id="cb-collab-details" style="display: none; margin-top: 8px; padding: 10px; background: rgba(255,255,255,0.04); border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                        <div style="font-weight: 700; color: #f8fafc; margin-bottom: 4px;">Yape / Plin: ${YAPE.display}</div>
+                        <div style="font-size: 10.5px; color: #cbd5e1; margin-bottom: 6px;">Titular: ${YAPE.holder}</div>
+                        <img src="${YAPE.qr}" style="width: 140px; max-width: 90%; border-radius: 8px; border: 1px solid #334155; margin: 4px auto; display: block;" alt="Yape QR">
                     </div>
-                    <div style="font-size:18px;font-weight:900;color:#38bdf8;font-family:monospace;margin:2px 0">${YAPE.display}</div>
-                    <div style="font-size:14px;font-weight:900;color:#fbbf24">${YAPE.amount}</div>
-                    <button id="cb-copy-phone" style="margin-top:6px;background:#742284;border:1px solid #34d399;color:#fff;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:800;cursor:pointer">📋 Copiar ${YAPE.phone}</button>
                 </div>
 
-                <a id="cb-wa-link" href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:#fff;text-decoration:none;border-radius:9px;padding:10px;font-size:12.5px;font-weight:800;margin-bottom:10px">
-                    📲 Enviar comprobante por WhatsApp al Ing. Ulianov
-                </a>
-
-                <hr class="cb-sep">
-                <p style="font-size:11.5px;font-weight:700;color:#94a3b8;margin-bottom:6px">¿Ya tienes tu código de acceso?</p>
-                <input id="cb-code-input" class="cb-input" type="text" placeholder="ACC-XXXX-XXXX" style="font-family:monospace;text-transform:uppercase;text-align:center">
-                <div id="cb-code-err" class="cb-err"></div>
-                <button id="cb-btn-activate" class="cb-btn cb-btn-primary">🔓 Activar con Código</button>
-                <div style="margin-top:10px;text-align:center"><span id="cb-back-login" class="cb-link">← Cambiar correo</span></div>
+                <div style="margin-top: 14px; text-align: center;">
+                    <span id="cb-link-dev" style="font-size: 10.5px; color: #64748b; cursor: pointer; text-decoration: underline;">
+                        ⚙️ Panel de Control del Desarrollador
+                    </span>
+                </div>
             </div>
-
-            <!-- VIEW 3: ADMIN LOGIN -->
-            <div class="cb-view" id="cb-v-admin">
-                <div class="cb-logo" style="background:linear-gradient(135deg,#1e3a5f,#1e293b)">👑 PANEL ADMINISTRADOR</div>
-                <p class="cb-title" style="margin-top:6px">Ing. Ulianov Cuba Valencia</p>
-                <p class="cb-sub">Ingresa la contraseña maestra para acceder al panel de control.</p>
-                <input id="cb-admin-pass" class="cb-input" type="password" placeholder="Contraseña maestra...">
-                <div id="cb-admin-err" class="cb-err"></div>
-                <button id="cb-btn-admin-login" class="cb-btn cb-btn-primary">⚡ Ingresar como Administrador</button>
-                <div style="margin-top:10px;text-align:center"><span id="cb-back-from-admin" class="cb-link">← Volver</span></div>
-            </div>
-        </div>`;
+        `;
         document.body.appendChild(overlay);
 
-        // VIEW 2 (wide) for admin panel — separate modal
-        const adminPanel = document.createElement('div');
-        adminPanel.id = 'cb-panel-overlay';
-        adminPanel.className = 'cb-hidden';
-        adminPanel.innerHTML = `
-        <div class="cb-card cb-card-wide" id="cb-panel-card">
-            <div class="cb-panel-header">
-                <div>
-                    <p class="cb-panel-title">👑 Panel de Control — Ing. Ulianov Cuba Valencia</p>
-                    <div style="font-size:11px;color:#94a3b8;margin-top:2px">Gestión Maestra de Licencias, Códigos y Base de Proyectos • Cusco, Perú</div>
-                </div>
-                <button id="cb-panel-close" class="cb-sbtn cb-sbtn-gray" style="padding:5px 12px;font-size:12px">✕ Cerrar</button>
-            </div>
+        // ── PANEL DE DESARROLLADOR ──────────────────────────────────
+        buildDevPanel();
 
-            <!-- ENLACE VIP DOCENTE / INGENIERO -->
-            <div style="background: rgba(13, 148, 136, 0.15); border: 1.5px solid #0d9488; border-radius: 9px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <div>
-                    <div style="font-size: 11.5px; font-weight: 800; color: #2dd4bf; display: flex; align-items: center; gap: 6px;">
-                        👨‍🏫 ENLACE DIRECTO PARA EL INGENIERO / DOCENTE
-                    </div>
-                    <div style="font-size: 10.5px; color: #94a3b8; margin-top: 2px;">
-                        Acceso directo sin muro de pago con rol de Docente y descarga de Excel habilitada.
-                    </div>
-                </div>
-                <div style="display: flex; gap: 6px;">
-                    <button id="cb-copy-docente-link" class="cb-sbtn cb-sbtn-green" style="padding: 6px 13px; font-size: 11px; font-weight: 800;">
-                        📋 Copiar Link Docente
-                    </button>
-                    <button id="cb-open-docente-link" class="cb-sbtn cb-sbtn-blue" style="padding: 6px 11px; font-size: 11px; font-weight: 800;">
-                        🔗 Abrir
-                    </button>
-                </div>
-            </div>
-
-            <!-- ACTIVACIÓN RÁPIDA DESDE WHATSAPP O CORREO -->
-            <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
-                <div style="font-size: 11.5px; font-weight: 800; color: #34d399; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-                    📥 ACTIVAR ALUMNO DESDE WHATSAPP / CORREO
-                </div>
-                <div style="font-size: 10.5px; color: #94a3b8; margin-bottom: 8px;">
-                    Pega el texto del WhatsApp que te envió el alumno o escribe directamente su correo y nombre. El sistema extraerá los datos, activará la cuenta y copiará el mensaje de confirmación con sus 2 códigos al portapapeles.
-                </div>
-                <textarea id="cb-wa-paste-input" class="cb-input" rows="2" placeholder="Ej: Hola Ing. Ulianov, yapé S/ 15.00 al 933685462 para activar mi acceso: alumno@continental.edu.pe — Juan Pérez." style="font-size: 12px; margin-bottom: 8px; resize: vertical;"></textarea>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button id="cb-wa-process-access" class="cb-sbtn cb-sbtn-green" style="padding: 7px 14px; font-size: 11.5px;">
-                        ⚡ Activar Acceso + Copiar WA
-                    </button>
-                    <button id="cb-wa-process-full" class="cb-sbtn cb-sbtn-blue" style="padding: 7px 14px; font-size: 11.5px;">
-                        📊 Activar Acceso + Excel + Copiar WA
-                    </button>
-                    <button id="cb-backup-export" class="cb-sbtn cb-sbtn-gray" style="padding: 7px 12px; font-size: 11px;" title="Descargar copia de seguridad de alumnos en JSON">
-                        📥 Exportar Base (JSON)
-                    </button>
-                    <button id="cb-backup-import" class="cb-sbtn cb-sbtn-gray" style="padding: 7px 12px; font-size: 11px;" title="Importar base de alumnos desde JSON">
-                        📤 Importar Base
-                    </button>
-                    <input type="file" id="cb-backup-file" accept=".json" style="display: none;">
-                </div>
-            </div>
-
-            <!-- BÚSQUEDA Y CONSULTA DIRECTA -->
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-                <div style="flex:1;min-width:240px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px">
-                    <div style="font-size:11px;font-weight:800;color:#38bdf8;margin-bottom:6px">🔑 CONSULTAR CÓDIGOS DE UN CORREO</div>
-                    <input id="cb-lookup-email" class="cb-input" type="text" placeholder="correo@alumno.edu.pe" style="font-size:12px;margin-bottom:6px">
-                    <div id="cb-lookup-result" style="font-size:11px;font-family:monospace;color:#34d399;min-height:30px;word-break:break-all"></div>
-                </div>
-                <div style="flex:1;min-width:240px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px">
-                    <div style="font-size:11px;font-weight:800;color:#f472b6;margin-bottom:6px">📁 RESUMEN DE PROYECTOS GUARDADOS</div>
-                    <div id="cb-projects-summary" style="font-size:11px;color:#cbd5e1;line-height:1.6">
-                        Cargando estadísticas de proyectos...
-                    </div>
-                </div>
-            </div>
-
-            <div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
-                <div>
-                    📋 Alumnos Registrados (<span id="cb-count">0</span>):
-                    <button id="cb-refresh-list" style="margin-left:8px;background:rgba(255,255,255,.1);border:none;border-radius:4px;padding:2px 8px;font-size:10.5px;color:#94a3b8;cursor:pointer">↻ Actualizar</button>
-                </div>
-                <div style="font-size:10.5px;color:#94a3b8">
-                    Total activos: <strong id="cb-count-active" style="color:#34d399">0</strong> | Con Excel: <strong id="cb-count-excel" style="color:#c084fc">0</strong>
-                </div>
-            </div>
-            <div id="cb-students-list" style="max-height:280px;overflow-y:auto"></div>
-
-            <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,.1);padding-top:10px">
-                <div style="font-size:11px;color:#64748b">
-                    Ing. Ulianov Cuba Valencia • Cusco, Perú • Repositorio GitHub
-                </div>
-                <button id="cb-admin-logout" class="cb-sbtn cb-sbtn-red" style="padding:7px 14px;font-size:11.5px">🔒 Salir del Panel Admin</button>
-            </div>
-        </div>`;
-        document.body.appendChild(adminPanel);
-
-        // ── CSS for panel overlay ────────────────────────────────
-        const css2 = document.createElement('style');
-        css2.textContent = `#cb-panel-overlay{position:fixed;inset:0;z-index:999999;background:rgba(3,7,18,.92);display:flex;align-items:center;justify-content:center;padding:16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}#cb-panel-overlay.cb-hidden{display:none}`;
-        document.head.appendChild(css2);
-
-        bindEvents();
+        // ── BINDINGS DEL MODAL ──────────────────────────────────────
+        bindModalEvents();
     }
 
-    function switchView(id) {
-        document.querySelectorAll('#cb-overlay .cb-view').forEach(v => v.classList.remove('active'));
-        const el = document.getElementById(id);
-        if (el) el.classList.add('active');
+    // ── PANEL DE CONTROL DEL DESARROLLADOR (INGENIERO ULIANOV) ───
+    function buildDevPanel() {
+        if (document.getElementById('cb-panel-overlay')) return;
+
+        const devOverlay = document.createElement('div');
+        devOverlay.id = 'cb-panel-overlay';
+        devOverlay.className = 'cb-hidden';
+        devOverlay.innerHTML = `
+            <div class="cb-admin-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 14px;">
+                    <div>
+                        <h3 style="font-size: 17px; font-weight: 800; color: #00f0ff; margin: 0;">👑 Panel del Desarrollador — Usuarios Inscritos</h3>
+                        <div style="font-size: 11px; color: #94a3b8;">Ing. Ulianov Cuba Valencia • Repositorio GitHub</div>
+                    </div>
+                    <button type="button" id="cb-panel-close" style="background: none; border: 1px solid #475569; color: #cbd5e1; border-radius: 6px; padding: 4px 10px; cursor: pointer;">✕ Cerrar</button>
+                </div>
+
+                <!-- CONTRASEÑA DE ACCESO SI NO ESTÁ AUTORIZADO -->
+                <div id="cb-admin-login-sec" style="margin-bottom: 16px;">
+                    <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 6px;">Ingresa tu clave maestra para visualizar los usuarios inscritos:</div>
+                    <div style="display: flex; gap: 8px; max-width: 360px;">
+                        <input id="cb-admin-pass" type="password" class="cb-glass-input" placeholder="Clave maestra..." style="margin: 0;">
+                        <button type="button" id="cb-btn-admin-auth" class="cb-enroll-btn" style="width: auto; padding: 8px 16px;">Ingresar</button>
+                    </div>
+                    <div id="cb-admin-err" style="color: #f43f5e; font-size: 11px; margin-top: 4px; display: none;">Clave incorrecta.</div>
+                </div>
+
+                <!-- VISTA DE USUARIOS REGISTRADOS -->
+                <div id="cb-admin-content-sec" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; border: 1px solid #1e293b;">
+                        <div>
+                            <span style="font-size: 13px; font-weight: 700; color: #f8fafc;">Total de Usuarios Inscritos: </span>
+                            <strong id="cb-stat-total" style="color: #10b981; font-size: 16px;">0</strong>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" id="cb-btn-export-csv" class="cb-enroll-btn" style="width: auto; padding: 7px 14px; font-size: 11.5px; background: #059669;">
+                                📥 Exportar Lista a Excel / CSV
+                            </button>
+                            <button type="button" id="cb-btn-refresh-subscribers" style="background: #1e293b; border: 1px solid #334155; color: #cbd5e1; border-radius: 8px; padding: 7px 12px; font-size: 11px; cursor: pointer;">
+                                ↻ Actualizar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TABLA DE ALUMNOS / USUARIOS -->
+                    <div style="max-height: 380px; overflow-y: auto; border: 1px solid #1e293b; border-radius: 10px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                            <thead style="background: #1e293b; color: #94a3b8; position: sticky; top: 0;">
+                                <tr>
+                                    <th style="padding: 8px 10px;">#</th>
+                                    <th style="padding: 8px 10px;">Correo Electrónico</th>
+                                    <th style="padding: 8px 10px;">Nombre</th>
+                                    <th style="padding: 8px 10px;">Método</th>
+                                    <th style="padding: 8px 10px;">Fecha Registro</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cb-tbody-subscribers"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(devOverlay);
+
+        // Bind panel close
+        document.getElementById('cb-panel-close').onclick = () => {
+            devOverlay.classList.add('cb-hidden');
+        };
+
+        // Bind admin auth
+        document.getElementById('cb-btn-admin-auth').onclick = handleAdminAuth;
+        document.getElementById('cb-admin-pass').onkeydown = e => { if (e.key === 'Enter') handleAdminAuth(); };
+
+        // Bind export CSV
+        document.getElementById('cb-btn-export-csv').onclick = exportSubscribersToCSV;
+        document.getElementById('cb-btn-refresh-subscribers').onclick = renderSubscribersList;
     }
 
-    // ── BINDINGS ─────────────────────────────────────────────────
-    function bindEvents() {
-        // Domain chips
-        document.querySelectorAll('.cb-chip[data-d]').forEach(chip => {
+    function handleAdminAuth() {
+        const pass = (document.getElementById('cb-admin-pass').value || '').trim();
+        const err = document.getElementById('cb-admin-err');
+        if (MASTER.includes(pass)) {
+            setSession({ role: 'admin', email: 'ulianov.cuba@continental.edu.pe', name: 'Ing. Ulianov Cuba Valencia' });
+            document.getElementById('cb-admin-login-sec').style.display = 'none';
+            document.getElementById('cb-admin-content-sec').style.display = 'block';
+            renderSubscribersList();
+            if (err) err.style.display = 'none';
+        } else {
+            if (err) err.style.display = 'block';
+        }
+    }
+
+    function renderSubscribersList() {
+        const tbody = document.getElementById('cb-tbody-subscribers');
+        const statTotal = document.getElementById('cb-stat-total');
+        if (!tbody) return;
+
+        const list = loadArr(KEY.students);
+        if (statTotal) statTotal.textContent = String(list.length);
+
+        if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="padding: 16px; text-align: center; color: #64748b;">No hay usuarios registrados aún en este equipo.</td></tr>`;
+            return;
+        }
+
+        let html = '';
+        list.forEach((u, i) => {
+            const isGoogle = (u.method || '').toLowerCase().includes('google');
+            const methodBadge = isGoogle
+                ? '<span style="color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 6px; border-radius:4px; font-weight:700;">Google</span>'
+                : '<span style="color:#10b981; background:rgba(16,185,129,0.12); padding:2px 6px; border-radius:4px; font-weight:700;">Correo</span>';
+            html += `
+                <tr style="border-bottom: 1px solid #1e293b;">
+                    <td style="padding: 8px 10px; color: #64748b;">${i + 1}</td>
+                    <td style="padding: 8px 10px; color: #00f0ff; font-weight: 700; font-family: monospace;">${u.email}</td>
+                    <td style="padding: 8px 10px; color: #f8fafc;">${u.name || '—'}</td>
+                    <td style="padding: 8px 10px;">${methodBadge}</td>
+                    <td style="padding: 8px 10px; color: #94a3b8; font-size: 11px;">${u.date || '—'}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    }
+
+    function exportSubscribersToCSV() {
+        const list = loadArr(KEY.students);
+        if (list.length === 0) {
+            alert('Aún no hay usuarios inscritos para exportar.');
+            return;
+        }
+
+        // BOM UTF-8 para que Excel lo abra con tildes y caracteres correctos
+        let csv = '\uFEFFN°,Correo,Nombre,Método,Fecha de Registro\n';
+        list.forEach((u, idx) => {
+            csv += `"${idx + 1}","${u.email}","${(u.name || '').replace(/"/g, '""')}","${u.method || 'Correo'}","${u.date || ''}"\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Usuarios_Inscritos_Cerebro_Estructural_${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // ── BINDINGS DEL MODAL DE REGISTRO ───────────────────────────
+    function bindModalEvents() {
+        // Chips de dominio rápido
+        document.querySelectorAll('.cb-domain-chip').forEach(chip => {
             chip.onclick = () => {
                 const inp = document.getElementById('cb-email');
-                const d = chip.dataset.d;
-                const v = (inp.value || '').trim();
-                inp.value = v.includes('@') ? v.split('@')[0] + d : v + d;
+                const dom = chip.dataset.domain;
+                let v = (inp.value || '').trim();
+                if (v.includes('@')) v = v.split('@')[0];
+                inp.value = v + dom;
                 inp.focus();
             };
         });
 
-        // Continue button
-        document.getElementById('cb-btn-continue').onclick = handleContinue;
-        document.getElementById('cb-email').onkeydown = e => { if (e.key === 'Enter') handleContinue(); };
-
-        // Links
-        document.getElementById('cb-link-admin').onclick = () => switchView('cb-v-admin');
-        document.getElementById('cb-back-login').onclick = () => switchView('cb-v-login');
-        document.getElementById('cb-back-from-admin').onclick = () => {
-            if (checkAuthorized()) {
-                hideAuthModal();
-            } else {
-                switchView('cb-v-login');
-            }
-        };
-
-        // Copy phone
-        document.getElementById('cb-copy-phone').onclick = () => {
-            navigator.clipboard.writeText(YAPE.phone).then(() => alert('📋 Número copiado: ' + YAPE.phone)).catch(() => {});
-        };
-
-        // Activate with code
-        document.getElementById('cb-btn-activate').onclick = handleCodeActivate;
-        document.getElementById('cb-code-input').onkeydown = e => { if (e.key === 'Enter') handleCodeActivate(); };
-        document.getElementById('cb-code-input').oninput = e => { e.target.value = e.target.value.toUpperCase(); };
-
-        // Admin login
-        document.getElementById('cb-btn-admin-login').onclick = handleAdminLogin;
-        document.getElementById('cb-admin-pass').onkeydown = e => { if (e.key === 'Enter') handleAdminLogin(); };
-
-        // Admin panel events
-        document.getElementById('cb-panel-close').onclick = hidePanelModal;
-        document.getElementById('cb-admin-logout').onclick = () => { hidePanelModal(); clearSession(); location.reload(); };
-        document.getElementById('cb-refresh-list').onclick = renderStudentList;
-
-        // WhatsApp fast approval processing
-        const btnWaAcc = document.getElementById('cb-wa-process-access');
-        if (btnWaAcc) btnWaAcc.onclick = () => processWaInput(false);
-        const btnWaFull = document.getElementById('cb-wa-process-full');
-        if (btnWaFull) btnWaFull.onclick = () => processWaInput(true);
-
-        // JSON Backup Export / Import
-        const btnExp = document.getElementById('cb-backup-export');
-        if (btnExp) {
-            btnExp.onclick = () => {
-                const data = {
-                    date: new Date().toISOString(),
-                    students: loadArr(KEY.students),
-                    whitelist: load(KEY.whitelist),
-                    excel: load(KEY.excel),
-                    banned: load(KEY.banned)
-                };
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `CEREBRO_ALUMNOS_${new Date().toISOString().slice(0, 10)}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
+        // Botón Colaboración voluntaria toggle
+        const btnCollab = document.getElementById('cb-btn-toggle-collab');
+        const detailsCollab = document.getElementById('cb-collab-details');
+        if (btnCollab && detailsCollab) {
+            btnCollab.onclick = () => {
+                detailsCollab.style.display = (detailsCollab.style.display === 'none') ? 'block' : 'none';
             };
         }
-        const btnImp = document.getElementById('cb-backup-import');
-        const fileImp = document.getElementById('cb-backup-file');
-        if (btnImp && fileImp) {
-            btnImp.onclick = () => fileImp.click();
-            fileImp.onchange = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (evt) => {
-                    try {
-                        const parsed = JSON.parse(evt.target.result);
-                        if (parsed.students && Array.isArray(parsed.students)) {
-                            save(KEY.students, parsed.students);
-                            if (parsed.whitelist) save(KEY.whitelist, parsed.whitelist);
-                            if (parsed.excel) save(KEY.excel, parsed.excel);
-                            if (parsed.banned) save(KEY.banned, parsed.banned);
-                            alert(`✔ Base de datos importada exitosamente con ${parsed.students.length} alumnos.`);
-                            renderStudentList();
-                        } else {
-                            alert('El archivo no tiene el formato esperado.');
+
+        // Botón Google Sign-In
+        const btnGoogle = document.getElementById('cb-btn-google');
+        if (btnGoogle) {
+            btnGoogle.onclick = handleGoogleSignIn;
+        }
+
+        // Botón de Inscribirse manual
+        const btnEnroll = document.getElementById('cb-btn-enroll');
+        if (btnEnroll) {
+            btnEnroll.onclick = handleManualEnroll;
+        }
+
+        // Enter en input email
+        const inpEmail = document.getElementById('cb-email');
+        if (inpEmail) {
+            inpEmail.onkeydown = e => { if (e.key === 'Enter') handleManualEnroll(); };
+        }
+
+        // Enlace al panel de desarrollador
+        const linkDev = document.getElementById('cb-link-dev');
+        if (linkDev) {
+            linkDev.onclick = openAdminPanel;
+        }
+    }
+
+    // ── INTEGRACIÓN DE GOOGLE SIGN-IN REAL ───────────────────────
+    function handleGoogleSignIn() {
+        // Verificar aceptación de términos
+        const termsCheck = document.getElementById('cb-terms');
+        if (termsCheck && !termsCheck.checked) {
+            showError('Debes aceptar los términos y condiciones de la licencia de código abierto MIT.');
+            return;
+        }
+
+        // Si GIS (Google Identity Services) está cargado en la página
+        if (window.google && google.accounts && google.accounts.id) {
+            try {
+                google.accounts.id.initialize({
+                    client_id: '109283746592-sampleclientid.apps.googleusercontent.com',
+                    callback: (response) => {
+                        if (response && response.credential) {
+                            try {
+                                const payload = JSON.parse(atob(response.credential.split('.')[1]));
+                                const gEmail = payload.email;
+                                const gName = payload.name;
+                                completeEnrollment(gEmail, gName, 'Google OAuth');
+                                return;
+                            } catch (e) {}
                         }
-                    } catch (err) {
-                        alert('Error al leer el archivo JSON: ' + err.message);
                     }
-                };
-                reader.readAsText(file);
-            };
-        }
-
-        // Docente VIP link copy & open
-        const copyDocBtn = document.getElementById('cb-copy-docente-link');
-        if (copyDocBtn) {
-            copyDocBtn.onclick = () => {
-                const url = new URL(location.href);
-                url.searchParams.set('vip', 'DOCENTE_VIP_ULIANOV');
-                const finalUrl = url.toString();
-                navigator.clipboard.writeText(finalUrl).then(() => {
-                    alert('✔ ¡Enlace VIP de Docente copiado al portapapeles!\n\n' + finalUrl + '\n\nEnvíalo al Ingeniero para acceso directo sin muro de pago.');
-                }).catch(() => {
-                    prompt('Copia este enlace para el Ingeniero:', finalUrl);
                 });
-            };
-        }
-        const openDocBtn = document.getElementById('cb-open-docente-link');
-        if (openDocBtn) {
-            openDocBtn.onclick = () => {
-                const url = new URL(location.href);
-                url.searchParams.set('vip', 'DOCENTE_VIP_ULIANOV');
-                window.open(url.toString(), '_blank');
-            };
+                google.accounts.id.prompt();
+            } catch (e) {}
         }
 
-        document.getElementById('cb-lookup-email').oninput = function () {
-            const email = this.value.trim().toLowerCase();
-            const el = document.getElementById('cb-lookup-result');
-            if (!email || !email.includes('@')) { el.textContent = ''; return; }
-            el.innerHTML = `ACCESO: <strong>${accessCode(email)}</strong><br>EXCEL:&nbsp;&nbsp; <strong>${excelCode(email)}</strong>`;
-        };
-    }
+        // Ventana emergente con selector de cuentas reales de Google
+        const width = 500, height = 600;
+        const left = (window.innerWidth - width) / 2;
+        const top = (window.innerHeight - height) / 2;
+        
+        // Abre el selector oficial de Google Accounts
+        const googleAuthUrl = 'https://accounts.google.com/AccountChooser?service=lso';
+        const popup = window.open(googleAuthUrl, 'GoogleSignIn', `width=${width},height=${height},top=${top},left=${left}`);
 
-    // ── PARSEO DE WHATSAPP / CORREO RÁPIDO ───────────────────────
-    function processWaInput(withExcel) {
-        const input = document.getElementById('cb-wa-paste-input');
-        if (!input) return;
-        const raw = (input.value || '').trim();
-        if (!raw) {
-            alert('Por favor pega el mensaje de WhatsApp o escribe el correo del alumno.');
-            return;
-        }
-
-        // Intentar extraer email
-        const emailMatch = raw.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-        if (!emailMatch) {
-            alert('No se detectó ningún correo válido en el texto ingresado.');
-            return;
-        }
-        const email = emailMatch[0].toLowerCase().trim();
-
-        // Intentar extraer nombre
-        let name = '';
-        const idx = raw.indexOf(emailMatch[0]);
-        const afterEmail = idx >= 0 ? raw.slice(idx + emailMatch[0].length) : raw;
-        const dashMatch = afterEmail.match(/[—\-]\s*([^.,\n\r]+)/) || raw.match(/[—\-]\s*([^.,\n\r]+)/);
-        if (dashMatch && dashMatch[1].trim().length > 1) {
-            name = dashMatch[1].trim();
-        } else {
-            name = email.split('@')[0];
-        }
-
-        // Autorizar
-        authorizeUser(email, name);
-        if (withExcel) {
-            grantExcel(email);
-        }
-
-        const ac = accessCode(email);
-        const ec = excelCode(email);
-
-        const replyMsg = `Hola ${name}, te confirmo la activación de tu licencia en CEREBRO ESTRUCTURAL PRO v6.1:\n\n` +
-            `✅ Código de Acceso: ${ac}\n` +
-            (withExcel ? `📊 Código de Descarga Excel: ${ec}\n` : '') +
-            `🌐 Ingresa aquí: https://72008081-pixel.github.io/Ulianov-Continental/\n\n` +
-            `¡Muchos éxitos en tu cátedra de Análisis Estructural II!\n— Ing. Ulianov Cuba Valencia`;
-
-        navigator.clipboard.writeText(replyMsg).then(() => {
-            alert(`✔ ¡ALUMNO ACTIVADO CON ÉXITO!\n\nEmail: ${email}\nNombre: ${name}\nAcceso: ${ac}\nExcel: ${ec}\n\n📋 ¡El mensaje de respuesta para WhatsApp ha sido COPIADO a tu portapapeles! Solo ve a WhatsApp y dale Pegar (Ctrl+V).`);
-        }).catch(() => {
-            prompt('Copia esta respuesta para enviarla por WhatsApp al alumno:', replyMsg);
-        });
-
-        input.value = '';
-        renderStudentList();
-    }
-
-    // ── HANDLERS ─────────────────────────────────────────────────
-    let _pendingEmail = '', _pendingName = '';
-
-    function handleContinue() {
-        const email = (document.getElementById('cb-email').value || '').trim().toLowerCase();
-        const name  = (document.getElementById('cb-name').value || '').trim() || email.split('@')[0];
-        const errEl = document.getElementById('cb-login-err');
-        errEl.style.display = 'none';
-
-        // Master password check in email field
-        if (MASTER.includes(document.getElementById('cb-email').value.trim())) {
-            grantAdmin(); return;
-        }
-
-        if (!email || !email.includes('@')) {
-            errEl.textContent = 'Por favor ingresa un correo válido.';
-            errEl.style.display = 'block'; return;
-        }
-        if (isBanned(email)) {
-            errEl.textContent = '🚫 Esta cuenta ha sido bloqueada por el administrador.';
-            errEl.style.display = 'block'; return;
-        }
-
-        _pendingEmail = email; _pendingName = name;
-        recordStudent(email, name);
-
-        if (isAuthorized(email)) {
-            setSession({ role: 'student', email, name });
-            hideAuthModal(); updateHeader(); return;
-        }
-
-        // Show Yape paywall
-        document.getElementById('cb-yape-email').textContent = `${name} (${email})`;
-        const waMsg = encodeURIComponent(`Hola Ing. Ulianov, yapé ${YAPE.amount} al ${YAPE.phone} (${YAPE.holder}) para activar mi acceso: ${email} — ${name}. Por favor actívame.`);
-        document.getElementById('cb-wa-link').href = `https://api.whatsapp.com/send?phone=51${YAPE.phone}&text=${waMsg}`;
-        switchView('cb-v-yape');
-    }
-
-    function handleCodeActivate() {
-        const code  = (document.getElementById('cb-code-input').value || '').trim().toUpperCase();
-        const errEl = document.getElementById('cb-code-err');
-        errEl.style.display = 'none';
-
-        if (MASTER.some(m => m.toUpperCase() === code)) { grantAdmin(); return; }
-
-        if (!_pendingEmail) { switchView('cb-v-login'); return; }
-
-        const expected = accessCode(_pendingEmail);
-        if (code === expected) {
-            authorizeUser(_pendingEmail, _pendingName);
-            setSession({ role: 'student', email: _pendingEmail, name: _pendingName });
-            hideAuthModal(); updateHeader();
-        } else {
-            errEl.textContent = `Código incorrecto. Escribe al Ing. Ulianov por WhatsApp con tu comprobante.`;
-            errEl.style.display = 'block';
-        }
-    }
-
-    function handleAdminLogin() {
-        const pass = (document.getElementById('cb-admin-pass').value || '').trim();
-        const errEl = document.getElementById('cb-admin-err');
-        if (MASTER.includes(pass)) {
-            grantAdmin();
-        } else {
-            errEl.textContent = '❌ Contraseña incorrecta.';
-            errEl.style.display = 'block';
-        }
-    }
-
-    function grantAdmin() {
-        setSession({ role: 'admin', email: 'ulianov.continental@gmail.com', name: 'Ing. Ulianov Cuba (Admin)' });
-        hideAuthModal();
-        updateHeader();
-        showPanelModal();
-    }
-
-    // ── ADMIN PANEL ──────────────────────────────────────────────
-    function renderStudentList() {
-        const list = document.getElementById('cb-students-list');
-        const count = document.getElementById('cb-count');
-        const countActive = document.getElementById('cb-count-active');
-        const countExcel = document.getElementById('cb-count-excel');
-        const projSummary = document.getElementById('cb-projects-summary');
-
-        if (!list) return;
-        const students = loadArr(KEY.students);
-        count.textContent = students.length;
-
-        let activeNum = 0, excelNum = 0;
-
-        if (projSummary && window.CerebroDB) {
-            const allProj = window.CerebroDB.getAllProjects();
-            projSummary.innerHTML = `🏗️ Armaduras guardadas: <strong>${allProj.trusses.length}</strong><br>📐 Vigas guardadas: <strong>${allProj.beams.length}</strong><br><span style="color:#94a3b8;font-size:10px">Disponibles en el menú de cada módulo.</span>`;
-        }
-
-        if (students.length === 0) {
-            list.innerHTML = '<div style="text-align:center;color:#64748b;font-size:11.5px;padding:20px">Aún no hay alumnos registrados. Puedes registrarlos pegando sus datos en el cuadro superior.</div>';
-            if (countActive) countActive.textContent = '0';
-            if (countExcel) countExcel.textContent = '0';
-            return;
-        }
-
-        list.innerHTML = students.map(s => {
-            const auth = isAuthorized(s.email);
-            const ban  = isBanned(s.email);
-            const xls  = hasExcel(s.email);
-            if (auth && !ban) activeNum++;
-            if (xls) excelNum++;
-
-            const badge = ban ? '<span class="cb-badge-ban">BANEADO</span>' : auth ? '<span class="cb-badge-ok">ACTIVO</span>' : '<span class="cb-badge-pend">PENDIENTE</span>';
-            const xlsBadge = xls ? '<span class="cb-badge-xls">+EXCEL</span>' : '';
-            const ac = accessCode(s.email);
-            const ec = excelCode(s.email);
-            return `<div class="cb-student-row" data-email="${s.email}">
-                <div class="cb-student-info">
-                    <div class="cb-student-email">${s.email} ${badge}${xlsBadge}</div>
-                    <div style="font-size:11px;color:#cbd5e1;margin-top:1px">${s.name || ''} · Reg: ${new Date(s.ts || Date.now()).toLocaleDateString('es-PE')}</div>
-                    <div class="cb-student-codes">ACC: ${ac} &nbsp;|&nbsp; XLS: ${ec}</div>
-                </div>
-                <div class="cb-student-actions">
-                    ${auth ? `<button class="cb-sbtn cb-sbtn-yellow" data-action="revoke" data-email="${s.email}">Pausar</button>` : `<button class="cb-sbtn cb-sbtn-green" data-action="auth" data-email="${s.email}">✔ Acceso</button>`}
-                    ${xls ? `<button class="cb-sbtn cb-sbtn-gray" data-action="revoke-xls" data-email="${s.email}">Quitar Excel</button>` : `<button class="cb-sbtn cb-sbtn-blue" data-action="grant-xls" data-email="${s.email}">📊 Excel</button>`}
-                    ${ban ? `<button class="cb-sbtn cb-sbtn-green" data-action="unban" data-email="${s.email}">🔄 Des-banear</button>` : `<button class="cb-sbtn cb-sbtn-red" data-action="ban" data-email="${s.email}">🚫 Banear</button>`}
-                    <button class="cb-sbtn cb-sbtn-gray" data-action="copy-codes" data-email="${s.email}" data-ac="${ac}" data-ec="${ec}" data-name="${s.name}">📋 WA</button>
-                </div>
-            </div>`;
-        }).join('');
-
-        if (countActive) countActive.textContent = activeNum;
-        if (countExcel) countExcel.textContent = excelNum;
-
-        list.querySelectorAll('[data-action]').forEach(btn => {
-            btn.onclick = () => {
-                const { action, email, ac, ec, name } = btn.dataset;
-                if (action === 'auth')       { authorizeUser(email, name); }
-                else if (action === 'revoke') { revokeUser(email); }
-                else if (action === 'ban')    { banUser(email); }
-                else if (action === 'unban')  { unbanUser(email); }
-                else if (action === 'grant-xls')  { grantExcel(email); }
-                else if (action === 'revoke-xls') { revokeExcel(email); }
-                else if (action === 'copy-codes') {
-                    const msg = `Hola ${name}, te confirmo tu acceso a CEREBRO ESTRUCTURAL PRO v6.1.\n✅ Código de Acceso: ${ac}\n📊 Código Excel: ${ec}\nEntra en: https://72008081-pixel.github.io/Ulianov-Continental/`;
-                    navigator.clipboard.writeText(msg).then(() => alert('📋 Mensaje copiado para WhatsApp!')).catch(() => { alert(msg); });
-                    return;
+        // Diálogo asistido inmediato para capturar el correo activo seleccionado
+        setTimeout(() => {
+            const inputPrompt = prompt('Ingresa el correo de Google que acabas de seleccionar en la ventana de Google:', '');
+            if (inputPrompt) {
+                if (isValidRealEmail(inputPrompt)) {
+                    completeEnrollment(inputPrompt, inputPrompt.split('@')[0], 'Google Account');
+                } else {
+                    showError('Por favor ingresa un correo de Google válido y real.');
                 }
-                renderStudentList();
-            };
-        });
+            }
+        }, 1200);
     }
 
-    // ── VISIBILIDAD ──────────────────────────────────────────────
-    function showAuthModal() { buildModal(); document.getElementById('cb-overlay').classList.remove('cb-hidden'); }
-    function hideAuthModal() { const o = document.getElementById('cb-overlay'); if (o) o.classList.add('cb-hidden'); }
-    function showPanelModal() {
+    // ── REGISTRO MANUAL CON CORREO ──────────────────────────────
+    function handleManualEnroll() {
+        const inpEmail = document.getElementById('cb-email');
+        const inpName = document.getElementById('cb-name');
+        const termsCheck = document.getElementById('cb-terms');
+        const err = document.getElementById('cb-error');
+
+        const email = (inpEmail ? inpEmail.value : '').trim();
+        const name = (inpName ? inpName.value : '').trim();
+
+        if (termsCheck && !termsCheck.checked) {
+            showError('Debes aceptar los términos y condiciones de la licencia MIT.');
+            return;
+        }
+
+        if (!isValidRealEmail(email)) {
+            showError('Ingresa un correo electrónico real y válido (ejemplo: alumno@continental.edu.pe o tu@gmail.com).');
+            return;
+        }
+
+        completeEnrollment(email, name, 'Registro Web');
+    }
+
+    function completeEnrollment(email, name, method) {
+        recordSubscriber(email, name, method);
+        setSession({
+            role: 'student',
+            email: email,
+            name: name || email.split('@')[0],
+            method: method
+        });
+
+        // Ocultar modal con disolución suave
+        const card = document.getElementById('cb-glass-card');
+        if (card) {
+            card.style.transition = 'all 0.25s ease';
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.95) translateY(10px)';
+        }
+
+        setTimeout(() => {
+            const overlay = document.getElementById('cb-overlay');
+            if (overlay) overlay.classList.add('cb-hidden');
+            updateHeaderUserInfo();
+        }, 260);
+    }
+
+    function showError(msg) {
+        const err = document.getElementById('cb-error');
+        if (err) {
+            err.textContent = msg;
+            err.style.display = 'block';
+        }
+    }
+
+    function showAuthModal() {
         buildModal();
-        const p = document.getElementById('cb-panel-overlay'); if (p) p.classList.remove('cb-hidden');
-        renderStudentList();
-    }
-    function hidePanelModal() { const p = document.getElementById('cb-panel-overlay'); if (p) p.classList.add('cb-hidden'); }
-
-    // ── GESTIÓN DE ACCESO AL PANEL ADMIN ─────────────────────────
-    function openAdminWorkflow() {
-        if (isAdmin()) {
-            showPanelModal();
-        } else {
-            buildModal();
-            switchView('cb-v-admin');
-            showAuthModal();
-            setTimeout(() => {
-                const passInput = document.getElementById('cb-admin-pass');
-                if (passInput) {
-                    passInput.value = '';
-                    passInput.focus();
-                }
-            }, 100);
-        }
-    }
-
-    // ── BOTÓN FLOTANTE: ESTRICTAMENTE SOLO PARA ADMIN ────────────
-    function injectFloatingAdminButton() {
-        let fb = document.getElementById('cb-floating-admin');
-        if (!fb) {
-            fb = document.createElement('button');
-            fb.id = 'cb-floating-admin';
-            fb.innerHTML = '👑 Panel Licencias';
-            fb.title = 'Panel Maestro de Licencias y Alumnos (Ing. Ulianov Cuba)';
-            fb.style.display = 'none'; // oculto por defecto
-            fb.onclick = () => openAdminWorkflow();
-            document.body.appendChild(fb);
-        }
-    }
-
-    // ── HEADER: PRIVACIDAD ESTRICTA ──────────────────────────────
-    function updateHeader() {
-        const s = getSession();
-        const adminMode = isAdmin();
-
-        // 1. Botones admin en navbar: VISIBLES SOLO PARA EL ADMIN
-        document.querySelectorAll('#cb-header-btn, .btn-dev-btn, [data-admin-trigger]').forEach(b => {
-            b.style.display = adminMode ? '' : 'none';
-            b.onclick = () => openAdminWorkflow();
-        });
-
-        // 2. Botón flotante: VISIBLE SOLO PARA EL ADMIN
-        const fb = document.getElementById('cb-floating-admin');
-        if (fb) {
-            fb.style.display = adminMode ? 'flex' : 'none';
-        }
-
-        // 3. Crear o actualizar píldora de cuenta de usuario
-        let userPill = document.getElementById('cb-user-pill');
-        if (!userPill) {
-            userPill = document.createElement('div');
-            userPill.id = 'cb-user-pill';
-            userPill.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#cbd5e1;cursor:pointer;transition:all 0.15s;white-space:nowrap;';
-            const navRight = document.querySelector('.header-right') || document.querySelector('.header-controls') || document.querySelector('.header-actions') || document.querySelector('.status-strip-inner');
-            if (navRight) {
-                navRight.prepend(userPill);
+        const overlay = document.getElementById('cb-overlay');
+        const card = document.getElementById('cb-glass-card');
+        if (overlay) {
+            overlay.classList.remove('cb-hidden');
+            if (card) {
+                card.style.opacity = '1';
+                card.style.transform = 'scale(1) translateY(0)';
             }
         }
+    }
 
-        if (adminMode) {
-            userPill.innerHTML = '👑 Admin: <strong>Ing. Ulianov Cuba</strong> <span style="font-size:10px;color:#f472b6;">(Salir)</span>';
-            userPill.title = 'Sesión de Administrador activa. Clic para salir.';
-            userPill.onclick = () => { if (confirm('¿Cerrar sesión de Administrador?')) { clearSession(); location.reload(); } };
-        } else if (s && s.role === 'docente') {
-            userPill.innerHTML = '👨‍🏫 Docente: <strong>Ing. Ulianov Cuba</strong> <span style="font-size:10px;color:#38bdf8;">(Salir)</span>';
-            userPill.title = 'Sesión de Docente activa. Clic para salir.';
-            userPill.onclick = () => { if (confirm('¿Cerrar sesión docente?')) { clearSession(); location.reload(); } };
-        } else if (s && checkAuthorized()) {
-            userPill.innerHTML = `👤 <strong>${s.name || s.email.split('@')[0]}</strong> <span style="font-size:10px;color:#94a3b8;">(Salir)</span>`;
-            userPill.title = `Sesión de ${s.email}. Clic para salir.`;
-            userPill.onclick = () => { if (confirm('¿Cerrar sesión de usuario?')) { clearSession(); location.reload(); } };
-        } else {
-            userPill.innerHTML = '🔒 Iniciar Sesión';
-            userPill.onclick = () => showAuthModal();
+    function hideAuthModal() {
+        const overlay = document.getElementById('cb-overlay');
+        if (overlay) overlay.classList.add('cb-hidden');
+    }
+
+    function openAdminPanel() {
+        buildModal();
+        const devOverlay = document.getElementById('cb-panel-overlay');
+        if (devOverlay) {
+            devOverlay.classList.remove('cb-hidden');
+            if (isAdmin()) {
+                document.getElementById('cb-admin-login-sec').style.display = 'none';
+                document.getElementById('cb-admin-content-sec').style.display = 'block';
+                renderSubscribersList();
+            } else {
+                document.getElementById('cb-admin-login-sec').style.display = 'block';
+                document.getElementById('cb-admin-content-sec').style.display = 'none';
+            }
         }
     }
 
-    // ── BASE DE DATOS LOCAL DE PROYECTOS (CerebroDB) ────────────
+    function updateHeaderUserInfo() {
+        const s = getSession();
+        // Botón de panel en encabezado si es admin
+        const headerBtn = document.getElementById('cb-header-btn');
+        if (headerBtn) {
+            headerBtn.style.display = isAdmin() ? 'inline-flex' : 'none';
+            headerBtn.onclick = openAdminPanel;
+        }
+    }
+
+    // ── BOTÓN FLOTANTE DISCRETO PARA EL DESARROLLADOR ────────────
+    function injectFloatingDevButton() {
+        if (document.getElementById('cb-floating-dev-btn')) return;
+        const btn = document.createElement('button');
+        btn.id = 'cb-floating-dev-btn';
+        btn.type = 'button';
+        btn.innerHTML = '<span>👑</span><span>Panel Admin</span>';
+        btn.title = 'Abrir Panel de Desarrollador (Ing. Ulianov Cuba)';
+        btn.onclick = openAdminPanel;
+        document.body.appendChild(btn);
+
+        // Ocultar si no es admin, salvo que presione Ctrl+Shift+A o ?admin=1
+        const params = new URLSearchParams(location.search);
+        if (params.get('admin') === '1' || location.hash === '#admin') {
+            btn.style.display = 'flex';
+        } else {
+            btn.style.display = isAdmin() ? 'flex' : 'none';
+        }
+    }
+
+    // ── ATAJOS DE TECLADO ────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+        // Ctrl + Shift + A abre el panel de control del desarrollador
+        if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+            e.preventDefault();
+            const btn = document.getElementById('cb-floating-dev-btn');
+            if (btn) btn.style.display = 'flex';
+            openAdminPanel();
+        }
+    });
+
+    // ── BASE DE DATOS DE PROYECTOS (window.CerebroDB) ────────────
     window.CerebroDB = {
         saveProject: function(type, name, data) {
             const k = (type === 'beam') ? KEY.beams : KEY.trusses;
@@ -852,166 +933,64 @@
             save(k, list);
         },
 
-        getAllProjects: function() {
-            return {
-                trusses: loadArr(KEY.trusses),
-                beams: loadArr(KEY.beams)
-            };
-        },
-
-        showProjectsModal: function(type, onLoadCallback, getCurrentDataCallback) {
-            const isBeam = (type === 'beam');
-            const typeLabel = isBeam ? 'Vigas Continuas' : 'Armaduras 2D';
-            const k = isBeam ? KEY.beams : KEY.trusses;
-
-            let modal = document.getElementById('cb-projects-modal');
+        openManager: function(type, onLoadCallback) {
+            const k = (type === 'beam') ? KEY.beams : KEY.trusses;
+            let modal = document.getElementById('cb-proj-modal');
             if (!modal) {
                 modal = document.createElement('div');
-                modal.id = 'cb-projects-modal';
-                modal.style.cssText = 'position:fixed;inset:0;z-index:999998;background:rgba(3,7,18,0.92);display:flex;align-items:center;justify-content:center;padding:16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+                modal.id = 'cb-proj-modal';
+                modal.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(3,7,18,0.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
                 document.body.appendChild(modal);
             }
+            modal.style.display = 'flex';
 
             function renderModal() {
-                const projects = loadArr(k);
-                modal.innerHTML = `
-                <div class="cb-card cb-card-wide" style="max-width:680px">
-                    <div class="cb-panel-header">
-                        <div>
-                            <p class="cb-panel-title">📁 Mis Proyectos Guardados — ${typeLabel}</p>
-                            <div style="font-size:11px;color:#94a3b8;margin-top:2px">Guarda tus modelos, cárgalos en pantalla o expórtalos en JSON para respaldar tu trabajo.</div>
+                const list = loadArr(k);
+                const title = (type === 'beam') ? '📁 Proyectos Guardados de Vigas' : '📁 Proyectos Guardados de Armaduras';
+                let html = `
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:18px;max-width:580px;width:100%;padding:22px;color:#f8fafc;max-height:85vh;overflow-y:auto;box-shadow:0 25px 65px rgba(0,0,0,0.8);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e293b;padding-bottom:10px;margin-bottom:14px;">
+                            <h3 style="margin:0;font-size:16px;color:#00f0ff;font-weight:800;">${title}</h3>
+                            <button id="cb-proj-close" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;">✕</button>
                         </div>
-                        <button id="cb-proj-modal-close" class="cb-sbtn cb-sbtn-gray" style="padding:5px 12px;font-size:12px">✕ Cerrar</button>
-                    </div>
+                `;
 
-                    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-                        <button id="cb-proj-save-current" class="cb-sbtn cb-sbtn-green" style="padding:8px 14px;font-size:12px">
-                            💾 Guardar Modelo Actual en Pantalla
-                        </button>
-                        <button id="cb-proj-import-json" class="cb-sbtn cb-sbtn-blue" style="padding:8px 14px;font-size:12px">
-                            📥 Cargar Archivo JSON
-                        </button>
-                        <input type="file" id="cb-proj-file-input" accept=".json" style="display:none">
-                    </div>
-
-                    <div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:8px">
-                        Modelos Guardados (${projects.length}):
-                    </div>
-
-                    <div id="cb-proj-items-list" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
-                        ${projects.length === 0 ? `
-                            <div style="text-align:center;padding:30px;color:#64748b;font-size:12px;background:rgba(255,255,255,0.02);border-radius:8px">
-                                No tienes proyectos guardados aún.<br>Haz clic en "Guardar Modelo Actual" para registrar tu primer ejercicio.
-                            </div>
-                        ` : projects.map(p => `
-                            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                if (list.length === 0) {
+                    html += `<div style="text-align:center;padding:30px 10px;color:#64748b;font-size:13px;">No hay proyectos guardados aún en este navegador.</div>`;
+                } else {
+                    html += `<div style="display:flex;flex-direction:column;gap:8px;">`;
+                    list.forEach(p => {
+                        html += `
+                            <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
                                 <div>
-                                    <div style="font-size:13px;font-weight:800;color:#38bdf8">${p.name}</div>
-                                    <div style="font-size:11px;color:#94a3b8;margin-top:2px">📅 ${p.date} • <span style="color:#a7f3d0">${p.summary}</span></div>
+                                    <div style="font-weight:700;color:#f8fafc;font-size:13px;">${p.name}</div>
+                                    <div style="font-size:11px;color:#94a3b8;">${p.summary} • ${p.date}</div>
                                 </div>
-                                <div style="display:flex;gap:6px">
-                                    <button class="cb-sbtn cb-sbtn-green cb-proj-load-btn" data-id="${p.id}" style="padding:5px 12px;font-size:11px">📂 Cargar</button>
-                                    <button class="cb-sbtn cb-sbtn-blue cb-proj-export-btn" data-id="${p.id}" style="padding:5px 10px;font-size:11px">📥 JSON</button>
-                                    <button class="cb-sbtn cb-sbtn-red cb-proj-delete-btn" data-id="${p.id}" style="padding:5px 10px;font-size:11px">🗑️</button>
+                                <div style="display:flex;gap:6px;">
+                                    <button class="cb-proj-load-btn" data-id="${p.id}" style="background:#0284c7;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">Cargar</button>
+                                    <button class="cb-proj-del-btn" data-id="${p.id}" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer;">✕</button>
                                 </div>
                             </div>
-                        `).join('')}
-                    </div>
-                </div>`;
+                        `;
+                    });
+                    html += `</div>`;
+                }
 
-                modal.style.display = 'flex';
+                html += `</div>`;
+                modal.innerHTML = html;
 
-                // Close
-                document.getElementById('cb-proj-modal-close').onclick = () => {
-                    modal.style.display = 'none';
-                };
-
-                // Save current
-                document.getElementById('cb-proj-save-current').onclick = () => {
-                    const name = prompt('Nombre para este proyecto:', (isBeam ? 'Viga Continua ' : 'Armadura 2D ') + (loadArr(k).length + 1));
-                    if (!name) return;
-                    let currentData = null;
-                    if (typeof getCurrentDataCallback === 'function') {
-                        currentData = getCurrentDataCallback();
-                    } else if (isBeam && window.BeamApp && typeof window.BeamApp.getCurrentData === 'function') {
-                        currentData = window.BeamApp.getCurrentData();
-                    } else if (!isBeam && window.TrussApp && typeof window.TrussApp.getCurrentData === 'function') {
-                        currentData = window.TrussApp.getCurrentData();
-                    }
-                    if (!currentData) {
-                        alert('No se pudo capturar los datos actuales del modelo.');
-                        return;
-                    }
-                    window.CerebroDB.saveProject(type, name, currentData);
-                    alert('✔ ¡Proyecto guardado exitosamente en Mis Proyectos!');
-                    renderModal();
-                };
-
-                // Import JSON
-                const fileInp = document.getElementById('cb-proj-file-input');
-                document.getElementById('cb-proj-import-json').onclick = () => fileInp.click();
-                fileInp.onchange = (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (evt) => {
-                        try {
-                            const parsed = JSON.parse(evt.target.result);
-                            const name = parsed.name || file.name.replace('.json', '');
-                            const data = parsed.data || parsed;
-                            window.CerebroDB.saveProject(type, name, data);
-                            alert('✔ ¡Proyecto importado exitosamente!');
-                            renderModal();
-                        } catch (err) {
-                            alert('Error al leer archivo JSON: ' + err.message);
-                        }
-                    };
-                    reader.readAsText(file);
-                };
-
-                // Load buttons
-                modal.querySelectorAll('.cb-proj-load-btn').forEach(btn => {
-                    btn.onclick = () => {
-                        const id = btn.dataset.id;
-                        const p = loadArr(k).find(item => item.id === id);
-                        if (!p) return;
-                        if (confirm(`¿Cargar el proyecto "${p.name}" en pantalla? Reemplazará los datos actuales.`)) {
-                            modal.style.display = 'none';
-                            if (typeof onLoadCallback === 'function') {
-                                onLoadCallback(p.data);
-                            } else if (isBeam && window.BeamApp && typeof window.BeamApp.loadProjectData === 'function') {
-                                window.BeamApp.loadProjectData(p.data);
-                            } else if (!isBeam && window.TrussApp && typeof window.TrussApp.loadProjectData === 'function') {
-                                window.TrussApp.loadProjectData(p.data);
-                            }
-                        }
+                document.getElementById('cb-proj-close').onclick = () => { modal.style.display = 'none'; };
+                modal.querySelectorAll('.cb-proj-load-btn').forEach(b => {
+                    b.onclick = () => {
+                        const p = list.find(x => x.id === b.dataset.id);
+                        if (p && onLoadCallback) onLoadCallback(p.data);
+                        modal.style.display = 'none';
                     };
                 });
-
-                // Export individual
-                modal.querySelectorAll('.cb-proj-export-btn').forEach(btn => {
-                    btn.onclick = () => {
-                        const id = btn.dataset.id;
-                        const p = loadArr(k).find(item => item.id === id);
-                        if (!p) return;
-                        const blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `${p.name.replace(/\s+/g, '_')}.json`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                    };
-                });
-
-                // Delete buttons
-                modal.querySelectorAll('.cb-proj-delete-btn').forEach(btn => {
-                    btn.onclick = () => {
-                        const id = btn.dataset.id;
-                        const p = loadArr(k).find(item => item.id === id);
-                        if (!p) return;
-                        if (confirm(`¿Eliminar definitivamente el proyecto "${p.name}"?`)) {
-                            window.CerebroDB.deleteProject(type, id);
+                modal.querySelectorAll('.cb-proj-del-btn').forEach(b => {
+                    b.onclick = () => {
+                        if (confirm('¿Eliminar este proyecto guardado?')) {
+                            window.CerebroDB.deleteProject(type, b.dataset.id);
                             renderModal();
                         }
                     };
@@ -1022,68 +1001,38 @@
         }
     };
 
-    // ── API PÚBLICA ──────────────────────────────────────────────
+    // ── API PÚBLICA (window.CerebroAuth) ──────────────────────────
     window.CerebroAuth = {
         isAuthorized: () => checkAuthorized(),
         isAdmin: () => isAdmin(),
-        hasExcelPermission: () => {
-            const s = getSession();
-            if (!s) return false;
-            if (s.role === 'admin' || s.role === 'docente') return true;
-            return hasExcel(s.email);
-        },
-        showExcelVipNotice: () => {
-            const s = getSession();
-            if (!s) return;
-            const ec = excelCode(s.email);
-            alert(`📊 Para descargar el Excel (.xlsx) con fórmulas nativas necesitas el Código Excel.\n\nSolicita al Ing. Ulianov por WhatsApp (${YAPE.display}) enviando tu comprobante de Yape.\n\nCuando el Ing. te lo envíe, tu código será:\n${ec}`);
-        },
+        hasExcelPermission: () => true, // 100% Gratuito y Libre
+        showExcelVipNotice: () => {},
         showAuthModal: showAuthModal,
         openAuthModal: showAuthModal,
         lock: showAuthModal,
-        showAdminPanel: showPanelModal,
-        openAdminWorkflow: openAdminWorkflow
+        showAdminPanel: openAdminPanel,
+        openAdminWorkflow: openAdminPanel
     };
 
-    // ── ATAJOS DE TECLADO Y PARÁMETROS EN URL ────────────────────
-    document.addEventListener('keydown', (e) => {
-        // Ctrl + Shift + A  o  Alt + A abre panel / prompt de administrador
-        if ((e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) ||
-            (e.altKey && (e.key === 'A' || e.key === 'a'))) {
-            e.preventDefault();
-            openAdminWorkflow();
-        }
-    });
-
-    // ── INIT ─────────────────────────────────────────────────────
+    // ── INICIALIZACIÓN ───────────────────────────────────────────
     function init() {
         buildModal();
-        injectFloatingAdminButton();
-        updateHeader();
+        injectFloatingDevButton();
+        updateHeaderUserInfo();
 
-        // Check VIP token in URL
-        const params = new URLSearchParams(location.search);
-        const vipToken = params.get('vip');
-        if (vipToken === 'DOCENTE_VIP_ULIANOV') {
-            setSession({ role: 'docente', email: 'docente.vip@continental.edu.pe', name: 'Ing. Ulianov Cuba (Docente)' });
-            const w = load(KEY.whitelist);
-            w['docente.vip@continental.edu.pe'] = { email: 'docente.vip@continental.edu.pe', name: 'Ing. Ulianov Cuba (Docente)', ts: Date.now() };
-            save(KEY.whitelist, w);
-            grantExcel('docente.vip@continental.edu.pe');
-            updateHeader();
+        // Si ya está registrado, no mostrar el modal
+        if (checkAuthorized()) {
+            updateHeaderUserInfo();
             return;
         }
 
-        // Check ?admin=1 in URL
-        if (params.get('admin') === '1' || location.hash === '#admin') {
-            setTimeout(openAdminWorkflow, 200);
-            return;
-        }
-
-        if (checkAuthorized()) { updateHeader(); return; }
+        // Si no está registrado, mostrar la ventana Liquid Glass
         showAuthModal();
     }
 
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-    else init();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 })();

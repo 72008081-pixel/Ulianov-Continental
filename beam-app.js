@@ -39,6 +39,7 @@
 
         renderBarsTable();
         renderNodesTable();
+        renderSpansLoadsTable();
         renderObliqueTable();
         renderSteinerTable();
 
@@ -365,7 +366,7 @@
         recomputeAll();
     }
 
-    // ── RENDERIZADO Y EDICIÓN DE TABLA DE BARRAS (TABLA 2: GEOMETRÍA PURA) ────
+    // ── RENDERIZADO Y EDICIÓN DE TABLA 2: GEOMETRÍA PURA DE TRAMOS ────
     function renderBarsTable() {
         const tbody = document.getElementById('tbodyBars');
         if (!tbody) return;
@@ -428,8 +429,8 @@
             const oldBar = currentState.bars && currentState.bars[i];
             const q = oldBar ? (oldBar.q || 0.0) : 0.0;
             const qUnit = oldBar ? (oldBar.q_unit || 'kgf/m') : 'kgf/m';
-            const pVal = oldBar ? (oldBar.P_tramo || 0.0) : 0.0;
-            const aVal = oldBar ? (oldBar.a_dist || 0.0) : 0.0;
+            const qInput = oldBar ? (oldBar.q_input || 0.0) : 0.0;
+            const lDist = oldBar ? (oldBar.L_dist || undefined) : undefined;
 
             if (xfVal !== '' && xfVal !== null && !isNaN(parseFloat(xfVal))) {
                 newBars.push({
@@ -438,9 +439,11 @@
                     xf: parseFloat(xfVal),
                     yf: parseFloat(yfVal) || 0.0,
                     q: q,
+                    q_input: qInput,
                     q_unit: qUnit,
-                    P_tramo: pVal,
-                    a_dist: aVal
+                    L_dist: lDist,
+                    P_tramo: 0.0,
+                    a_dist: 0.0
                 });
             }
         });
@@ -450,79 +453,235 @@
         recomputeAll();
     }
 
-    // ── RENDERIZADO Y EDICIÓN DE TABLA 3.1: CARGAS DISTRIBUIDAS Y EN TRAMO ────
+    // ── RENDERIZADO Y EDICIÓN DE TABLA 3.1: EXCLUSIVAMENTE CARGAS DISTRIBUIDAS ────
+    function syncDistLoadsFromBars() {
+        if (!currentState.dist_loads || currentState.dist_loads.length === 0) {
+            currentState.dist_loads = [];
+            (currentState.bars || []).forEach((b, i) => {
+                if (Math.abs(b.q || 0) > 1e-9 || Math.abs(b.q_input || 0) > 1e-9) {
+                    const spanLen = Math.abs((b.xf || 0) - (b.xi || 0)) || 200;
+                    currentState.dist_loads.push({
+                        barIdx: i,
+                        w: (b.q_input !== undefined && b.q_input !== null && b.q_input !== '') ? b.q_input : (b.q_unit === 'kgf/m' ? (b.q * 100) : b.q),
+                        unit: b.q_unit || 'kgf/m',
+                        L_dist: (b.L_dist !== undefined && b.L_dist !== null && b.L_dist !== '') ? b.L_dist : spanLen
+                    });
+                }
+            });
+        }
+    }
+
+    function calcEquivalentLoads(wCm, spanLen, lLoaded) {
+        const L = spanLen;
+        const c = Math.min(L, Math.max(0, (lLoaded !== undefined && lLoaded !== null && lLoaded !== '') ? parseFloat(lLoaded) : L));
+        const w = wCm;
+        let Vi = 0, Mi = 0, Vj = 0, Mj = 0;
+        if (Math.abs(w) > 1e-12 && L > 0) {
+            if (Math.abs(c - L) < 1e-6) {
+                Vi = (w * L) / 2.0;
+                Mi = (w * L * L) / 12.0;
+                Vj = (w * L) / 2.0;
+                Mj = -(w * L * L) / 12.0;
+            } else if (c > 0) {
+                Mi = (w * c * c / (12.0 * L * L)) * (6.0 * L * L - 8.0 * L * c + 3.0 * c * c);
+                Mj = -(w * Math.pow(c, 3) / (12.0 * L * L)) * (4.0 * L - 3.0 * c);
+                Vi = (w * c * (L - c / 2.0)) / L + (Mi + Mj) / L;
+                Vj = w * c - Vi;
+            }
+        }
+        return { Vi, Mi, Vj, Mj };
+    }
+
     function renderSpansLoadsTable() {
         const tbody = document.getElementById('tbodySpansLoads');
         if (!tbody) return;
 
-        let html = '';
-        for (let i = 0; i < BeamSolver.MAX_BARS; i++) {
-            const b = currentState.bars && currentState.bars[i];
-            const hasGeom = b && (b.xf !== null && b.xf !== undefined && b.xf !== '' && b.xf > b.xi);
-            const nI = i + 1;
-            const nF = i + 2;
-            const L = hasGeom ? (b.xf - b.xi) : 0;
-            const q = (b && b.q !== null && b.q !== undefined && b.q !== 0) ? b.q : '';
-            const qUnit = (b && b.q_unit === 'kgf/m') ? 'kgf/m' : 'kgf/cm';
-            const P_tramo = (b && b.P_tramo !== null && b.P_tramo !== undefined && b.P_tramo !== 0) ? b.P_tramo : '';
-            const a_dist = (b && b.a_dist !== null && b.a_dist !== undefined && b.a_dist !== 0) ? b.a_dist : '';
+        syncDistLoadsFromBars();
 
-            const qVal = parseFloat(q) || 0;
-            const qEquivCm = qUnit === 'kgf/m' ? (qVal / 100) : qVal;
+        // Si no hay ninguna carga distribuida registrada, mostrar 1 fila vacía lista para usar
+        if (currentState.dist_loads.length === 0) {
+            currentState.dist_loads.push({
+                barIdx: 0,
+                w: '',
+                unit: 'kgf/m',
+                L_dist: (currentState.bars && currentState.bars[0]) ? Math.abs(currentState.bars[0].xf - currentState.bars[0].xi) : 200
+            });
+        }
+
+        const activeBars = (currentState.bars || []).map((b, idx) => ({
+            idx: idx,
+            barNum: idx + 1,
+            nI: idx + 1,
+            nF: idx + 2,
+            L: Math.abs((b.xf || 0) - (b.xi || 0))
+        })).filter(b => b.L > 0);
+
+        let html = '';
+        currentState.dist_loads.forEach((item, k) => {
+            const barIdx = parseInt(item.barIdx, 10) || 0;
+            const targetBar = currentState.bars && currentState.bars[barIdx];
+            const spanLen = targetBar ? Math.abs(targetBar.xf - targetBar.xi) : 200;
+            const lLoaded = (item.L_dist !== undefined && item.L_dist !== null && item.L_dist !== '') ? item.L_dist : spanLen;
+            const wVal = parseFloat(item.w) || 0;
+            const unit = item.unit || 'kgf/m';
+            const wCm = unit === 'kgf/m' ? (wVal / 100.0) : wVal;
+
+            const eq = calcEquivalentLoads(wCm, spanLen, lLoaded);
+
+            const spanOptions = activeBars.map(ab => `
+                <option value="${ab.idx}" ${ab.idx === barIdx ? 'selected' : ''}>
+                    Tramo [${ab.barNum}]: Nudo (${ab.nI}) → (${ab.nF}) • L=${ab.L.toFixed(0)}cm
+                </option>
+            `).join('');
 
             html += `
-                <tr data-span-idx="${i}" style="${hasGeom ? '' : 'opacity: 0.5;'}">
-                    <td><strong style="color: #b91c1c;">[${i + 1}]</strong></td>
-                    <td class="cell-auto-subhdr">${nI} → ${nF}</td>
-                    <td class="cell-auto-subhdr span-out-L">${hasGeom ? L.toFixed(1) : '-'}</td>
-                    <td class="cell-input"><input type="number" step="any" class="span-load-inp" data-bar-idx="${i}" data-field="q" value="${q}" placeholder="0" style="width:75px;"></td>
+                <tr data-dist-row="${k}">
+                    <td><strong style="color: #00f0ff;">${k + 1}</strong></td>
                     <td class="cell-input">
-                        <select class="span-load-inp" data-bar-idx="${i}" data-field="q_unit" style="font-size:11px; width:75px;">
-                            <option value="kgf/m" ${qUnit === 'kgf/m' ? 'selected' : ''}>kgf/m</option>
-                            <option value="kgf/cm" ${qUnit === 'kgf/cm' ? 'selected' : ''}>kgf/cm</option>
+                        <select class="dist-inp" data-field="barIdx" style="font-size: 11.5px; width: 100%; min-width: 170px;">
+                            ${spanOptions || `<option value="0">Tramo [1] (Nudo 1 → 2)</option>`}
                         </select>
                     </td>
-                    <td class="cell-auto-green span-out-qequiv">${qEquivCm > 0 ? qEquivCm.toFixed(4) : '-'}</td>
-                    <td class="cell-input"><input type="number" step="any" class="span-load-inp" data-bar-idx="${i}" data-field="P_tramo" value="${P_tramo}" placeholder="0" style="width:75px;"></td>
-                    <td class="cell-input"><input type="number" step="any" class="span-load-inp" data-bar-idx="${i}" data-field="a_dist" value="${a_dist}" placeholder="L/2" style="width:65px;"></td>
-                    <td class="cell-auto-celeste span-out-vi">-</td>
-                    <td class="cell-auto-celeste span-out-mi">-</td>
-                    <td class="cell-auto-celeste span-out-vj">-</td>
-                    <td class="cell-auto-celeste span-out-mj">-</td>
+                    <td class="cell-input">
+                        <input type="number" step="any" class="dist-inp" data-field="w" value="${item.w !== undefined ? item.w : ''}" placeholder="Ej: 400" style="width: 75px; font-weight: bold; color: #fbbf24;">
+                    </td>
+                    <td class="cell-input">
+                        <select class="dist-inp" data-field="unit" style="font-size: 11px; width: 75px;">
+                            <option value="kgf/m" ${unit === 'kgf/m' ? 'selected' : ''}>kgf/m</option>
+                            <option value="kgf/cm" ${unit === 'kgf/cm' ? 'selected' : ''}>kgf/cm</option>
+                        </select>
+                    </td>
+                    <td class="cell-auto-subhdr dist-out-ltramo" style="font-family: monospace;">${spanLen.toFixed(1)}</td>
+                    <td class="cell-input">
+                        <input type="number" step="any" class="dist-inp" data-field="L_dist" value="${lLoaded}" placeholder="${spanLen}" style="width: 80px; font-family: monospace;" title="Longitud real cargada (editable libremente)">
+                    </td>
+                    <td class="cell-auto-green dist-out-wequiv" style="font-family: monospace; font-weight: bold;">${wCm > 0 ? wCm.toFixed(4) : '0.0000'}</td>
+                    <td class="cell-auto-celeste dist-out-vi" style="font-family: monospace;">+${eq.Vi.toFixed(2)}</td>
+                    <td class="cell-auto-celeste dist-out-mi" style="font-family: monospace;">+${eq.Mi.toFixed(2)}</td>
+                    <td class="cell-auto-celeste dist-out-vj" style="font-family: monospace;">+${eq.Vj.toFixed(2)}</td>
+                    <td class="cell-auto-celeste dist-out-mj" style="font-family: monospace;">${eq.Mj.toFixed(2)}</td>
+                    <td style="text-align: center;">
+                        <button type="button" class="dist-del-btn" data-row="${k}" style="background: #dc2626; color: #fff; border: none; border-radius: 4px; padding: 2px 7px; font-size: 11px; cursor: pointer;" title="Eliminar esta carga distribuida">✕</button>
+                    </td>
                 </tr>
             `;
-        }
+        });
         tbody.innerHTML = html;
 
-        tbody.querySelectorAll('.span-load-inp').forEach(inp => {
+        // Binds de inputs en la tabla 3.1
+        tbody.querySelectorAll('.dist-inp').forEach(inp => {
             inp.addEventListener('input', readSpansLoadsInputs);
             inp.addEventListener('change', readSpansLoadsInputs);
         });
+
+        // Binds de botones eliminar
+        tbody.querySelectorAll('.dist-del-btn').forEach(btn => {
+            btn.onclick = () => {
+                const rowIdx = parseInt(btn.dataset.row, 10);
+                currentState.dist_loads.splice(rowIdx, 1);
+                applyDistLoadsToBars();
+                renderSpansLoadsTable();
+                recomputeAll();
+            };
+        });
+
+        // Bind botón añadir carga
+        const btnAdd = document.getElementById('btnAddDistLoad');
+        if (btnAdd) {
+            btnAdd.onclick = () => {
+                const nextIdx = Math.min((currentState.dist_loads.length), (currentState.bars.length - 1));
+                const targetBar = currentState.bars && currentState.bars[nextIdx];
+                const spanLen = targetBar ? Math.abs(targetBar.xf - targetBar.xi) : 200;
+                currentState.dist_loads.push({
+                    barIdx: Math.max(0, nextIdx),
+                    w: '',
+                    unit: 'kgf/m',
+                    L_dist: spanLen
+                });
+                renderSpansLoadsTable();
+            };
+        }
     }
 
     function readSpansLoadsInputs() {
         const tbody = document.getElementById('tbodySpansLoads');
         if (!tbody) return;
 
-        tbody.querySelectorAll('tr').forEach((tr, i) => {
-            if (!currentState.bars[i]) {
-                currentState.bars[i] = { xi: 0, yi: 0, xf: 0, yf: 0, q: 0, q_unit: 'kgf/m', P_tramo: 0, a_dist: 0 };
-            }
-            const qVal = tr.querySelector('[data-field="q"]').value;
-            const qUnit = tr.querySelector('[data-field="q_unit"]').value;
-            const pVal = tr.querySelector('[data-field="P_tramo"]').value;
-            const aVal = tr.querySelector('[data-field="a_dist"]').value;
+        const newDistLoads = [];
+        tbody.querySelectorAll('tr').forEach(tr => {
+            const barSelect = tr.querySelector('[data-field="barIdx"]');
+            const wInput = tr.querySelector('[data-field="w"]');
+            const unitSelect = tr.querySelector('[data-field="unit"]');
+            const lDistInput = tr.querySelector('[data-field="L_dist"]');
+            if (!barSelect || !wInput) return;
 
-            currentState.bars[i].q = parseFloat(qVal) || 0.0;
-            currentState.bars[i].q_unit = qUnit;
-            currentState.bars[i].P_tramo = parseFloat(pVal) || 0.0;
-            currentState.bars[i].a_dist = parseFloat(aVal) || 0.0;
+            const barIdx = parseInt(barSelect.value, 10) || 0;
+            const wVal = wInput.value;
+            const unit = unitSelect ? unitSelect.value : 'kgf/m';
+            const lDistVal = lDistInput ? lDistInput.value : '';
+
+            const targetBar = currentState.bars && currentState.bars[barIdx];
+            const spanLen = targetBar ? Math.abs((targetBar.xf || 0) - (targetBar.xi || 0)) : 200;
+            const lLoaded = (lDistVal !== '' && !isNaN(parseFloat(lDistVal))) ? parseFloat(lDistVal) : spanLen;
+            const wNum = (wVal !== '' && !isNaN(parseFloat(wVal))) ? parseFloat(wVal) : 0;
+            const wCm = unit === 'kgf/m' ? (wNum / 100.0) : wNum;
+
+            const eq = calcEquivalentLoads(wCm, spanLen, lLoaded);
+
+            // Actualizar celdas calculadas en la misma fila en tiempo real
+            const tdL = tr.querySelector('.dist-out-ltramo');
+            if (tdL) tdL.textContent = spanLen.toFixed(1);
+            const tdWequiv = tr.querySelector('.dist-out-wequiv');
+            if (tdWequiv) tdWequiv.textContent = wCm > 0 ? wCm.toFixed(4) : '0.0000';
+            const tdVi = tr.querySelector('.dist-out-vi');
+            if (tdVi) tdVi.textContent = '+' + eq.Vi.toFixed(2);
+            const tdMi = tr.querySelector('.dist-out-mi');
+            if (tdMi) tdMi.textContent = '+' + eq.Mi.toFixed(2);
+            const tdVj = tr.querySelector('.dist-out-vj');
+            if (tdVj) tdVj.textContent = '+' + eq.Vj.toFixed(2);
+            const tdMj = tr.querySelector('.dist-out-mj');
+            if (tdMj) tdMj.textContent = eq.Mj.toFixed(2);
+
+            newDistLoads.push({
+                barIdx: barIdx,
+                w: wVal !== '' ? parseFloat(wVal) : '',
+                unit: unit,
+                L_dist: lDistVal !== '' ? parseFloat(lDistVal) : undefined
+            });
         });
 
+        currentState.dist_loads = newDistLoads;
+        applyDistLoadsToBars();
         recomputeAll();
     }
 
-    // ── RENDERIZADO Y EDICIÓN DE TABLA DE EVALUACIÓN NODAL (12 NUDOS) ──
+    function applyDistLoadsToBars() {
+        // 1. Limpiar cargas distribuidas previas en las barras
+        (currentState.bars || []).forEach(b => {
+            b.q = 0.0;
+            b.q_input = 0.0;
+            b.L_dist = undefined;
+        });
+
+        // 2. Aplicar cada carga distribuida de la Tabla 3.1
+        (currentState.dist_loads || []).forEach(item => {
+            const b = currentState.bars && currentState.bars[item.barIdx];
+            if (b && item.w !== '' && item.w !== null && !isNaN(parseFloat(item.w))) {
+                const wVal = parseFloat(item.w);
+                const unit = item.unit || 'kgf/m';
+                const wCm = unit === 'kgf/m' ? (wVal / 100.0) : wVal;
+                const spanLen = Math.abs(b.xf - b.xi);
+                const lLoaded = (item.L_dist !== undefined && item.L_dist !== null && !isNaN(parseFloat(item.L_dist))) ? parseFloat(item.L_dist) : spanLen;
+
+                b.q = (b.q || 0.0) + wCm;
+                b.q_input = (b.q_input || 0.0) + wVal;
+                b.q_unit = unit;
+                b.L_dist = lLoaded;
+            }
+        });
+    }
+
+// ── RENDERIZADO Y EDICIÓN DE TABLA DE EVALUACIÓN NODAL (12 NUDOS) ──
     function renderNodesTable() {
         const tbody = document.getElementById('tbodyNodes');
         if (!tbody) return;

@@ -42,29 +42,55 @@ function calculate(sol){
         const t = a / L;
         const q = b.q * c;
         const P = b.P_tramo * c;
+
+        // Longitud cargada de la carga distribuida (parcial o total)
+        const L_dist_eff = (b.L_dist !== undefined && b.L_dist !== null && b.L_dist > 0) ? Math.min(L, b.L_dist) : L;
+        const cLoad = L_dist_eff;
+
+        let Vi_q = 0, Mi_q = 0, Vj_q = 0, Mj_q = 0;
+        if (Math.abs(q) > 1e-12 && L > 0) {
+            if (Math.abs(cLoad - L) < 1e-6) {
+                Vi_q = q * L / 2.0;
+                Mi_q = q * L * L / 12.0;
+                Vj_q = q * L / 2.0;
+                Mj_q = -q * L * L / 12.0;
+            } else if (cLoad > 0) {
+                Mi_q = (q * cLoad * cLoad / (12.0 * L * L)) * (6.0 * L * L - 8.0 * L * cLoad + 3.0 * cLoad * cLoad);
+                Mj_q = -(q * Math.pow(cLoad, 3) / (12.0 * L * L)) * (4.0 * L - 3.0 * cLoad);
+                Vi_q = (q * cLoad * (L - cLoad / 2.0)) / L + (Mi_q + Mj_q) / L;
+                Vj_q = q * cLoad - Vi_q;
+            }
+        }
+
         const f = [
             0,
-            -q * L / 2 - P * (1 - 3 * t * t + 2 * t * t * t),
-            -q * L * L / 12 - P * L * (t - 2 * t * t + t * t * t),
+            -Vi_q - P * (1 - 3 * t * t + 2 * t * t * t),
+            -Mi_q - P * L * (t - 2 * t * t + t * t * t),
             0,
-            -q * L / 2 - P * (3 * t * t - 2 * t * t * t),
-            q * L * L / 12 - P * L * (-t * t + t * t * t)
+            -Vj_q - P * (3 * t * t - 2 * t * t * t),
+            -Mj_q - P * L * (-t * t + t * t * t)
         ];
         const end = K.map((row, idx) => row.reduce((sum, v, col) => sum + v * u[col], 0) - f[idx]);
         const V0 = end[1];
         const M0 = -end[2];
         const points = [];
 
-        const at = (x, after = false) => ({
-            x: station + x,
-            xLocal: x,
-            V: V0 - q * x - (P !== 0 && (x > a || (after && x === a)) ? P : 0),
-            M: M0 + V0 * x - q * x * x / 2 - P * Math.max(0, x - a)
-        });
+        const at = (x, after = false) => {
+            const qLoaded = Math.min(x, cLoad);
+            const qShear = q * qLoaded;
+            const qMoment = (x <= cLoad) ? (q * x * x / 2.0) : (q * cLoad * (x - cLoad / 2.0));
+            return {
+                x: station + x,
+                xLocal: x,
+                V: V0 - qShear - (P !== 0 && (x > a || (after && x === a)) ? P : 0),
+                M: M0 + V0 * x - qMoment - P * Math.max(0, x - a)
+            };
+        };
 
         const numDivs = Math.max(40, Math.min(120, Math.floor(L / 5)));
         const cuts = Array.from({ length: numDivs + 1 }, (_, idx) => L * idx / numDivs);
         if (P !== 0) cuts.push(a);
+        if (cLoad > 0 && cLoad < L) cuts.push(cLoad);
         cuts.sort((x, y) => x - y);
         const unique = cuts.filter((x, idx) => idx === 0 || Math.abs(x - cuts[idx - 1]) > L * 1e-10);
 

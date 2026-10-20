@@ -1069,12 +1069,13 @@
             </div>
 
             <!-- 2. ASISTENTE Y TABLA DE TRAMOS (BARRAS) -->
+            <!-- 2. GEOMETRÍA DE TRAMOS Y COORDENADAS DE NUDOS -->
             <div class="input-card">
                 <div class="input-card-head">
                     <div class="input-card-title">
-                        <span>2. Tramos · Cargas distribuidas y puntuales interiores</span>
+                        <span>2. Geometría de Tramos y Coordenadas de Nudos</span>
                     </div>
-                    <div class="input-card-units">Longitud cm · q kgf/cm o kgf/m · P kgf</div>
+                    <div class="input-card-units">Coordenadas cm · Longitud L (cm / m)</div>
                 </div>
 
                 <!-- Asistente rápido por distancias L1, L2, L3... -->
@@ -1090,7 +1091,7 @@
                             <option value="cm">cm</option>
                         </select>
                     </div>
-                    <button type="button" id="btnApplyQuickSpans" class="tool-btn" style="background: var(--pastel-mint);">
+                    <button type="button" id="btnApplyQuickSpans" class="tool-btn" style="background: var(--pastel-mint); color: #000; font-weight: 700;">
                         ✓ Aplicar Tramos
                     </button>
                 </div>
@@ -1100,7 +1101,7 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>#</th><th>Nudo i</th><th>Nudo j</th><th>Xi (cm)</th><th>Yi (cm)</th><th>Xf (cm)</th><th>Yf (cm)</th><th>q distribuida ↓</th><th>Unidad q</th><th>P interior (kgf) ↓ · opcional</th><th>a (cm)</th><th>L (cm)</th><th>cos θ</th><th>sen θ</th><th>12EI/L³</th><th>6EI/L²</th><th>4EI/L</th><th>2EI/L</th><th>EA/L</th><th>GDL inicio</th><th>GDL final</th>
+                                <th>#</th><th>Nudo i</th><th>Nudo j</th><th>Xi (cm)</th><th>Yi (cm)</th><th>Xf (cm)</th><th>Yf (cm)</th><th>L (cm)</th><th>L (m)</th><th>cos θ</th><th>sen θ</th><th>12EI/L³</th><th>6EI/L²</th><th>4EI/L</th><th>2EI/L</th><th>EA/L</th><th>GDL inicio</th><th>GDL final</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyBars"></tbody>
@@ -1108,25 +1109,63 @@
                 </div>
             </div>
 
-            <!-- 3. EVALUACIÓN NODAL, APOYOS Y CARGAS NODALES -->
+            <!-- 3. EVALUACIÓN NODAL Y APOYOS (HASTA 12 NUDOS) -->
             <div class="input-card">
                 <div class="input-card-head">
                     <div class="input-card-title">
                         <span>3. Evaluación Nodal y Apoyos (Hasta 12 Nudos)</span>
                     </div>
-                    <div class="input-card-units">cm | Kgf | Kgf·cm</div>
+                    <div class="input-card-units">cm | Apoyo | Cargas Nodales Directas: Fx, Fy (Kgf) | Mz (Kgf·cm)</div>
                 </div>
                 <div class="table-wrap">
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>X</th><th>Y</th>
+                                <th>X (cm)</th><th>Y (cm)</th>
                                 <th>Condición Apoyo</th>
-                                <th>Fx</th><th>Fy</th><th>Mz</th>
+                                <th>Fx / Px (Kgf)</th>
+                                <th>Fy / Py (Kgf)</th>
+                                <th>Mz (Kgf·cm)</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyNodes"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3.1 CARGAS DISTRIBUIDAS (EXCLUSIVAMENTE PARA DISTRIBUIDAS) -->
+            <div class="input-card">
+                <div class="input-card-head" style="flex-wrap: wrap; gap: 8px;">
+                    <div class="input-card-title">
+                        <span>3.1 Cargas Distribuidas (Por Tramo o Zona Cargada)</span>
+                    </div>
+                    <div class="input-card-units" style="display: flex; align-items: center; gap: 10px;">
+                        <span>w (Kgf/m o Kgf/cm) · L_cargada (cm) · Cargas Equivalentes {Vi, Mi, Vj, Mj}</span>
+                        <button type="button" id="btnAddDistLoad" class="tool-btn" style="background: var(--pastel-mint); color: #000; font-weight: 700; padding: 3px 10px; font-size: 11px;">
+                            + Añadir Carga
+                        </button>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Tramo Asignado</th>
+                                <th>Carga w (q)</th>
+                                <th>Unidad</th>
+                                <th>L tramo (cm)</th>
+                                <th>L cargada (cm)</th>
+                                <th>w equiv (Kgf/cm)</th>
+                                <th>Vi equiv (Kgf)</th>
+                                <th>Mi equiv (Kgf·cm)</th>
+                                <th>Vj equiv (Kgf)</th>
+                                <th>Mj equiv (Kgf·cm)</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodySpansLoads"></tbody>
                     </table>
                 </div>
             </div>
@@ -1363,31 +1402,8 @@
     </footer>
 
     <!-- Dependencias de cálculo y autenticación -->
-    <!-- Modo gratuito y abierto de Vigas: se conserva auth.js para proyectos guardados,
-         pero su interfaz de licencias/pagos y sus controles de acceso quedan desactivados. -->
-    <script src="auth.js?v=6.0"></script>
-    <script>
-        // Aplicar únicamente al módulo de Vigas, sin alterar otros módulos del sitio.
-        (function () {
-            const estilo = document.createElement('style');
-            estilo.textContent = '#cb-overlay,#cb-header-btn,#cb-floating-admin,#cb-floating-admin-btn,[id^="cb-admin-floating"]{display:none!important}';
-            document.head.appendChild(estilo);
-            if (window.CerebroAuth) {
-                CerebroAuth.isAuthorized = () => true;
-                CerebroAuth.hasExcelPermission = () => true;
-                CerebroAuth.showAuthModal = () => {};
-                CerebroAuth.openAuthModal = () => {};
-                CerebroAuth.lock = () => {};
-                CerebroAuth.showExcelVipNotice = () => {};
-            }
-            const ocultarPago = () => {
-                document.getElementById('cb-overlay')?.classList.add('cb-hidden');
-                document.getElementById('cb-header-btn')?.setAttribute('hidden', '');
-            };
-            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ocultarPago);
-            else ocultarPago();
-        })();
-    </script>
+        <!-- Sistema de Registro Libre Liquid Glass y Control de Comunidad (100% Gratuito MIT) -->
+    <script src="auth.js?v=7.0"></script>
     <script src="beam-solver.js?v=6.4"></script>
     <script src="beam-canvas.js?v=6.3"></script>
     <script src="assets/exceljs.min.js"></script>
