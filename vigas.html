@@ -752,6 +752,82 @@
                 grid-template-columns: 1fr;
             }
         }
+    
+        /* TARJETAS VISUALES DE SEPARACIÓN DE CARGAS EQUIVALENTES */
+        .equivalent-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .eq-card {
+            background: #090e1a;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .eq-card:hover {
+            border-color: #00f0ff;
+            transform: translateY(-2px);
+        }
+        .eq-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1e293b;
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
+        .eq-card-title {
+            font-weight: 700;
+            font-size: 13px;
+            color: #00f0ff;
+        }
+        .eq-badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 99px;
+            background: rgba(0, 240, 255, 0.15);
+            color: #00f0ff;
+            border: 1px solid rgba(0, 240, 255, 0.3);
+        }
+        .eq-card-loads {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 11px;
+        }
+        .eq-load-node {
+            background: #111a2e;
+            border-radius: 6px;
+            padding: 8px;
+            border-left: 3px solid #10b981;
+        }
+        .eq-load-node.node-j {
+            border-left-color: #f59e0b;
+        }
+        .eq-node-title {
+            font-weight: 700;
+            font-size: 11px;
+            color: #e2e8f0;
+            margin-bottom: 4px;
+        }
+        .eq-val-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+        .eq-val-label {
+            color: #94a3b8;
+        }
+        .eq-val-num {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: #f8fafc;
+        }
     </style>
 </head>
 <body>
@@ -781,9 +857,13 @@
                         <option value="cuaderno_distribuidas">2. Ejemplo Cuaderno (Cargas Distribuidas q)</option>
                         <option value="ejemplos_ingeniero">3. Viga Continua (7 Nudos, 6 Barras)</option>
                         <option value="viga_steiner_t">4. Sección T Compuesta (Steiner)</option>
+                        <option value="ejemplo_5_pizarra">5. Viga Continua 5 Tramos (11 m) Cargas Mixtas (Pizarra)</option>
                     </select>
                 </div>
 
+                <a href="./PLANTILLA_MAESTRA_VIGAS_12_NODOS_METODO_RIGIDEZ.xlsx" download="PLANTILLA_MAESTRA_VIGAS_12_NODOS_METODO_RIGIDEZ.xlsx" class="btn btn-excel" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:700;" title="Descargar la plantilla maestra oficial de 5 pestañas completas">
+                    📥 Plantilla Maestra (5 Pestañas .xlsx)
+                </a>
                 <button id="btnSaveBeamProject" class="btn btn-clear" style="background:#e0e7ff;border-color:#a5b4fc" title="Guardar viga actual en Mis Proyectos">
                     💾 Guardar Viga
                 </button>
@@ -873,11 +953,22 @@
 
             <!-- Leyenda inferior -->
             <div class="canvas-legend">
-                <span>6° Gráfica Final: Nudos (círculos), Tramos (línea), Cargas aplicadas y Reacciones {R}</span>
+                <span>Viga Continua: Nudos (círculos), Tramos (línea), Cargas aplicadas y Reacciones {R}</span>
                 <div class="legend-items">
                     <span><span class="legend-dot" style="background: #38bdf8;"></span> Nudos & Apoyos</span>
                     <span><span class="legend-dot" style="background: #fbbf24;"></span> Cargas q, P</span>
                     <span><span class="legend-dot" style="background: #34d399;"></span> Reacciones {R}</span>
+                </div>
+            </div>
+
+            <!-- TARJETAS VISUALES: SEPARACIÓN DE CARGAS EQUIVALENTES EN TRAMOS (VI, MI, VJ, MJ) -->
+            <div class="equivalent-loads-section" style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
+                <div class="mini-card-head" style="color: var(--accent-sky); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px;">⚡ Separación de Cargas Equivalentes por Tramo con Carga Distribuida (FEM)</span>
+                    <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">{Q_equiv} = {q·L/2, q·L²/12}</span>
+                </div>
+                <div id="beamEquivalentCardsContainer" class="equivalent-cards-grid">
+                    <!-- Se llena reactivamente con JS -->
                 </div>
             </div>
         </section>
@@ -911,6 +1002,17 @@
                         <select id="inpPropMode" class="cell-select" style="width: 120px;">
                             <option value="CONSTANTE">E, A, I Constantes</option>
                             <option value="VARIABLE">Por Barra</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Material:</label>
+                        <select id="inpMaterial" class="cell-select" style="width: 150px;">
+                            <option value="ACERO_A36" selected>Acero A36 (2,000,000 kgf/cm²)</option>
+                            <option value="ACERO_A992">Acero A992 (2,040,000 kgf/cm²)</option>
+                            <option value="CONCRETO_210">Concreto f'c=210 (217,370 kgf/cm²)</option>
+                            <option value="CONCRETO_280">Concreto f'c=280 (250,998 kgf/cm²)</option>
+                            <option value="MADERA">Madera (100,000 kgf/cm²)</option>
+                            <option value="CUSTOM">Personalizado / Manual</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -1170,30 +1272,90 @@
     <!-- CURVA ELÁSTICA: visualización de desplazamientos y giros nodales -->
     <section class="results-section" id="curvaElasticaSection" aria-label="Curva elástica de la viga">
         <div class="input-card" style="padding:18px">
-            <div class="mini-card-head"><span>📈 7. Curva elástica — deformada nodal y suavizada con θ</span></div>
-            <div class="form-row" style="padding:8px 0 14px;gap:12px">
-                <label class="form-label" for="elasticAmplification">Amplificación visual:</label>
-                <input id="elasticAmplification" type="range" min="1" max="100" value="25" style="accent-color:#38bdf8;flex:1;max-width:250px">
-                <strong id="elasticAmplificationValue" style="color:#bae6fd">25×</strong>
-                <span style="font-size:11px;color:var(--text-muted)">Escala gráfica ilustrativa; los valores del cálculo no se modifican</span>
+            <div class="mini-card-head" style="color: var(--accent-sky); font-size: 15px; font-weight: 700;">
+                <span>📈 7. Curva Elástica — Deformada Nodal (Poligonal) y Continua (Hermite)</span>
+            </div>
+            <div class="form-row" style="padding:8px 0 14px; gap:16px; align-items: center; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label class="form-label" for="elasticAmplification">Amplificación Y:</label>
+                    <input id="elasticAmplification" type="range" min="1" max="150" value="30" style="accent-color:#00f0ff; width: 140px;">
+                    <strong id="elasticAmplificationValue" style="color:#00f0ff">30×</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label class="form-label" for="elasticZoomX">Estirar X:</label>
+                    <input id="elasticZoomX" type="range" min="50" max="250" value="100" style="accent-color:#10b981; width: 130px;">
+                    <strong id="elasticZoomXVal" style="color:#10b981">100%</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label class="form-label" for="elasticZoomY">Estirar Y:</label>
+                    <input id="elasticZoomY" type="range" min="50" max="250" value="100" style="accent-color:#f59e0b; width: 130px;">
+                    <strong id="elasticZoomYVal" style="color:#f59e0b">100%</strong>
+                </div>
+                <button type="button" id="btnResetElasticZoom" class="tool-btn" style="background: #1e293b; color: #f8fafc; font-size: 11px;">↺ Restablecer</button>
             </div>
             <div class="results-grid-2col" style="margin:0">
                 <div class="mini-card">
-                    <div class="mini-card-head" style="color:#38bdf8">1. Curva poligonal — rectas entre nudos</div>
-                    <svg id="elasticPolygon" role="img" aria-label="Curva elástica recta entre nodos" viewBox="0 0 760 310" style="width:100%;height:auto;display:block;background:#080f1e;border-radius:8px"></svg>
-                    <div style="font-size:11px;color:var(--text-muted);margin-top:7px">Une los desplazamientos de cada nudo sin suavizado. No representa la curvatura dentro de los tramos.</div>
+                    <div class="mini-card-head" style="color:#00f0ff">1. Curva Poligonal — Rectas entre nudos</div>
+                    <svg id="elasticPolygon" role="img" aria-label="Curva elástica recta entre nodos" viewBox="0 0 850 320" style="width:100%;height:auto;display:block;background:#080f1e;border-radius:8px;border:1px solid #1e293b;"></svg>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:7px">Une los desplazamientos nodales {Ux, Uy} con segmentos de recta.</div>
                 </div>
                 <div class="mini-card">
-                    <div class="mini-card-head" style="color:#34d399">2. Curva suavizada — interpolación con θ</div>
-                    <svg id="elasticSmooth" role="img" aria-label="Curva elástica suavizada con giros nodales" viewBox="0 0 760 310" style="width:100%;height:auto;display:block;background:#080f1e;border-radius:8px"></svg>
-                    <div style="font-size:11px;color:var(--text-muted);margin-top:7px">Interpolación de Hermite por tramo, con Ux, Uy y giro θ de cada extremo; aproxima la deformada del elemento de viga.</div>
+                    <div class="mini-card-head" style="color:#10b981">2. Curva Suavizada — Interpolación con Giros θ (Hermite)</div>
+                    <svg id="elasticSmooth" role="img" aria-label="Curva elástica suavizada con giros nodales" viewBox="0 0 850 320" style="width:100%;height:auto;display:block;background:#080f1e;border-radius:8px;border:1px solid #1e293b;"></svg>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:7px">Interpolación continua de Hermite por tramo, con Ux, Uy y giros θ de cada nudo.</div>
                 </div>
             </div>
             <div id="elasticInfo" style="padding-top:12px;font-size:11px;color:var(--text-muted)" aria-live="polite"></div>
         </div>
     </section>
 
-<section class="results-section" id="beamInternalDiagramSection"><div class="input-card" style="padding:18px"><div class="mini-card-head">📉 Diagramas automáticos de esfuerzos internos</div><div class="results-grid-2col"><div class="mini-card"><div class="mini-card-head" style="color:#38bdf8">3. Diagrama de fuerza cortante V</div><svg id="beamShearDiagram" viewBox="0 0 900 300" style="display:block;width:100%;background:#0b1423;border-radius:10px"></svg></div><div class="mini-card"><div class="mini-card-head" style="color:#fbbf24">4. Diagrama de momento flector M</div><svg id="beamMomentDiagram" viewBox="0 0 900 300" style="display:block;width:100%;background:#0b1423;border-radius:10px"></svg></div></div><p style="font-size:11px;color:#94a3b8;margin-top:10px">Resultados en ejes locales de cada tramo; carga distribuida: cortante lineal y momento parabólico; carga puntual: salto de cortante. M positivo: flexión sagante.</p></div></section>
+    <!-- DIAGRAMAS DE ESFUERZOS INTERNOS -->
+    <section class="results-section" id="beamInternalDiagramSection">
+        <div class="input-card" style="padding:18px">
+            <div class="mini-card-head" style="color: var(--accent-amber); font-size: 15px; font-weight: 700; margin-bottom: 6px;">
+                <span>📉 Diagramas de Esfuerzos Internos: Fuerza Cortante (DFC) y Momento Flector (DMF)</span>
+            </div>
+            <div class="form-row" style="padding:4px 0 14px; gap:16px; align-items: center; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label class="form-label" for="diagZoomX">Estirar X (Longitud):</label>
+                    <input id="diagZoomX" type="range" min="50" max="250" value="100" style="accent-color:#00f0ff; width: 140px;">
+                    <strong id="diagZoomXVal" style="color:#00f0ff">100%</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label class="form-label" for="diagZoomY">Estirar Y (Magnitud):</label>
+                    <input id="diagZoomY" type="range" min="50" max="250" value="100" style="accent-color:#f59e0b; width: 140px;">
+                    <strong id="diagZoomYVal" style="color:#f59e0b">100%</strong>
+                </div>
+                <span style="font-size: 11px; color: var(--text-muted);">💡 Pasa el mouse sobre cualquier diagrama para ver x, V(x), M(x), V=0 y M_máx</span>
+            </div>
+
+            <div class="results-grid-2col">
+                <div class="mini-card">
+                    <div class="mini-card-head" style="color:#00f0ff">
+                        <span>3. Diagrama de Fuerza Cortante V (DFC)</span>
+                        <span id="badgeVZero" style="font-size:10px; color:#00f0ff; background:rgba(0,240,255,0.1); padding:2px 6px; border-radius:4px;">V=0</span>
+                    </div>
+                    <div style="position: relative;">
+                        <svg id="beamShearDiagram" viewBox="0 0 900 320" style="display:block;width:100%;background:#090e1a;border-radius:10px;border:1px solid #1e293b;cursor:crosshair;"></svg>
+                    </div>
+                </div>
+                <div class="mini-card">
+                    <div class="mini-card-head" style="color:#f59e0b">
+                        <span>4. Diagrama de Momento Flector M (DMF)</span>
+                        <span id="badgeMMax" style="font-size:10px; color:#f59e0b; background:rgba(245,158,11,0.1); padding:2px 6px; border-radius:4px;">M_máx</span>
+                    </div>
+                    <div style="position: relative;">
+                        <svg id="beamMomentDiagram" viewBox="0 0 900 320" style="display:block;width:100%;background:#090e1a;border-radius:10px;border:1px solid #1e293b;cursor:crosshair;"></svg>
+                    </div>
+                </div>
+            </div>
+            <div id="diagramCrosshairTooltip" style="margin-top: 10px; font-size: 12px; font-family: var(--font-mono); color: #e2e8f0; background: #0b1424; padding: 8px 14px; border-radius: 6px; border-left: 3px solid #00f0ff; display: flex; gap: 20px;">
+                <span>Posición x: <strong id="tipX">—</strong></span>
+                <span>Cortante V(x): <strong id="tipV" style="color:#00f0ff">—</strong></span>
+                <span>Momento M(x): <strong id="tipM" style="color:#f59e0b">—</strong></span>
+            </div>
+        </div>
+    </section>
     <!-- ══ PIE DE PÁGINA ════════════════════════════════════════════ -->
     <footer class="footer">
         CEREBRO ESTRUCTURAL v6.1 • Análisis Estructural II • Desarrollado por el Ing. Ulianov Cuba Valencia • Cusco, Perú
@@ -1232,93 +1394,263 @@
     <script src="beam-excel-generator.js?v=7.0"></script>
     <script src="beam-app.js?v=7.0"></script>
 <script src="beam-diagrams.js?v=1.1"></script>
-<script>(function(){const draw=()=>{const sol=window.CerebroApp?.getSolution();const spans=window.BeamDiagrams?.calculate(sol)||[];BeamDiagrams.render(document.getElementById('beamShearDiagram'),spans,'V');BeamDiagrams.render(document.getElementById('beamMomentDiagram'),spans,'M');};document.addEventListener('beam:recomputed',draw);document.addEventListener('DOMContentLoaded',draw);})();</script>
+<script>
+    // ── GESTIÓN DE DIAGRAMAS INTERNOS V Y M CON ZOOM Y CROSSHAIR ────
+    (function(){
+        let currentZoomX = 1.0;
+        let currentZoomY = 1.0;
 
-    <script>
-    // Gráficas pedagógicas de la deformada; Ux, Uy [cm] y theta [rad] proceden del solucionador.
-    (function () {
-        'use strict';
+        const drawDiags = () => {
+            const sol = window.CerebroApp?.getSolution();
+            const spans = window.BeamDiagrams?.calculate(sol) || [];
+            
+            const zxInp = document.getElementById('diagZoomX');
+            const zyInp = document.getElementById('diagZoomY');
+            const zxVal = document.getElementById('diagZoomXVal');
+            const zyVal = document.getElementById('diagZoomYVal');
+            
+            if (zxInp) {
+                currentZoomX = (parseFloat(zxInp.value) || 100) / 100.0;
+                if (zxVal) zxVal.textContent = Math.round(currentZoomX * 100) + '%';
+            }
+            if (zyInp) {
+                currentZoomY = (parseFloat(zyInp.value) || 100) / 100.0;
+                if (zyVal) zyVal.textContent = Math.round(currentZoomY * 100) + '%';
+            }
+
+            const svgV = document.getElementById('beamShearDiagram');
+            const svgM = document.getElementById('beamMomentDiagram');
+            if (window.BeamDiagrams) {
+                BeamDiagrams.render(svgV, spans, 'V', { zoomX: currentZoomX, zoomY: currentZoomY });
+                BeamDiagrams.render(svgM, spans, 'M', { zoomX: currentZoomX, zoomY: currentZoomY });
+            }
+        };
+
+        document.addEventListener('beam:recomputed', drawDiags);
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('diagZoomX')?.addEventListener('input', drawDiags);
+            document.getElementById('diagZoomY')?.addEventListener('input', drawDiags);
+            drawDiags();
+        });
+    })();
+
+    // ── GESTIÓN DE CURVA ELÁSTICA CON PLANO CARTESIANO (0,0) Y ESTIRAMIENTO ────
+    (function(){
         const NS = 'http://www.w3.org/2000/svg';
         const $ = id => document.getElementById(id);
         const num = n => Number.isFinite(+n) ? +n : 0;
         const fmt = n => num(n).toFixed(4);
-        function element(tag,attrs,txt) {
-            const el = document.createElementNS(NS,tag);
-            Object.entries(attrs||{}).forEach(([k,v])=>el.setAttribute(k,String(v)));
-            if(txt!==undefined)el.textContent=txt;
+
+        function element(tag, attrs, txt) {
+            const el = document.createElementNS(NS, tag);
+            Object.entries(attrs || {}).forEach(([k, v]) => el.setAttribute(k, String(v)));
+            if (txt !== undefined) el.textContent = txt;
             return el;
         }
-        function render() {
-            const sol=window.CerebroApp && CerebroApp.getSolution();
-            const state=window.CerebroApp && CerebroApp.getCurrentState();
-            const info=$('elasticInfo');
-            const charts=[$('elasticPolygon'),$('elasticSmooth')];
-            if(charts.some(c=>!c))return;
-            charts.forEach(c=>c.replaceChildren());
-            if(!sol || !sol.success || !state || !Array.isArray(sol.D_full)){
-                info.textContent='No hay una solución estructural válida para graficar.';
+
+        let zoomXFactor = 1.0;
+        let zoomYFactor = 1.0;
+
+        function renderElastic() {
+            const sol = window.CerebroApp && CerebroApp.getSolution();
+            const state = window.CerebroApp && CerebroApp.getCurrentState();
+            const info = $('elasticInfo');
+            const charts = [$('elasticPolygon'), $('elasticSmooth')];
+            if (charts.some(c => !c)) return;
+            charts.forEach(c => c.replaceChildren());
+
+            if (!sol || !sol.success || !state || !Array.isArray(sol.D_full)) {
+                if (info) info.textContent = 'No hay una solución estructural válida para graficar.';
                 return;
             }
-            const bars=(state.bars||[]).slice(0,sol.activeBarsCount||0).filter(b=>num(b.xf)!==num(b.xi)||num(b.yf)!==num(b.yi));
-            if(!bars.length){info.textContent='Agrega tramos con longitud distinta de cero.';return;}
-            const positions=[{x:num(bars[0].xi),y:num(bars[0].yi)}];
-            bars.forEach(b=>positions.push({x:num(b.xf),y:num(b.yf)}));
-            const dofs=positions.map((p,i)=>({ux:num(sol.D_full[3*i]),uy:num(sol.D_full[3*i+1]),theta:num(sol.D_full[3*i+2])}));
-            const strength=num($('elasticAmplification').value)||1;
-            $('elasticAmplificationValue').textContent=strength+'×';
-            const allPoints=[];
-            const orig=positions.map(p=>({x:p.x,y:p.y}));
-            const deformed=positions.map((p,i)=>({x:p.x+strength*dofs[i].ux,y:p.y+strength*dofs[i].uy}));
-            const smooth=[];
-            for(let i=0;i<bars.length;i++){
-                const a=positions[i],b=positions[i+1],d0=dofs[i],d1=dofs[i+1];
-                const L=Math.hypot(b.x-a.x,b.y-a.y);
-                if(L<1e-10)continue;
-                const c=(b.x-a.x)/L,s=(b.y-a.y)/L;
-                const axial0=c*d0.ux+s*d0.uy,axial1=c*d1.ux+s*d1.uy;
-                const trans0=-s*d0.ux+c*d0.uy,trans1=-s*d1.ux+c*d1.uy;
-                for(let j=0;j<=36;j++){
-                    const t=j/36,t2=t*t,t3=t2*t;
-                    const h1=2*t3-3*t2+1,h2=t3-2*t2+t,h3=-2*t3+3*t2,h4=t3-t2;
-                    const v=h1*trans0+h2*L*d0.theta+h3*trans1+h4*L*d1.theta;
-                    const axial=(1-t)*axial0+t*axial1;
-                    const x=a.x+(b.x-a.x)*t+strength*(c*axial-s*v);
-                    const y=a.y+(b.y-a.y)*t+strength*(s*axial+c*v);
-                    smooth.push({x,y});
+
+            const bars = (state.bars || []).slice(0, sol.activeBarsCount || 0).filter(b => num(b.xf) !== num(b.xi) || num(b.yf) !== num(b.yi));
+            if (!bars.length) {
+                if (info) info.textContent = 'Agrega tramos con longitud distinta de cero.';
+                return;
+            }
+
+            const zxInp = $('elasticZoomX');
+            const zyInp = $('elasticZoomY');
+            const zxVal = $('elasticZoomXVal');
+            const zyVal = $('elasticZoomYVal');
+            if (zxInp) {
+                zoomXFactor = (parseFloat(zxInp.value) || 100) / 100.0;
+                if (zxVal) zxVal.textContent = Math.round(zoomXFactor * 100) + '%';
+            }
+            if (zyInp) {
+                zoomYFactor = (parseFloat(zyInp.value) || 100) / 100.0;
+                if (zyVal) zyVal.textContent = Math.round(zoomYFactor * 100) + '%';
+            }
+
+            const positions = [{ x: num(bars[0].xi), y: num(bars[0].yi) }];
+            bars.forEach(b => positions.push({ x: num(b.xf), y: num(b.yf) }));
+            const dofs = positions.map((p, i) => ({
+                ux: num(sol.D_full[3 * i]),
+                uy: num(sol.D_full[3 * i + 1]),
+                theta: num(sol.D_full[3 * i + 2])
+            }));
+
+            const strength = num($('elasticAmplification')?.value) || 30;
+            if ($('elasticAmplificationValue')) $('elasticAmplificationValue').textContent = strength + '×';
+
+            const allPoints = [];
+            const orig = positions.map(p => ({ x: p.x, y: p.y }));
+            const deformed = positions.map((p, i) => ({
+                x: p.x + strength * dofs[i].ux,
+                y: p.y + strength * dofs[i].uy * zoomYFactor
+            }));
+
+            const smooth = [];
+            for (let i = 0; i < bars.length; i++) {
+                const a = positions[i], b = positions[i + 1], d0 = dofs[i], d1 = dofs[i + 1];
+                const L = Math.hypot(b.x - a.x, b.y - a.y);
+                if (L < 1e-10) continue;
+                const c = (b.x - a.x) / L, s = (b.y - a.y) / L;
+                const axial0 = c * d0.ux + s * d0.uy, axial1 = c * d1.ux + s * d1.uy;
+                const trans0 = -s * d0.ux + c * d0.uy, trans1 = -s * d1.ux + c * d1.uy;
+                for (let j = 0; j <= 40; j++) {
+                    const t = j / 40, t2 = t * t, t3 = t2 * t;
+                    const h1 = 2 * t3 - 3 * t2 + 1, h2 = t3 - 2 * t2 + t, h3 = -2 * t3 + 3 * t2, h4 = t3 - t2;
+                    const v = h1 * trans0 + h2 * L * d0.theta + h3 * trans1 + h4 * L * d1.theta;
+                    const axial = (1 - t) * axial0 + t * axial1;
+                    const x = a.x + (b.x - a.x) * t + strength * (c * axial - s * v);
+                    const y = a.y + (b.y - a.y) * t + strength * (s * axial + c * v) * zoomYFactor;
+                    smooth.push({ x, y });
                 }
             }
-            allPoints.push(...orig,...deformed,...smooth);
-            let minX=Math.min(...allPoints.map(p=>p.x)),maxX=Math.max(...allPoints.map(p=>p.x));
-            let minY=Math.min(...allPoints.map(p=>p.y)),maxY=Math.max(...allPoints.map(p=>p.y));
-            const width=Math.max(maxX-minX,1),height=Math.max(maxY-minY,1);
-            const scale=Math.min(670/width,205/height);
-            const xOffset=380-scale*(minX+maxX)/2;
-            const yOffset=157+scale*(minY+maxY)/2;
-            const screen=p=>({x:xOffset+scale*p.x,y:yOffset-scale*p.y});
-            const path=points=>points.map((p,i)=>{const q=screen(p);return (i?'L':'M')+q.x.toFixed(2)+' '+q.y.toFixed(2);}).join(' ');
-            for(let ci=0;ci<charts.length;ci++){
-                const svg=charts[ci];
-                svg.appendChild(element('path',{d:path(orig),stroke:'#64748b','stroke-width':2,'stroke-dasharray':'6 6',fill:'none'}));
-                svg.appendChild(element('path',{d:path(ci===0?deformed:smooth),stroke:ci===0?'#38bdf8':'#34d399','stroke-width':3,fill:'none','stroke-linecap':'round','stroke-linejoin':'round'}));
-                for(let i=0;i<positions.length;i++){
-                    const p=screen(deformed[i]);
-                    svg.appendChild(element('circle',{cx:p.x,cy:p.y,r:4.4,fill:'#fbbf24',stroke:'#0f172a','stroke-width':1.2}));
-                    const label='N'+(i+1);
-                    const tx=Math.max(5,Math.min(650,p.x+7)),ty=Math.max(13,Math.min(297,p.y-9-(i%2)*14));
-                    svg.appendChild(element('text',{x:tx,y:ty,fill:'#e2e8f0','font-size':'11'},label));
+
+            allPoints.push(...orig, ...deformed, ...smooth);
+            let minX = 0; // Origen cartesiano fijado en 0,0
+            let maxX = Math.max(...allPoints.map(p => p.x), 100);
+            let minY = Math.min(...allPoints.map(p => p.y), -5);
+            let maxY = Math.max(...allPoints.map(p => p.y), 5);
+
+            const width = Math.max(maxX - minX, 1);
+            const height = Math.max(maxY - minY, 1);
+
+            const W_svg = 850;
+            const H_svg = 320;
+            const padLeft = 70;
+            const padRight = 50;
+            const padTop = 35;
+            const padBot = 45;
+
+            const plotW = (W_svg - padLeft - padRight) * zoomXFactor;
+            const plotH = H_svg - padTop - padBot;
+
+            const scaleX = plotW / width;
+            const scaleY = plotH / height;
+
+            // Funciones de mapeo a pantalla con origen cartesiano explícito (0,0)
+            const screenX = x => padLeft + (x - minX) * scaleX;
+            const screenY = y => (padTop + plotH / 2) - y * scaleY;
+
+            const path = points => points.map((p, i) => (i ? 'L ' : 'M ') + screenX(p.x).toFixed(2) + ' ' + screenY(p.y).toFixed(2)).join(' ');
+
+            for (let ci = 0; ci < charts.length; ci++) {
+                const svg = charts[ci];
+
+                // 1. Grilla Cartesiana de Fondo
+                // Eje X (y = 0)
+                const yZero = screenY(0);
+                svg.appendChild(element('line', {
+                    x1: padLeft - 15, y1: yZero,
+                    x2: padLeft + plotW + 20, y2: yZero,
+                    stroke: '#475569', 'stroke-width': 1.6
+                }));
+
+                // Eje Y (x = 0) Origen
+                const xZero = screenX(0);
+                svg.appendChild(element('line', {
+                    x1: xZero, y1: padTop - 15,
+                    x2: xZero, y2: H_svg - padBot + 15,
+                    stroke: '#475569', 'stroke-width': 1.6
+                }));
+
+                // Marcas y cotas del plano cartesiano (0,0)
+                svg.appendChild(element('text', {
+                    x: xZero - 8, y: yZero + 15,
+                    fill: '#f8fafc', 'font-size': '11', 'font-family': 'monospace', 'font-weight': 'bold'
+                }, '(0,0)'));
+
+                // Líneas de grilla auxiliares en X (por tramos o intervalos)
+                positions.forEach((p, idx) => {
+                    const sx = screenX(p.x);
+                    svg.appendChild(element('line', {
+                        x1: sx, y1: padTop - 5,
+                        x2: sx, y2: H_svg - padBot + 5,
+                        stroke: '#1e293b', 'stroke-width': 1.0, 'stroke-dasharray': '2 3'
+                    }));
+                    svg.appendChild(element('text', {
+                        x: sx, y: H_svg - padBot + 18,
+                        fill: '#94a3b8', 'font-size': '10', 'text-anchor': 'middle', 'font-family': 'monospace'
+                    }, (p.x / 100).toFixed(1) + 'm'));
+                });
+
+                // 2. Viga original sin deformar (línea discontinua)
+                svg.appendChild(element('path', {
+                    d: path(orig),
+                    stroke: '#64748b', 'stroke-width': 2.2, 'stroke-dasharray': '6 6', fill: 'none'
+                }));
+
+                // 3. Deformada (Curva 1 o Curva 2)
+                const curveColor = ci === 0 ? '#00f0ff' : '#10b981';
+                svg.appendChild(element('path', {
+                    d: path(ci === 0 ? deformed : smooth),
+                    stroke: curveColor, 'stroke-width': 3.2, fill: 'none',
+                    'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+                }));
+
+                // 4. Marcadores de nudos y etiquetas
+                for (let i = 0; i < positions.length; i++) {
+                    const p = { x: screenX(deformed[i].x), y: screenY(deformed[i].y) };
+                    svg.appendChild(element('circle', {
+                        cx: p.x, cy: p.y, r: 5.0,
+                        fill: '#fbbf24', stroke: '#090d16', 'stroke-width': 1.8
+                    }));
+                    const label = 'N' + (i + 1);
+                    const tx = p.x + 8;
+                    const ty = p.y - 10;
+                    svg.appendChild(element('text', {
+                        x: tx, y: ty, fill: '#e2e8f0', 'font-size': '11', 'font-weight': 'bold', 'font-family': 'monospace'
+                    }, label));
                 }
-                svg.appendChild(element('text',{x:14,y:285,fill:'#94a3b8','font-size':'11'},'Gris: viga original  •  Amarillo: nudos  •  Deformada: '+strength+'×'));
+
+                // Leyenda inferior
+                svg.appendChild(element('text', {
+                    x: padLeft, y: padTop - 12,
+                    fill: curveColor, 'font-size': '12', 'font-weight': 'bold'
+                }, ci === 0 ? 'Curva 1: Deformada Poligonal Nodal' : 'Curva 2: Deformada Continua (Hermite)'));
+
+                svg.appendChild(element('text', {
+                    x: padLeft + plotW, y: H_svg - 10,
+                    fill: '#64748b', 'font-size': '10.5', 'text-anchor': 'end'
+                }, 'Gris: viga original  •  Amarillo: nudos  •  Deformada: ' + strength + '×'));
             }
-            const maxDisp=Math.max(...dofs.map(d=>Math.hypot(d.ux,d.uy)));
-            info.textContent='Nudos: '+positions.length+'  |  Tramos: '+bars.length+'  |  Desplazamiento máximo: '+fmt(maxDisp)+' cm  |  Giros (rad): '+dofs.map((d,i)=>'θ'+(i+1)+'='+fmt(d.theta)).join(' · ')+'  |  Curva suavizada: interpolación de Hermite.';
+
+            const maxDisp = Math.max(...dofs.map(d => Math.hypot(d.ux, d.uy)));
+            if (info) {
+                info.textContent = 'Nudos: ' + positions.length + '  |  Tramos: ' + bars.length +
+                    '  |  Desplazamiento máx: ' + fmt(maxDisp) + ' cm  |  ' +
+                    dofs.map((d, i) => 'θ' + (i + 1) + '=' + fmt(d.theta) + ' rad').join(' · ');
+            }
         }
-        document.addEventListener('beam:recomputed',render);
-        document.addEventListener('DOMContentLoaded',()=>{
-            $('elasticAmplification')?.addEventListener('input',render);
-            render();
+
+        document.addEventListener('beam:recomputed', renderElastic);
+        document.addEventListener('DOMContentLoaded', () => {
+            $('elasticAmplification')?.addEventListener('input', renderElastic);
+            $('elasticZoomX')?.addEventListener('input', renderElastic);
+            $('elasticZoomY')?.addEventListener('input', renderElastic);
+            $('btnResetElasticZoom')?.addEventListener('click', () => {
+                if ($('elasticAmplification')) $('elasticAmplification').value = 30;
+                if ($('elasticZoomX')) $('elasticZoomX').value = 100;
+                if ($('elasticZoomY')) $('elasticZoomY').value = 100;
+                renderElastic();
+            });
+            renderElastic();
         });
     })();
-    </script>
-
+</script>
 </body>
 </html>

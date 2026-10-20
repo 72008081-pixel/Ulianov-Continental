@@ -101,6 +101,7 @@
         renderSteinerTable();
         renderBarsTable();
         renderNodesTable();
+        renderSpansLoadsTable();
         renderObliqueTable();
 
         recomputeAll();
@@ -195,6 +196,27 @@
         const inpMode = document.getElementById('inpPropMode');
         const btnToggleSteiner = document.getElementById('btnToggleSteiner');
         const steinerWrap = document.getElementById('steinerWrap');
+        const inpMat = document.getElementById('inpMaterial');
+
+        if (inpMat) {
+            inpMat.addEventListener('change', () => {
+                const mat = inpMat.value;
+                if (mat === 'ACERO_A36') inpE.value = '2000000';
+                else if (mat === 'ACERO_A992') inpE.value = '2040000';
+                else if (mat === 'CONCRETO_210') inpE.value = '217370';
+                else if (mat === 'CONCRETO_280') inpE.value = '250998';
+                else if (mat === 'MADERA') inpE.value = '100000';
+                updateSec();
+                recomputeAll();
+            });
+        }
+        if (inpE) {
+            inpE.addEventListener('input', () => {
+                if (inpMat && inpMat.value !== 'CUSTOM') {
+                    inpMat.value = 'CUSTOM';
+                }
+            });
+        }
 
         const updateSec = () => {
             currentState.E = parseFloat(inpE.value) || 2100000;
@@ -343,7 +365,7 @@
         recomputeAll();
     }
 
-    // ── RENDERIZADO Y EDICIÓN DE TABLA DE BARRAS (11 BARRAS) ────
+    // ── RENDERIZADO Y EDICIÓN DE TABLA DE BARRAS (TABLA 2: GEOMETRÍA PURA) ────
     function renderBarsTable() {
         const tbody = document.getElementById('tbodyBars');
         if (!tbody) return;
@@ -357,10 +379,6 @@
             const yi = (b && b.yi !== null && b.yi !== undefined) ? b.yi : (i === 0 ? 0 : '');
             const xf = (b && b.xf !== null && b.xf !== undefined) ? b.xf : '';
             const yf = (b && b.yf !== null && b.yf !== undefined) ? b.yf : '';
-            const q = (b && b.q !== null && b.q !== undefined) ? b.q : '';
-            const qUnit = b && b.q_unit === 'kgf/m' ? 'kgf/m' : 'kgf/cm';
-            const P_tramo = (b && b.P_tramo !== null && b.P_tramo !== undefined) ? b.P_tramo : '';
-            const a_dist = (b && b.a_dist !== null && b.a_dist !== undefined) ? b.a_dist : '';
 
             const nI = i + 1;
             const nF = i + 2;
@@ -374,10 +392,8 @@
                     <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="yi" value="${yi}"></td>
                     <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="xf" value="${xf}"></td>
                     <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="yf" value="${yf}"></td>
-                    <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="q" value="${q}" title="Carga uniforme: positiva hacia abajo"></td><td><select class="bar-inp" data-field="q_unit" title="Unidad de la carga distribuida"><option value="kgf/cm" ${qUnit === "kgf/cm" ? "selected" : ""}>kgf/cm</option><option value="kgf/m" ${qUnit === "kgf/m" ? "selected" : ""}>kgf/m</option></select></td>
-                    <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="P_tramo" value="${P_tramo}"></td>
-                    <td class="cell-input"><input type="number" step="any" class="bar-inp" data-field="a_dist" value="${a_dist}"></td>
                     <td class="cell-auto-green bar-out-L">-</td>
+                    <td class="cell-auto-green bar-out-Lm">-</td>
                     <td class="bar-out-cos">-</td>
                     <td class="bar-out-sin">-</td>
                     <td class="cell-auto-celeste bar-out-k1">-</td>
@@ -408,10 +424,12 @@
             const yiVal = tr.querySelector('[data-field="yi"]').value;
             const xfVal = tr.querySelector('[data-field="xf"]').value;
             const yfVal = tr.querySelector('[data-field="yf"]').value;
-            const qVal = tr.querySelector('[data-field="q"]').value;
-            const qUnit = tr.querySelector('[data-field="q_unit"]').value;
-            const pVal = tr.querySelector('[data-field="P_tramo"]').value;
-            const aVal = tr.querySelector('[data-field="a_dist"]').value;
+
+            const oldBar = currentState.bars && currentState.bars[i];
+            const q = oldBar ? (oldBar.q || 0.0) : 0.0;
+            const qUnit = oldBar ? (oldBar.q_unit || 'kgf/m') : 'kgf/m';
+            const pVal = oldBar ? (oldBar.P_tramo || 0.0) : 0.0;
+            const aVal = oldBar ? (oldBar.a_dist || 0.0) : 0.0;
 
             if (xfVal !== '' && xfVal !== null && !isNaN(parseFloat(xfVal))) {
                 newBars.push({
@@ -419,15 +437,88 @@
                     yi: parseFloat(yiVal) || 0.0,
                     xf: parseFloat(xfVal),
                     yf: parseFloat(yfVal) || 0.0,
-                    q: parseFloat(qVal) || 0.0,
+                    q: q,
                     q_unit: qUnit,
-                    P_tramo: parseFloat(pVal) || 0.0,
-                    a_dist: parseFloat(aVal) || 0.0
+                    P_tramo: pVal,
+                    a_dist: aVal
                 });
             }
         });
 
         currentState.bars = newBars;
+        renderSpansLoadsTable();
+        recomputeAll();
+    }
+
+    // ── RENDERIZADO Y EDICIÓN DE TABLA 3.1: CARGAS DISTRIBUIDAS Y EN TRAMO ────
+    function renderSpansLoadsTable() {
+        const tbody = document.getElementById('tbodySpansLoads');
+        if (!tbody) return;
+
+        let html = '';
+        for (let i = 0; i < BeamSolver.MAX_BARS; i++) {
+            const b = currentState.bars && currentState.bars[i];
+            const hasGeom = b && (b.xf !== null && b.xf !== undefined && b.xf !== '' && b.xf > b.xi);
+            const nI = i + 1;
+            const nF = i + 2;
+            const L = hasGeom ? (b.xf - b.xi) : 0;
+            const q = (b && b.q !== null && b.q !== undefined && b.q !== 0) ? b.q : '';
+            const qUnit = (b && b.q_unit === 'kgf/m') ? 'kgf/m' : 'kgf/cm';
+            const P_tramo = (b && b.P_tramo !== null && b.P_tramo !== undefined && b.P_tramo !== 0) ? b.P_tramo : '';
+            const a_dist = (b && b.a_dist !== null && b.a_dist !== undefined && b.a_dist !== 0) ? b.a_dist : '';
+
+            const qVal = parseFloat(q) || 0;
+            const qEquivCm = qUnit === 'kgf/m' ? (qVal / 100) : qVal;
+
+            html += `
+                <tr data-span-idx="${i}" style="${hasGeom ? '' : 'opacity: 0.5;'}">
+                    <td><strong style="color: #b91c1c;">[${i + 1}]</strong></td>
+                    <td class="cell-auto-subhdr">${nI} → ${nF}</td>
+                    <td class="cell-auto-subhdr span-out-L">${hasGeom ? L.toFixed(1) : '-'}</td>
+                    <td class="cell-input"><input type="number" step="any" class="span-load-inp" data-bar-idx="${i}" data-field="q" value="${q}" placeholder="0" style="width:75px;"></td>
+                    <td class="cell-input">
+                        <select class="span-load-inp" data-bar-idx="${i}" data-field="q_unit" style="font-size:11px; width:75px;">
+                            <option value="kgf/m" ${qUnit === 'kgf/m' ? 'selected' : ''}>kgf/m</option>
+                            <option value="kgf/cm" ${qUnit === 'kgf/cm' ? 'selected' : ''}>kgf/cm</option>
+                        </select>
+                    </td>
+                    <td class="cell-auto-green span-out-qequiv">${qEquivCm > 0 ? qEquivCm.toFixed(4) : '-'}</td>
+                    <td class="cell-input"><input type="number" step="any" class="span-load-inp" data-bar-idx="${i}" data-field="P_tramo" value="${P_tramo}" placeholder="0" style="width:75px;"></td>
+                    <td class="cell-input"><input type="number" step="any" class="span-load-inp" data-bar-idx="${i}" data-field="a_dist" value="${a_dist}" placeholder="L/2" style="width:65px;"></td>
+                    <td class="cell-auto-celeste span-out-vi">-</td>
+                    <td class="cell-auto-celeste span-out-mi">-</td>
+                    <td class="cell-auto-celeste span-out-vj">-</td>
+                    <td class="cell-auto-celeste span-out-mj">-</td>
+                </tr>
+            `;
+        }
+        tbody.innerHTML = html;
+
+        tbody.querySelectorAll('.span-load-inp').forEach(inp => {
+            inp.addEventListener('input', readSpansLoadsInputs);
+            inp.addEventListener('change', readSpansLoadsInputs);
+        });
+    }
+
+    function readSpansLoadsInputs() {
+        const tbody = document.getElementById('tbodySpansLoads');
+        if (!tbody) return;
+
+        tbody.querySelectorAll('tr').forEach((tr, i) => {
+            if (!currentState.bars[i]) {
+                currentState.bars[i] = { xi: 0, yi: 0, xf: 0, yf: 0, q: 0, q_unit: 'kgf/m', P_tramo: 0, a_dist: 0 };
+            }
+            const qVal = tr.querySelector('[data-field="q"]').value;
+            const qUnit = tr.querySelector('[data-field="q_unit"]').value;
+            const pVal = tr.querySelector('[data-field="P_tramo"]').value;
+            const aVal = tr.querySelector('[data-field="a_dist"]').value;
+
+            currentState.bars[i].q = parseFloat(qVal) || 0.0;
+            currentState.bars[i].q_unit = qUnit;
+            currentState.bars[i].P_tramo = parseFloat(pVal) || 0.0;
+            currentState.bars[i].a_dist = parseFloat(aVal) || 0.0;
+        });
+
         recomputeAll();
     }
 
@@ -585,6 +676,61 @@
     }
 
     // ── CÁLCULO Y ACTUALIZACIÓN GENERAL (RESOLUCIÓN MATRICIAL) ────
+        // ── TARJETAS VISUALES DE SEPARACIÓN DE CARGAS EQUIVALENTES ────
+    function renderEquivalentLoadCards(sol) {
+        const container = document.getElementById('beamEquivalentCardsContainer');
+        if (!container) return;
+
+        if (!sol || !sol.success || !sol.barsTable) {
+            container.innerHTML = '<div style="color:#64748b; font-size:12px; padding:8px;">Sin solución calculada.</div>';
+            return;
+        }
+
+        const loadedBars = sol.barsTable.filter(b => b.active && (Math.abs(b.q) > 1e-9 || Math.abs(b.P_tramo) > 1e-9));
+        if (loadedBars.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column: 1 / -1; color: #64748b; font-size: 12px; padding: 12px; text-align: center; background: #090e1a; border-radius: 8px; border: 1px dashed #1e293b;">
+                    ℹ️ No hay cargas distribuidas asignadas en los tramos actuales (Cargas nodales puras).
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        loadedBars.forEach(b => {
+            const nI = b.barNum;
+            const nF = b.barNum + 1;
+            const qDisp = b.q_unit === 'kgf/m' ? (b.q_input + ' kgf/m') : (b.q + ' kgf/cm');
+            const L_m = (b.L / 100).toFixed(2);
+
+            html += `
+                <div class="eq-card">
+                    <div class="eq-card-header">
+                        <span class="eq-card-title">Tramo [${b.barNum}]: Nudo (${nI}) → Nudo (${nF})</span>
+                        <span class="eq-badge">L = ${L_m} m (${b.L.toFixed(0)} cm)</span>
+                    </div>
+                    <div style="font-size: 11.5px; margin-bottom: 8px; color: #bae6fd;">
+                        <strong>Carga aplicada:</strong> q = ${qDisp} ${b.q_unit === 'kgf/m' ? `(${b.q.toFixed(4)} kgf/cm)` : ''}
+                        ${b.P_tramo !== 0 ? `<br><strong>Carga puntual en tramo:</strong> P = ${b.P_tramo} kgf @ a = ${b.a_dist || (b.L/2)} cm` : ''}
+                    </div>
+                    <div class="eq-card-loads">
+                        <div class="eq-load-node">
+                            <div class="eq-node-title">Extremo Inicial (Nudo ${nI})</div>
+                            <div class="eq-val-row"><span class="eq-val-label">Vi equiv:</span><span class="eq-val-num" style="color:#00f0ff;">+${b.V_ini.toFixed(2)} kgf</span></div>
+                            <div class="eq-val-row"><span class="eq-val-label">Mi equiv:</span><span class="eq-val-num" style="color:#10b981;">+${b.M_ini.toFixed(2)} kgf·cm</span></div>
+                        </div>
+                        <div class="eq-load-node node-j">
+                            <div class="eq-node-title">Extremo Final (Nudo ${nF})</div>
+                            <div class="eq-val-row"><span class="eq-val-label">Vj equiv:</span><span class="eq-val-num" style="color:#00f0ff;">+${b.V_fin.toFixed(2)} kgf</span></div>
+                            <div class="eq-val-row"><span class="eq-val-label">Mj equiv:</span><span class="eq-val-num" style="color:#f59e0b;">${b.M_fin.toFixed(2)} kgf·cm</span></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
     function recomputeAll() {
         currentSolution = BeamSolver.solveBeam(currentState);
 

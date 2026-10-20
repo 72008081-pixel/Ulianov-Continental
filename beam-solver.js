@@ -1047,6 +1047,36 @@
                 { cond: 'RODILLO',   Px: 0.0, Py: 0.0,     Mz: 0.0 },
                 { cond: 'FIJO',      Px: 0.0, Py: 0.0,     Mz: 0.0 }
             ]
+        },
+        ejemplo_5_pizarra: {
+            id: 'ejemplo_5_pizarra',
+            name: '5. Viga Continua 5 Tramos (11 m) con Cargas Mixtas (Pizarra del Ingeniero)',
+            E: 2100000.0,
+            sec_type: 'RECTANGULAR',
+            b: 25.0,
+            h: 50.0,
+            p3: 0.0,
+            p4: 0.0,
+            prop_mode: 'CONSTANTE',
+            steiner_rows: [
+                { tipo: 'RECTANGULO', b: 25.0, b_sup: 0, h: 50.0, y_base: 0.0, x_c: 12.5 }
+            ],
+            bars: [
+                { xi: 0.0,    yi: 0.0, xf: 200.0,  yf: 0.0, q: 400.0, q_unit: 'kgf/m', q_input: 400.0, P_tramo: 0.0, a_dist: 0.0 },
+                { xi: 200.0,  yi: 0.0, xf: 500.0,  yf: 0.0, q: 400.0, q_unit: 'kgf/m', q_input: 400.0, P_tramo: 0.0, a_dist: 0.0 },
+                { xi: 500.0,  yi: 0.0, xf: 600.0,  yf: 0.0, q: 0.0, q_unit: 'kgf/m', q_input: 0.0,   P_tramo: 0.0, a_dist: 0.0 },
+                { xi: 600.0,  yi: 0.0, xf: 800.0,  yf: 0.0, q: 0.0, q_unit: 'kgf/m', q_input: 0.0,   P_tramo: 0.0, a_dist: 0.0 },
+                { xi: 800.0,  yi: 0.0, xf: 1100.0, yf: 0.0, q: 0.0, q_unit: 'kgf/m', q_input: 0.0,   P_tramo: 0.0, a_dist: 0.0 }
+            ],
+            oblique_loads: [],
+            nodes: [
+                { cond: 'FIJO',    Px: 0.0, Py: 0.0,     Mz: 0.0 },
+                { cond: 'LIBRE',   Px: 0.0, Py: -1000.0, Mz: 0.0 },
+                { cond: 'RODILLO', Px: 0.0, Py: 0.0,     Mz: 0.0 },
+                { cond: 'LIBRE',   Px: 0.0, Py: -2000.0, Mz: 0.0 },
+                { cond: 'LIBRE',   Px: 0.0, Py: -3000.0, Mz: 0.0 },
+                { cond: 'RODILLO', Px: 0.0, Py: 0.0,     Mz: 0.0 }
+            ]
         }
     };
 

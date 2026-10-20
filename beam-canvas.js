@@ -259,21 +259,9 @@
         ctx.save();
         ctx.scale(dpr, dpr);
 
-        // 1. Fondo blanco limpio + línea superior negra + título "6° Grafica final"
+        // 1. Fondo blanco limpio para dibujo técnico sin marcas ajenas
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, logicalW, logicalH);
-
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3.5;
-        ctx.beginPath();
-        ctx.moveTo(28, 16);
-        ctx.lineTo(logicalW - 28, 16);
-        ctx.stroke();
-
-        ctx.font = '26px "Calibri", "Segoe UI", sans-serif';
-        ctx.fillStyle = '#000000';
-        ctx.textAlign = 'left';
-        ctx.fillText('6° Grafica final', 65, 62);
 
         // Distribuidor anticolisiones: recoloca textos sin alterar geometría ni resultados.
         const baseFillText = ctx.fillText.bind(ctx);
@@ -432,10 +420,11 @@
             const midX = (p1.x + p2.x) / 2.0;
             const midY = (p1.y + p2.y) / 2.0;
 
+            const hasQ = Math.abs(b.q) > 1e-9;
             const boxW = 36;
             const boxH = 29;
             const boxX = midX - boxW / 2.0;
-            const boxY = midY - 48;
+            const boxY = hasQ ? (midY - 96) : (midY - 48);
 
             // Recuadro rojo con fondo blanco
             ctx.save();
@@ -474,7 +463,9 @@
             // - Nudos pares libres (2, 4, 6) tienen el círculo verde DEBAJO de la viga
             const isFirst = idx === 0;
             const isLast = idx === totalN - 1;
-            const placeCircleAbove = isFirst || isLast || (nNum % 2 === 1);
+            const hasSupport = nd.cond && nd.cond !== 'LIBRE';
+            const hasDownLoad = (nd.Py_dir !== undefined && nd.Py_dir < -1e-9);
+            const placeCircleAbove = hasSupport || (!hasDownLoad && (isFirst || isLast || (nNum % 2 === 1)));
 
             const circleR = 16.5;
             let cX = pt.x;
@@ -729,7 +720,7 @@
     /**
      * Descarga el canvas de la "6° Gráfica Final" como archivo PNG de alta resolución
      */
-    function downloadGraficaFinalPNG(target, options = {}, filename = '6_Grafica_Final_Viga_Ulianov.png') {
+    function downloadGraficaFinalPNG(target, options = {}, filename = 'Viga_Metodo_Rigidez.png') {
         let dataUrl = '';
         if (target && target.tagName === 'CANVAS') {
             dataUrl = target.toDataURL('image/png');
