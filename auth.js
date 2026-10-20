@@ -1,20 +1,18 @@
 /**
- * auth.js — CEREBRO ESTRUCTURAL PRO v7.0
- * Sistema de Registro Libre Liquid Glass, Privacidad y Base de Proyectos
+ * auth.js — CEREBRO ESTRUCTURAL PRO v8.1
+ * Sistema de Registro Libre Liquid Glass, Términos y Condiciones, y Panel de Desarrollador Protegido
  * - 100% Código Abierto (Licencia MIT) — 0% Cobros Forzosos / Sin Bloqueos de Pago
- * - Registro Elegante de Usuario en Interfaz "Liquid Glass" (Glassmorphism con desenfoque y reflejos)
- * - Inicio de Sesión con Google Oficial (Selector de Cuentas Reales de Google)
- * - Registro con Correo Real / Institucional y Aceptación de Términos y Condiciones
- * - Base de Datos de Alumnos / Usuarios Inscritos visible para el Ingeniero Desarrollador
- * - Botón de Exportación de Usuarios Inscritos a Excel / CSV para el Administrador
- * - Sección inferior sutil y no invasiva para colaboraciones voluntarias
+ * - Pantalla Inicial de Registro Liquid Glass con Términos y Condiciones del Programa
+ * - Registro con Google Oficial (Selector de Cuentas) o Correo Real Validado
+ * - Panel de Desarrollador con Acceso Restringido mediante Contraseña Maestra
+ * - Exportación de Usuarios Inscritos a Excel / CSV para el Desarrollador
  * - Base de datos local unificada de proyectos guardados (window.CerebroDB)
  * Desarrollado por Ing. Ulianov Cuba Valencia — Cusco, Perú
  */
 (function () {
     'use strict';
 
-    // ── CONSTANTES ──────────────────────────────────────────────
+    // ── CONSTANTES Y CLAVES ──────────────────────────────────────
     const MASTER = ['Vayolett1404', 'vayolett1404', 'ULIANOV2026', 'ulianov'];
     const YAPE = {
         holder: 'Ing. Ulianov Sabath Cuba Valencia',
@@ -25,15 +23,16 @@
     };
 
     const KEY = {
-        session:   'cb_session_v55',
-        whitelist: 'cb_access_v55',
-        banned:    'cb_banned_v55',
-        excel:     'cb_excel_v55',
-        students:  'cb_students_v55',
-        device:    'cb_device_v55',
+        session:   'cb_session_v81',
+        user:      'cb_user_v81',
+        students:  'cb_students_v81',
+        excel:     'cb_excel_v81',
         trusses:   'cb_saved_trusses_v61',
         beams:     'cb_saved_beams_v61'
     };
+
+    // Estado en memoria de la sesión del panel del desarrollador (NUNCA permanente)
+    let isDeveloperUnlocked = false;
 
     // ── UTILIDADES DE ALMACENAMIENTO ─────────────────────────────
     function load(k) {
@@ -49,9 +48,36 @@
         catch (e) { return []; }
     }
 
-    // ── SESIÓN ACTUAL ────────────────────────────────────────────
+    // ── MIGRACIÓN AUTOMÁTICA DE REGISTROS PREVIOS ────────────────
+    function migrateOldSubscribers() {
+        let currentList = loadArr(KEY.students);
+        const legacyKeys = ['cb_students_v55', 'cb_students_v60', 'cb_students_v70'];
+        let updated = false;
+
+        legacyKeys.forEach(lk => {
+            const oldArr = loadArr(lk);
+            if (Array.isArray(oldArr)) {
+                oldArr.forEach(item => {
+                    if (item && item.email) {
+                        const em = item.email.toLowerCase().trim();
+                        if (!currentList.some(s => s.email === em)) {
+                            currentList.push(item);
+                            updated = true;
+                        }
+                    }
+                });
+            }
+        });
+
+        if (updated) {
+            save(KEY.students, currentList);
+        }
+    }
+
+    // ── GESTIÓN DE SESIÓN DE USUARIO ─────────────────────────────
     function getSession() {
-        return load(KEY.session).email ? load(KEY.session) : null;
+        const s = load(KEY.session);
+        return (s && s.email) ? s : null;
     }
     function setSession(u) {
         save(KEY.session, u);
@@ -60,7 +86,12 @@
         try { localStorage.removeItem(KEY.session); } catch (e) {}
     }
 
-    // ── GESTIÓN DE USUARIOS INSCRITOS ───────────────────────────
+    function checkAuthorized() {
+        const s = getSession();
+        return !!(s && s.email);
+    }
+
+    // ── REGISTRO DE NUEVO USUARIO ────────────────────────────────
     function recordSubscriber(email, name, method = 'Correo') {
         if (!email) return;
         email = email.toLowerCase().trim();
@@ -76,43 +107,12 @@
         if (idx >= 0) arr[idx] = { ...arr[idx], ...entry };
         else arr.push(entry);
         save(KEY.students, arr);
-
-        // Habilitar acceso total gratuito
-        const w = load(KEY.whitelist);
-        w[email] = { email, name: entry.name, ts: Date.now() };
-        save(KEY.whitelist, w);
-
-        const exc = load(KEY.excel);
-        exc[email] = true;
-        save(KEY.excel, exc);
-    }
-
-    function isBanned(email) {
-        if (!email) return false;
-        return !!load(KEY.banned)[email.toLowerCase().trim()];
-    }
-
-    function checkAuthorized() {
-        const s = getSession();
-        if (!s) return false;
-        if (s.role === 'admin' || s.role === 'docente') return true;
-        if (isBanned(s.email)) {
-            clearSession();
-            return false;
-        }
-        return true;
-    }
-
-    function isAdmin() {
-        const s = getSession();
-        return !!(s && (s.role === 'admin' || s.role === 'docente'));
     }
 
     // ── VALIDACIÓN ESTRICTA DE CORREOS REALES ───────────────────
     function isValidRealEmail(email) {
         if (!email || typeof email !== 'string') return false;
         email = email.trim().toLowerCase();
-        // Regex estándar RFC 5322
         const re = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
         if (!re.test(email)) return false;
 
@@ -123,11 +123,9 @@
         if (user.length < 3) return false;
         if (!domain.includes('.')) return false;
 
-        // Rechazo de dominios ficticios / temporales / de prueba
         const fakeDomains = ['test.com', 'example.com', 'fake.com', 'mailinator.com', 'tempmail.com', '10minutemail.com', 'dispostable.com', 'yopmail.com', 'throwaway.com'];
         if (fakeDomains.includes(domain)) return false;
 
-        // Rechazo de usuarios evidentes
         const fakeUsers = ['test', 'asdf', 'admin', 'qwerty', 'fake', 'prueba', 'usuario', 'anon', '12345'];
         if (fakeUsers.includes(user)) return false;
 
@@ -137,7 +135,7 @@
         return true;
     }
 
-    // ── ESTILOS LIQUID GLASS (GLASSMORPHISM) ─────────────────────
+    // ── ESTILOS CSS LIQUID GLASS & MODAL ─────────────────────────
     const styleEl = document.createElement('style');
     styleEl.textContent = `
         /* OVERLAY Y CONTENEDOR LIQUID GLASS */
@@ -145,9 +143,9 @@
             position: fixed;
             inset: 0;
             z-index: 999999;
-            background: radial-gradient(circle at 50% 30%, rgba(15, 23, 42, 0.88), rgba(3, 7, 18, 0.96));
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            background: radial-gradient(circle at 50% 25%, rgba(15, 23, 42, 0.88), rgba(3, 7, 18, 0.97));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -163,24 +161,24 @@
 
         /* TARJETA LIQUID GLASS */
         .cb-glass-card {
-            background: rgba(15, 23, 42, 0.72);
-            backdrop-filter: blur(32px) saturate(190%);
-            -webkit-backdrop-filter: blur(32px) saturate(190%);
-            border: 1.5px solid rgba(255, 255, 255, 0.18);
-            border-top: 1.5px solid rgba(255, 255, 255, 0.38);
-            border-radius: 24px;
-            max-width: 480px;
+            background: rgba(15, 23, 42, 0.76);
+            backdrop-filter: blur(36px) saturate(200%);
+            -webkit-backdrop-filter: blur(36px) saturate(200%);
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            border-top: 1.5px solid rgba(0, 240, 255, 0.5);
+            border-radius: 26px;
+            max-width: 500px;
             width: 100%;
-            padding: 28px 26px;
-            box-shadow: 0 35px 90px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+            padding: 30px 28px;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.25);
             color: #f8fafc;
             position: relative;
             max-height: 94vh;
             overflow-y: auto;
-            animation: cbGlassPop 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: cbGlassPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         @keyframes cbGlassPop {
-            from { transform: scale(0.94) translateY(12px); opacity: 0; }
+            from { transform: scale(0.92) translateY(16px); opacity: 0; }
             to   { transform: scale(1) translateY(0); opacity: 1; }
         }
 
@@ -189,8 +187,9 @@
             content: '';
             position: absolute;
             top: 0; left: 15%; right: 15%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.8), transparent);
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00f0ff, transparent);
+            box-shadow: 0 0 12px #00f0ff;
         }
 
         .cb-glass-badge {
@@ -201,23 +200,23 @@
             font-weight: 800;
             color: #00f0ff;
             background: rgba(0, 240, 255, 0.12);
-            border: 1px solid rgba(0, 240, 255, 0.3);
-            padding: 4px 11px;
+            border: 1px solid rgba(0, 240, 255, 0.35);
+            padding: 4px 12px;
             border-radius: 99px;
             margin-bottom: 12px;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.4px;
         }
 
         .cb-glass-title {
-            font-size: 21px;
-            font-weight: 800;
+            font-size: 22px;
+            font-weight: 900;
             color: #ffffff;
-            margin: 0 0 4px;
-            letter-spacing: -0.4px;
+            margin: 0 0 6px;
+            letter-spacing: -0.02em;
         }
 
         .cb-glass-sub {
-            font-size: 12px;
+            font-size: 12.5px;
             color: #94a3b8;
             margin: 0 0 18px;
             line-height: 1.5;
@@ -243,7 +242,7 @@
             box-sizing: border-box;
         }
         .cb-google-btn:hover {
-            background: #f1f5f9;
+            background: #f8fafc;
             transform: translateY(-1px);
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
         }
@@ -283,7 +282,7 @@
         .cb-glass-input:focus {
             background: rgba(255, 255, 255, 0.1);
             border-color: #00f0ff;
-            box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+            box-shadow: 0 0 14px rgba(0, 240, 255, 0.3);
         }
         .cb-glass-input::placeholder {
             color: #64748b;
@@ -294,7 +293,7 @@
             display: flex;
             gap: 6px;
             flex-wrap: wrap;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
         }
         .cb-domain-chip {
             font-size: 10.5px;
@@ -315,22 +314,22 @@
         /* BOTÓN DE ACCIÓN PRINCIPAL */
         .cb-enroll-btn {
             width: 100%;
-            padding: 12px;
+            padding: 13px;
             border-radius: 12px;
             background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
             color: #ffffff;
-            font-size: 13.5px;
+            font-size: 14px;
             font-weight: 800;
-            border: none;
+            border: 1px solid #38bdf8;
             cursor: pointer;
             box-shadow: 0 4px 18px rgba(13, 148, 136, 0.4);
             transition: all 0.18s ease;
             box-sizing: border-box;
         }
         .cb-enroll-btn:hover {
-            opacity: 0.95;
+            filter: brightness(1.1);
             transform: translateY(-1px);
-            box-shadow: 0 6px 22px rgba(13, 148, 136, 0.55);
+            box-shadow: 0 6px 24px rgba(13, 148, 136, 0.6);
         }
 
         /* MENSAJE DE ERROR */
@@ -339,14 +338,29 @@
             color: #f43f5e;
             font-size: 11.5px;
             font-weight: 700;
-            margin-bottom: 8px;
-            padding: 6px 10px;
+            margin-bottom: 10px;
+            padding: 8px 12px;
             background: rgba(244, 63, 94, 0.12);
-            border: 1px solid rgba(244, 63, 94, 0.25);
+            border: 1px solid rgba(244, 63, 94, 0.3);
             border-radius: 8px;
         }
 
-        /* SECCIÓN INFERIOR SUTIL DE COLABORACIÓN */
+        /* CUADRO DESPLEGABLE DE TÉRMINOS Y CONDICIONES */
+        #cb-terms-content {
+            display: none;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 14px;
+            max-height: 180px;
+            overflow-y: auto;
+            font-size: 11px;
+            color: #cbd5e1;
+            line-height: 1.5;
+        }
+
+        /* SECCIÓN SUTIL VOLUNTARIA */
         .cb-voluntary-box {
             margin-top: 18px;
             padding: 12px;
@@ -376,56 +390,75 @@
             bottom: 14px;
             right: 14px;
             z-index: 999990;
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #94a3b8;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 240, 255, 0.35);
+            color: #00f0ff;
             border-radius: 99px;
-            padding: 6px 12px;
-            font-size: 11px;
-            font-weight: 700;
+            padding: 7px 14px;
+            font-size: 11.5px;
+            font-weight: 800;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-            transition: all 0.15s;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 10px rgba(0, 240, 255, 0.2);
+            transition: all 0.18s;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
         }
         #cb-floating-dev-btn:hover {
-            color: #00f0ff;
-            border-color: #00f0ff;
+            background: rgba(0, 240, 255, 0.15);
             transform: scale(1.04);
+            box-shadow: 0 6px 20px rgba(0, 240, 255, 0.4);
         }
 
-        /* PANEL DE ADMINISTRADOR / DESARROLLADOR */
+        /* PANEL DE ADMINISTRADOR / DESARROLLADOR OVERLAY */
         #cb-panel-overlay {
             position: fixed;
             inset: 0;
             z-index: 999999;
-            background: rgba(3, 7, 18, 0.94);
-            backdrop-filter: blur(12px);
+            background: rgba(3, 7, 18, 0.95);
+            backdrop-filter: blur(16px);
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         #cb-panel-overlay.cb-hidden { display: none !important; }
+
         .cb-admin-card {
             background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 18px;
+            border: 1.5px solid #334155;
+            border-radius: 20px;
             max-width: 820px;
             width: 100%;
-            padding: 24px;
+            padding: 26px;
             color: #f8fafc;
             max-height: 92vh;
             overflow-y: auto;
-            box-shadow: 0 25px 70px rgba(0,0,0,0.8);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.9), 0 0 25px rgba(0, 240, 255, 0.1);
+            position: relative;
+        }
+
+        /* AVISO DE ACCESO RESTRINGIDO */
+        .cb-restricted-box {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1.5px solid #ef4444;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            margin-top: 14px;
+            animation: cbShake 0.3s ease;
+        }
+        @keyframes cbShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
         }
     `;
     document.head.appendChild(styleEl);
 
-    // ── CONSTRUCCIÓN DEL MODAL DOM ────────────────────────────────
+    // ── CONSTRUCCIÓN DEL MODAL DE REGISTRO DOM ───────────────────
     function buildModal() {
         if (document.getElementById('cb-overlay')) return;
 
@@ -436,12 +469,12 @@
             <div class="cb-glass-card" id="cb-glass-card">
                 <!-- BADGE SUPERIOR -->
                 <div class="cb-glass-badge">
-                    <span>🌟 CÓDIGO ABIERTO • LICENCIA MIT</span>
+                    <span>🌟 CÓDIGO ABIERTO • LICENCIA MIT (100% GRATUITO)</span>
                 </div>
 
-                <h2 class="cb-glass-title">Registro de Usuario</h2>
+                <h2 class="cb-glass-title">Registro de Usuario — Versión 8.1</h2>
                 <p class="cb-glass-sub">
-                    Accede libremente al Software de Análisis Estructural II desarrollado por el <strong>Ing. Ulianov Cuba Valencia</strong>.
+                    Accede libremente a la Suite de Análisis Estructural II desarrollada por el <strong>Ing. Ulianov Cuba Valencia</strong>.
                 </p>
 
                 <!-- BOTÓN GOOGLE OFICIAL -->
@@ -455,7 +488,7 @@
                     <span>Continuar con Google</span>
                 </button>
 
-                <div class="cb-glass-sep">o con tu correo</div>
+                <div class="cb-glass-sep">o con tu correo institucional / personal</div>
 
                 <!-- FORMULARIO DE CORREO -->
                 <input id="cb-email" class="cb-glass-input" type="email" placeholder="correo@continental.edu.pe o personal" autocomplete="email">
@@ -470,17 +503,33 @@
                 </div>
 
                 <!-- CHECKBOX TÉRMINOS Y CONDICIONES -->
-                <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 11.5px; color: #cbd5e1; cursor: pointer; margin-bottom: 12px; line-height: 1.4;">
-                    <input type="checkbox" id="cb-terms" checked style="accent-color: #10b981; margin-top: 2px;">
-                    <span>Acepto los términos de uso y la licencia de código abierto MIT del Software Estructural desarrollado por el Ing. Ulianov Cuba Valencia.</span>
-                </label>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 11.5px; color: #cbd5e1; cursor: pointer; line-height: 1.4;">
+                        <input type="checkbox" id="cb-terms" checked style="accent-color: #00f0ff; margin-top: 2px;">
+                        <span>Acepto los Términos y Condiciones y la Licencia MIT de Código Abierto del Software Estructural desarrollado por el Ing. Ulianov Cuba Valencia.</span>
+                    </label>
+                    <div style="margin-top: 4px; margin-left: 24px;">
+                        <span id="cb-link-toggle-terms" style="color: #00f0ff; text-decoration: underline; cursor: pointer; font-size: 11px;">
+                            📄 Ver Términos y Condiciones Completos
+                        </span>
+                    </div>
+                </div>
+
+                <!-- DETALLE EXPANDIBLE DE TÉRMINOS Y CONDICIONES -->
+                <div id="cb-terms-content">
+                    <strong style="color: #00f0ff;">TÉRMINOS Y CONDICIONES DE USO DEL PROGRAMA:</strong><br><br>
+                    <strong>1. Propósito Académico y Libre:</strong> Este software es una herramienta didáctica y de análisis computacional desarrollada bajo la cátedra del Ing. Ulianov Cuba Valencia para el curso de Análisis Estructural II de la Universidad Continental. Es 100% de libre acceso.<br><br>
+                    <strong>2. Registro de Usuarios:</strong> La recopilación de correos electrónicos tiene la única finalidad de auditar la comunidad de estudiantes y usuarios activos de la suite, así como permitir al desarrollador estimar la cantidad de alumnos inscritos.<br><br>
+                    <strong>3. Licencia de Código Abierto (MIT):</strong> Se otorga autorización para utilizar las plantillas matriciales en Excel y visualizar los diagramas de esfuerzo y curvas elásticas generadas.<br><br>
+                    <strong>4. Responsabilidad Profesional:</strong> Las memorias de cálculo generadas aplican rigurosamente el Método de Rigidez Directa. Todo diseño final para obras reales debe ser validado por un ingeniero colegiado habilitado.
+                </div>
 
                 <!-- MENSAJE DE ERROR -->
                 <div id="cb-error" class="cb-glass-err"></div>
 
                 <!-- BOTÓN PRINCIPAL -->
                 <button type="button" id="cb-btn-enroll" class="cb-enroll-btn">
-                    🚀 Inscribirse e Ingresar Gratis
+                    🚀 Inscribirse e Ingresar a la Suite v8.1
                 </button>
 
                 <!-- SECCIÓN SUTIL VOLUNTARIA -->
@@ -497,8 +546,8 @@
                 </div>
 
                 <div style="margin-top: 14px; text-align: center;">
-                    <span id="cb-link-dev" style="font-size: 10.5px; color: #64748b; cursor: pointer; text-decoration: underline;">
-                        ⚙️ Panel de Control del Desarrollador
+                    <span id="cb-link-dev" style="font-size: 11px; color: #64748b; cursor: pointer; text-decoration: underline;">
+                        ⚙️ Panel de Control del Desarrollador (Ing. Ulianov Cuba)
                     </span>
                 </div>
             </div>
@@ -512,7 +561,7 @@
         bindModalEvents();
     }
 
-    // ── PANEL DE CONTROL DEL DESARROLLADOR (INGENIERO ULIANOV) ───
+    // ── PANEL DE CONTROL DEL DESARROLLADOR CON PROTECCIÓN ESTRICTA ──
     function buildDevPanel() {
         if (document.getElementById('cb-panel-overlay')) return;
 
@@ -521,51 +570,71 @@
         devOverlay.className = 'cb-hidden';
         devOverlay.innerHTML = `
             <div class="cb-admin-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px; margin-bottom: 16px;">
                     <div>
-                        <h3 style="font-size: 17px; font-weight: 800; color: #00f0ff; margin: 0;">👑 Panel del Desarrollador — Usuarios Inscritos</h3>
-                        <div style="font-size: 11px; color: #94a3b8;">Ing. Ulianov Cuba Valencia • Repositorio GitHub</div>
-                    </div>
-                    <button type="button" id="cb-panel-close" style="background: none; border: 1px solid #475569; color: #cbd5e1; border-radius: 6px; padding: 4px 10px; cursor: pointer;">✕ Cerrar</button>
-                </div>
-
-                <!-- CONTRASEÑA DE ACCESO SI NO ESTÁ AUTORIZADO -->
-                <div id="cb-admin-login-sec" style="margin-bottom: 16px;">
-                    <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 6px;">Ingresa tu clave maestra para visualizar los usuarios inscritos:</div>
-                    <div style="display: flex; gap: 8px; max-width: 360px;">
-                        <input id="cb-admin-pass" type="password" class="cb-glass-input" placeholder="Clave maestra..." style="margin: 0;">
-                        <button type="button" id="cb-btn-admin-auth" class="cb-enroll-btn" style="width: auto; padding: 8px 16px;">Ingresar</button>
-                    </div>
-                    <div id="cb-admin-err" style="color: #f43f5e; font-size: 11px; margin-top: 4px; display: none;">Clave incorrecta.</div>
-                </div>
-
-                <!-- VISTA DE USUARIOS REGISTRADOS -->
-                <div id="cb-admin-content-sec" style="display: none;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; border: 1px solid #1e293b;">
-                        <div>
-                            <span style="font-size: 13px; font-weight: 700; color: #f8fafc;">Total de Usuarios Inscritos: </span>
-                            <strong id="cb-stat-total" style="color: #10b981; font-size: 16px;">0</strong>
+                        <h3 style="font-size: 18px; font-weight: 900; color: #00f0ff; margin: 0; display: flex; align-items: center; gap: 8px;">
+                            <span>👑</span><span>Panel del Desarrollador — Auditoría de Alumnos</span>
+                        </h3>
+                        <div style="font-size: 11.5px; color: #94a3b8; margin-top: 3px;">
+                            Ing. Ulianov Cuba Valencia • Análisis Estructural II • Versión 8.1
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button type="button" id="cb-btn-export-csv" class="cb-enroll-btn" style="width: auto; padding: 7px 14px; font-size: 11.5px; background: #059669;">
+                    </div>
+                    <button type="button" id="cb-panel-close" style="background: rgba(255,255,255,0.06); border: 1px solid #475569; color: #cbd5e1; border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 12px; font-weight: 700;">✕ Cerrar</button>
+                </div>
+
+                <!-- 1. PANTALLA DE ACCESO RESTRINGIDO CON CLAVE -->
+                <div id="cb-admin-login-sec">
+                    <div style="font-size: 13px; color: #e2e8f0; margin-bottom: 10px; line-height: 1.5;">
+                        Para auditar la lista de alumnos y usuarios inscritos en el programa, ingresa tu clave maestra de desarrollador:
+                    </div>
+                    <div style="display: flex; gap: 8px; max-width: 420px;">
+                        <input id="cb-admin-pass" type="password" class="cb-glass-input" placeholder="Clave de desarrollador..." style="margin: 0; font-size: 14px;">
+                        <button type="button" id="cb-btn-admin-auth" class="cb-enroll-btn" style="width: auto; padding: 8px 18px; font-size: 13px;">
+                            Desbloquear
+                        </button>
+                    </div>
+
+                    <!-- CAJA DE ERROR SI NO ES EL DESARROLLADOR -->
+                    <div id="cb-admin-err" style="display: none;">
+                        <div class="cb-restricted-box">
+                            <div style="color: #ef4444; font-size: 16px; font-weight: 800; margin-bottom: 4px;">⛔ Acceso Restringido</div>
+                            <div style="color: #fca5a5; font-size: 12.5px; line-height: 1.5; font-weight: 600;">
+                                Este panel es de uso exclusivo para el <strong>Ing. Ulianov Cuba Valencia (Desarrollador)</strong> para auditar la cantidad de alumnos y usuarios inscritos en el programa.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. VISTA PRIVADA DE USUARIOS REGISTRADOS (SÓLO SI DESBLOQUEADO) -->
+                <div id="cb-admin-content-sec" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; background: rgba(255,255,255,0.03); padding: 12px 16px; border-radius: 12px; border: 1px solid #1e293b;">
+                        <div>
+                            <span style="font-size: 13.5px; font-weight: 700; color: #f8fafc;">Total de Alumnos / Usuarios Inscritos: </span>
+                            <strong id="cb-stat-total" style="color: #00f0ff; font-size: 18px; font-weight: 900; margin-left: 4px;">0</strong>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" id="cb-btn-export-csv" class="cb-enroll-btn" style="width: auto; padding: 7px 14px; font-size: 11.5px; background: #059669; border-color: #10b981;">
                                 📥 Exportar Lista a Excel / CSV
                             </button>
                             <button type="button" id="cb-btn-refresh-subscribers" style="background: #1e293b; border: 1px solid #334155; color: #cbd5e1; border-radius: 8px; padding: 7px 12px; font-size: 11px; cursor: pointer;">
                                 ↻ Actualizar
                             </button>
+                            <button type="button" id="cb-btn-lock-panel" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; border-radius: 8px; padding: 7px 12px; font-size: 11px; cursor: pointer; font-weight: 700;">
+                                🔒 Bloquear y Salir
+                            </button>
                         </div>
                     </div>
 
                     <!-- TABLA DE ALUMNOS / USUARIOS -->
-                    <div style="max-height: 380px; overflow-y: auto; border: 1px solid #1e293b; border-radius: 10px;">
+                    <div style="max-height: 400px; overflow-y: auto; border: 1px solid #1e293b; border-radius: 10px;">
                         <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
                             <thead style="background: #1e293b; color: #94a3b8; position: sticky; top: 0;">
                                 <tr>
-                                    <th style="padding: 8px 10px;">#</th>
-                                    <th style="padding: 8px 10px;">Correo Electrónico</th>
-                                    <th style="padding: 8px 10px;">Nombre</th>
-                                    <th style="padding: 8px 10px;">Método</th>
-                                    <th style="padding: 8px 10px;">Fecha Registro</th>
+                                    <th style="padding: 9px 12px;">#</th>
+                                    <th style="padding: 9px 12px;">Correo Electrónico</th>
+                                    <th style="padding: 9px 12px;">Nombre / Identificador</th>
+                                    <th style="padding: 9px 12px;">Método</th>
+                                    <th style="padding: 9px 12px;">Fecha de Registro</th>
                                 </tr>
                             </thead>
                             <tbody id="cb-tbody-subscribers"></tbody>
@@ -585,21 +654,31 @@
         document.getElementById('cb-btn-admin-auth').onclick = handleAdminAuth;
         document.getElementById('cb-admin-pass').onkeydown = e => { if (e.key === 'Enter') handleAdminAuth(); };
 
-        // Bind export CSV
+        // Bind export CSV y refresh
         document.getElementById('cb-btn-export-csv').onclick = exportSubscribersToCSV;
         document.getElementById('cb-btn-refresh-subscribers').onclick = renderSubscribersList;
+
+        // Bind bloqueo manual
+        document.getElementById('cb-btn-lock-panel').onclick = () => {
+            isDeveloperUnlocked = false;
+            document.getElementById('cb-admin-pass').value = '';
+            document.getElementById('cb-admin-login-sec').style.display = 'block';
+            document.getElementById('cb-admin-content-sec').style.display = 'none';
+            devOverlay.classList.add('cb-hidden');
+        };
     }
 
     function handleAdminAuth() {
         const pass = (document.getElementById('cb-admin-pass').value || '').trim();
         const err = document.getElementById('cb-admin-err');
         if (MASTER.includes(pass)) {
-            setSession({ role: 'admin', email: 'ulianov.cuba@continental.edu.pe', name: 'Ing. Ulianov Cuba Valencia' });
+            isDeveloperUnlocked = true;
             document.getElementById('cb-admin-login-sec').style.display = 'none';
             document.getElementById('cb-admin-content-sec').style.display = 'block';
-            renderSubscribersList();
             if (err) err.style.display = 'none';
+            renderSubscribersList();
         } else {
+            isDeveloperUnlocked = false;
             if (err) err.style.display = 'block';
         }
     }
@@ -613,7 +692,7 @@
         if (statTotal) statTotal.textContent = String(list.length);
 
         if (list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="padding: 16px; text-align: center; color: #64748b;">No hay usuarios registrados aún en este equipo.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" style="padding: 20px; text-align: center; color: #64748b;">No hay usuarios registrados aún en este equipo.</td></tr>`;
             return;
         }
 
@@ -621,15 +700,15 @@
         list.forEach((u, i) => {
             const isGoogle = (u.method || '').toLowerCase().includes('google');
             const methodBadge = isGoogle
-                ? '<span style="color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 6px; border-radius:4px; font-weight:700;">Google</span>'
-                : '<span style="color:#10b981; background:rgba(16,185,129,0.12); padding:2px 6px; border-radius:4px; font-weight:700;">Correo</span>';
+                ? '<span style="color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 7px; border-radius:4px; font-weight:700;">Google</span>'
+                : '<span style="color:#10b981; background:rgba(16,185,129,0.12); padding:2px 7px; border-radius:4px; font-weight:700;">Correo</span>';
             html += `
                 <tr style="border-bottom: 1px solid #1e293b;">
-                    <td style="padding: 8px 10px; color: #64748b;">${i + 1}</td>
-                    <td style="padding: 8px 10px; color: #00f0ff; font-weight: 700; font-family: monospace;">${u.email}</td>
-                    <td style="padding: 8px 10px; color: #f8fafc;">${u.name || '—'}</td>
-                    <td style="padding: 8px 10px;">${methodBadge}</td>
-                    <td style="padding: 8px 10px; color: #94a3b8; font-size: 11px;">${u.date || '—'}</td>
+                    <td style="padding: 9px 12px; color: #64748b;">${i + 1}</td>
+                    <td style="padding: 9px 12px; color: #00f0ff; font-weight: 700; font-family: monospace;">${u.email}</td>
+                    <td style="padding: 9px 12px; color: #f8fafc;">${u.name || '—'}</td>
+                    <td style="padding: 9px 12px;">${methodBadge}</td>
+                    <td style="padding: 9px 12px; color: #94a3b8; font-size: 11px;">${u.date || '—'}</td>
                 </tr>
             `;
         });
@@ -653,7 +732,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Usuarios_Inscritos_Cerebro_Estructural_${Date.now()}.csv`;
+        a.download = `Alumnos_Inscritos_Cerebro_Estructural_v81_${Date.now()}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -673,6 +752,15 @@
                 inp.focus();
             };
         });
+
+        // Toggle Términos y Condiciones
+        const linkTerms = document.getElementById('cb-link-toggle-terms');
+        const boxTerms = document.getElementById('cb-terms-content');
+        if (linkTerms && boxTerms) {
+            linkTerms.onclick = () => {
+                boxTerms.style.display = (boxTerms.style.display === 'block') ? 'none' : 'block';
+            };
+        }
 
         // Botón Colaboración voluntaria toggle
         const btnCollab = document.getElementById('cb-btn-toggle-collab');
@@ -710,44 +798,19 @@
 
     // ── INTEGRACIÓN DE GOOGLE SIGN-IN REAL ───────────────────────
     function handleGoogleSignIn() {
-        // Verificar aceptación de términos
         const termsCheck = document.getElementById('cb-terms');
         if (termsCheck && !termsCheck.checked) {
-            showError('Debes aceptar los términos y condiciones de la licencia de código abierto MIT.');
+            showError('Debes aceptar los términos y condiciones de la licencia MIT.');
             return;
         }
 
-        // Si GIS (Google Identity Services) está cargado en la página
-        if (window.google && google.accounts && google.accounts.id) {
-            try {
-                google.accounts.id.initialize({
-                    client_id: '109283746592-sampleclientid.apps.googleusercontent.com',
-                    callback: (response) => {
-                        if (response && response.credential) {
-                            try {
-                                const payload = JSON.parse(atob(response.credential.split('.')[1]));
-                                const gEmail = payload.email;
-                                const gName = payload.name;
-                                completeEnrollment(gEmail, gName, 'Google OAuth');
-                                return;
-                            } catch (e) {}
-                        }
-                    }
-                });
-                google.accounts.id.prompt();
-            } catch (e) {}
-        }
-
-        // Ventana emergente con selector de cuentas reales de Google
         const width = 500, height = 600;
         const left = (window.innerWidth - width) / 2;
         const top = (window.innerHeight - height) / 2;
         
-        // Abre el selector oficial de Google Accounts
         const googleAuthUrl = 'https://accounts.google.com/AccountChooser?service=lso';
-        const popup = window.open(googleAuthUrl, 'GoogleSignIn', `width=${width},height=${height},top=${top},left=${left}`);
+        window.open(googleAuthUrl, 'GoogleSignIn', `width=${width},height=${height},top=${top},left=${left}`);
 
-        // Diálogo asistido inmediato para capturar el correo activo seleccionado
         setTimeout(() => {
             const inputPrompt = prompt('Ingresa el correo de Google que acabas de seleccionar en la ventana de Google:', '');
             if (inputPrompt) {
@@ -765,7 +828,6 @@
         const inpEmail = document.getElementById('cb-email');
         const inpName = document.getElementById('cb-name');
         const termsCheck = document.getElementById('cb-terms');
-        const err = document.getElementById('cb-error');
 
         const email = (inpEmail ? inpEmail.value : '').trim();
         const name = (inpName ? inpName.value : '').trim();
@@ -792,7 +854,6 @@
             method: method
         });
 
-        // Ocultar modal con disolución suave
         const card = document.getElementById('cb-glass-card');
         if (card) {
             card.style.transition = 'all 0.25s ease';
@@ -828,34 +889,55 @@
         }
     }
 
-    function hideAuthModal() {
-        const overlay = document.getElementById('cb-overlay');
-        if (overlay) overlay.classList.add('cb-hidden');
-    }
-
     function openAdminPanel() {
         buildModal();
         const devOverlay = document.getElementById('cb-panel-overlay');
         if (devOverlay) {
             devOverlay.classList.remove('cb-hidden');
-            if (isAdmin()) {
+            const passInp = document.getElementById('cb-admin-pass');
+            const err = document.getElementById('cb-admin-err');
+            if (err) err.style.display = 'none';
+
+            if (isDeveloperUnlocked) {
                 document.getElementById('cb-admin-login-sec').style.display = 'none';
                 document.getElementById('cb-admin-content-sec').style.display = 'block';
                 renderSubscribersList();
             } else {
                 document.getElementById('cb-admin-login-sec').style.display = 'block';
                 document.getElementById('cb-admin-content-sec').style.display = 'none';
+                if (passInp) {
+                    passInp.value = '';
+                    setTimeout(() => passInp.focus(), 150);
+                }
             }
         }
     }
 
     function updateHeaderUserInfo() {
-        const s = getSession();
-        // Botón de panel en encabezado si es admin
+        // Enlazar el botón de desarrollador en el header (visible para todos, con contraseña)
         const headerBtn = document.getElementById('cb-header-btn');
         if (headerBtn) {
-            headerBtn.style.display = isAdmin() ? 'inline-flex' : 'none';
+            headerBtn.style.display = 'inline-flex';
             headerBtn.onclick = openAdminPanel;
+        }
+
+        const userBadge = document.getElementById('cb-user-badge');
+        const s = getSession();
+        if (userBadge) {
+            if (s && s.email) {
+                userBadge.style.display = 'inline-flex';
+                userBadge.innerHTML = `👤 ${s.email}`;
+                userBadge.title = `Registrado como: ${s.email}. Clic para ver opciones`;
+                userBadge.style.cursor = 'pointer';
+                userBadge.onclick = () => {
+                    if (confirm(`Estás registrado con: ${s.email}\n¿Deseas cerrar sesión para registrar otro correo?`)) {
+                        clearSession();
+                        location.reload();
+                    }
+                };
+            } else {
+                userBadge.style.display = 'none';
+            }
         }
     }
 
@@ -865,27 +947,16 @@
         const btn = document.createElement('button');
         btn.id = 'cb-floating-dev-btn';
         btn.type = 'button';
-        btn.innerHTML = '<span>👑</span><span>Panel Admin</span>';
+        btn.innerHTML = '<span>👑</span><span>Panel Desarrollador</span>';
         btn.title = 'Abrir Panel de Desarrollador (Ing. Ulianov Cuba)';
         btn.onclick = openAdminPanel;
         document.body.appendChild(btn);
-
-        // Ocultar si no es admin, salvo que presione Ctrl+Shift+A o ?admin=1
-        const params = new URLSearchParams(location.search);
-        if (params.get('admin') === '1' || location.hash === '#admin') {
-            btn.style.display = 'flex';
-        } else {
-            btn.style.display = isAdmin() ? 'flex' : 'none';
-        }
     }
 
     // ── ATAJOS DE TECLADO ────────────────────────────────────────
     document.addEventListener('keydown', (e) => {
-        // Ctrl + Shift + A abre el panel de control del desarrollador
         if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
             e.preventDefault();
-            const btn = document.getElementById('cb-floating-dev-btn');
-            if (btn) btn.style.display = 'flex';
             openAdminPanel();
         }
     });
@@ -1004,8 +1075,8 @@
     // ── API PÚBLICA (window.CerebroAuth) ──────────────────────────
     window.CerebroAuth = {
         isAuthorized: () => checkAuthorized(),
-        isAdmin: () => isAdmin(),
-        hasExcelPermission: () => true, // 100% Gratuito y Libre
+        isAdmin: () => isDeveloperUnlocked,
+        hasExcelPermission: () => true,
         showExcelVipNotice: () => {},
         showAuthModal: showAuthModal,
         openAuthModal: showAuthModal,
@@ -1016,17 +1087,18 @@
 
     // ── INICIALIZACIÓN ───────────────────────────────────────────
     function init() {
+        migrateOldSubscribers();
         buildModal();
         injectFloatingDevButton();
         updateHeaderUserInfo();
 
-        // Si ya está registrado, no mostrar el modal
+        // Si ya está registrado en v8.1, actualizar badge y permitir navegación
         if (checkAuthorized()) {
             updateHeaderUserInfo();
             return;
         }
 
-        // Si no está registrado, mostrar la ventana Liquid Glass
+        // Si no está registrado en v8.1, desplegar inmediatamente la ventana Liquid Glass
         showAuthModal();
     }
 
