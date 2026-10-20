@@ -1063,7 +1063,11 @@
             save(k, list);
         },
 
-        openManager: function(type, onLoadCallback) {
+        showProjectsModal: function(type, onLoadCallback, getExportData) {
+            return this.openManager(type, onLoadCallback, getExportData);
+        },
+
+        openManager: function(type, onLoadCallback, getExportData) {
             const k = (type === 'beam') ? KEY.beams : KEY.trusses;
             let modal = document.getElementById('cb-proj-modal');
             if (!modal) {
@@ -1084,6 +1088,16 @@
                             <button id="cb-proj-close" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;">✕</button>
                         </div>
                 `;
+
+                if (typeof getExportData === 'function') {
+                    html += `
+                        <div style="margin-bottom: 14px; text-align: right;">
+                            <button id="cb-proj-quick-save" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #fff; border: 1px solid #38bdf8; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer;">
+                                💾 + Guardar Proyecto Actual
+                            </button>
+                        </div>
+                    `;
+                }
 
                 if (list.length === 0) {
                     html += `<div style="text-align:center;padding:30px 10px;color:#64748b;font-size:13px;">No hay proyectos guardados aún en este navegador.</div>`;
@@ -1110,6 +1124,16 @@
                 modal.innerHTML = html;
 
                 document.getElementById('cb-proj-close').onclick = () => { modal.style.display = 'none'; };
+                const btnQuickSave = document.getElementById('cb-proj-quick-save');
+                if (btnQuickSave && typeof getExportData === 'function') {
+                    btnQuickSave.onclick = () => {
+                        const name = prompt('Nombre para este proyecto:', (type === 'beam' ? 'Viga ' : 'Armadura ') + (new Date().toLocaleDateString('es-PE') + ' ' + new Date().toLocaleTimeString('es-PE').slice(0, 5)));
+                        if (!name) return;
+                        const data = getExportData();
+                        window.CerebroDB.saveProject(type, name, data);
+                        renderModal();
+                    };
+                }
                 modal.querySelectorAll('.cb-proj-load-btn').forEach(b => {
                     b.onclick = () => {
                         const p = list.find(x => x.id === b.dataset.id);

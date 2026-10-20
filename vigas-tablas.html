@@ -361,24 +361,28 @@
 
       // 3. Renderizar Tabla 1: Barras
       const tbGeo = document.getElementById('tbodyBarsGeo');
-      if (tbGeo && sol.barsDetailed) {
-        tbGeo.innerHTML = sol.barsDetailed.filter(b => b.active).map(b => `
-          <tr>
-            <td class="cell-subhdr">Barra ${b.id}</td>
-            <td class="cell-val">${b.xi.toFixed(1)}</td>
-            <td class="cell-val">${b.yi.toFixed(1)}</td>
-            <td class="cell-val">${b.xf.toFixed(1)}</td>
-            <td class="cell-val">${b.yf.toFixed(1)}</td>
-            <td class="cell-val">${b.dx.toFixed(1)}</td>
-            <td class="cell-val">${b.dy.toFixed(1)}</td>
-            <td class="cell-yellow">${b.L.toFixed(1)}</td>
-            <td class="cell-val">${b.cosT.toFixed(4)}</td>
-            <td class="cell-val">${b.sinT.toFixed(4)}</td>
-            <td class="cell-val">${b.q.toFixed(2)}</td>
-            <td class="cell-val">${b.P_tramo.toFixed(2)}</td>
-            <td class="cell-val">${b.a_dist.toFixed(1)}</td>
-          </tr>
-        `).join('');
+      if (tbGeo && sol.barsTable) {
+        tbGeo.innerHTML = sol.barsTable.filter(b => b.active).map(b => {
+          const cosVal = (b.Cosx !== '' && b.Cosx != null) ? Number(b.Cosx) : 1;
+          const sinVal = (b.Cosy !== '' && b.Cosy != null) ? Number(b.Cosy) : 0;
+          return `
+            <tr>
+              <td class="cell-subhdr">Barra ${b.barNum}</td>
+              <td class="cell-val">${Number(b.xi || 0).toFixed(1)}</td>
+              <td class="cell-val">${Number(b.yi || 0).toFixed(1)}</td>
+              <td class="cell-val">${Number(b.xf || 0).toFixed(1)}</td>
+              <td class="cell-val">${Number(b.yf || 0).toFixed(1)}</td>
+              <td class="cell-val">${Number(b.Dx || 0).toFixed(1)}</td>
+              <td class="cell-val">${Number(b.Dy || 0).toFixed(1)}</td>
+              <td class="cell-yellow">${Number(b.L || 0).toFixed(1)}</td>
+              <td class="cell-val">${cosVal.toFixed(4)}</td>
+              <td class="cell-val">${sinVal.toFixed(4)}</td>
+              <td class="cell-val">${Number(b.q || 0).toFixed(2)}</td>
+              <td class="cell-val">${Number(b.P_tramo || 0).toFixed(2)}</td>
+              <td class="cell-val">${Number(b.a_dist || 0).toFixed(1)}</td>
+            </tr>
+          `;
+        }).join('');
       }
 
       // 4. Renderizar Tabla 2: Sección
@@ -390,60 +394,85 @@
       if (lblIz && sol.secProps) lblIz.textContent = (sol.secProps.Iz || sol.secProps.I || 0).toFixed(4);
 
       const tbSteiner = document.getElementById('tbodySteinerGeo');
-      if (tbSteiner && sol.steinerResult && sol.steinerResult.rows) {
-        tbSteiner.innerHTML = sol.steinerResult.rows.map(r => `
+      const stRows = (sol.secProps && sol.secProps.steiner && sol.secProps.steiner.rows) ? sol.secProps.steiner.rows : (sol.steinerResult ? sol.steinerResult.rows : null);
+      if (tbSteiner && stRows && stRows.length > 0) {
+        tbSteiner.innerHTML = stRows.map(r => `
           <tr>
-            <td class="cell-subhdr">${r.idx}</td>
+            <td class="cell-subhdr">${r.idx || 1}</td>
             <td class="cell-val">${r.tipo}</td>
-            <td class="cell-val">${r.b.toFixed(1)}</td>
-            <td class="cell-val">${r.h.toFixed(1)}</td>
-            <td class="cell-val">${r.A.toFixed(2)}</td>
-            <td class="cell-val">${r.y.toFixed(2)}</td>
-            <td class="cell-val">${r.Ay.toFixed(2)}</td>
-            <td class="cell-val">${r.Iz.toFixed(2)}</td>
-            <td class="cell-val">${r.d.toFixed(2)}</td>
-            <td class="cell-val">${r.Ad2.toFixed(2)}</td>
-            <td class="cell-green">${r.IT.toFixed(2)}</td>
+            <td class="cell-val">${Number(r.b || 0).toFixed(1)}</td>
+            <td class="cell-val">${Number(r.h || 0).toFixed(1)}</td>
+            <td class="cell-val">${Number(r.A || 0).toFixed(2)}</td>
+            <td class="cell-val">${Number(r.y_c != null ? r.y_c : (r.y || 0)).toFixed(2)}</td>
+            <td class="cell-val">${Number(r.Ay || 0).toFixed(2)}</td>
+            <td class="cell-val">${Number(r.I0 != null ? r.I0 : (r.Iz || 0)).toFixed(2)}</td>
+            <td class="cell-val">${Number(r.dy != null ? r.dy : (r.d || 0)).toFixed(2)}</td>
+            <td class="cell-val">${Number(r.Ad2 != null ? r.Ad2 : 0).toFixed(2)}</td>
+            <td class="cell-green">${Number(r.Iz_total != null ? r.Iz_total : (r.IT || 0)).toFixed(2)}</td>
           </tr>
         `).join('');
+      } else if (tbSteiner && sol.secProps) {
+        tbSteiner.innerHTML = `
+          <tr>
+            <td class="cell-subhdr">1</td>
+            <td class="cell-val">${sol.secProps.sec_type || 'RECTANGULAR'}</td>
+            <td class="cell-val">${Number(sol.secProps.b || 0).toFixed(1)}</td>
+            <td class="cell-val">${Number(sol.secProps.h || 0).toFixed(1)}</td>
+            <td class="cell-val">${Number(sol.secProps.A || 0).toFixed(2)}</td>
+            <td class="cell-val">${Number(sol.secProps.Y_CG || 0).toFixed(2)}</td>
+            <td class="cell-val">${Number((sol.secProps.A || 0) * (sol.secProps.Y_CG || 0)).toFixed(2)}</td>
+            <td class="cell-val">${Number(sol.secProps.Iz || 0).toFixed(2)}</td>
+            <td class="cell-val">0.00</td>
+            <td class="cell-val">0.00</td>
+            <td class="cell-green">${Number(sol.secProps.Iz || 0).toFixed(2)}</td>
+          </tr>
+        `;
       }
 
       // 5. Renderizar Tabla 3: Nudos
       const tbNodes = document.getElementById('tbodyNodesGeo');
-      if (tbNodes && sol.nodesEvaluated) {
-        tbNodes.innerHTML = sol.nodesEvaluated.filter(n => n.active).map(n => `
-          <tr>
-            <td class="cell-subhdr">Nudo ${n.id}</td>
-            <td class="cell-val">${n.x.toFixed(1)}</td>
-            <td class="cell-val">${n.y.toFixed(1)}</td>
-            <td class="cell-yellow">${n.cond}</td>
-            <td class="cell-val">${n.restX ? 'SÍ (Restr)' : 'NO (Libre)'}</td>
-            <td class="cell-val">${n.restY ? 'SÍ (Restr)' : 'NO (Libre)'}</td>
-            <td class="cell-val">${n.restM ? 'SÍ (Restr)' : 'NO (Libre)'}</td>
-            <td class="cell-val">${n.Fx.toFixed(2)}</td>
-            <td class="cell-val">${n.Fy.toFixed(2)}</td>
-            <td class="cell-val">${n.Mz.toFixed(2)}</td>
-          </tr>
-        `).join('');
+      if (tbNodes && sol.nodesTable) {
+        tbNodes.innerHTML = sol.nodesTable.filter(n => n.active).map(n => {
+          let nodeX = 0;
+          if (n.nodeNum === 1 && sol.barsTable && sol.barsTable[0]) {
+            nodeX = sol.barsTable[0].xi || 0;
+          } else if (sol.barsTable && sol.barsTable[n.nodeNum - 2]) {
+            nodeX = sol.barsTable[n.nodeNum - 2].xf || 0;
+          }
+          return `
+            <tr>
+              <td class="cell-subhdr">Nudo ${n.nodeNum}</td>
+              <td class="cell-val">${Number(nodeX).toFixed(1)}</td>
+              <td class="cell-val">0.0</td>
+              <td class="cell-yellow">${n.cond}</td>
+              <td class="cell-val">${n.hayDx === 'NO' ? 'SÍ (Restr)' : 'NO (Libre)'}</td>
+              <td class="cell-val">${n.hayDy === 'NO' ? 'SÍ (Restr)' : 'NO (Libre)'}</td>
+              <td class="cell-val">${n.hayDz === 'NO' ? 'SÍ (Restr)' : 'NO (Libre)'}</td>
+              <td class="cell-val">${Number(n.Px_tot || 0).toFixed(2)}</td>
+              <td class="cell-val">${Number(n.Py_tot || 0).toFixed(2)}</td>
+              <td class="cell-val">${Number(n.Mz_tot || 0).toFixed(2)}</td>
+            </tr>
+          `;
+        }).join('');
       }
 
       // 6. Renderizar Tabla 4: Matrices Locales
       const cLoc = document.getElementById('containerLocalMatrices');
       if (cLoc && sol.barsDetailed) {
         cLoc.innerHTML = sol.barsDetailed.filter(b => b.active).map(b => {
-          const kl = b.k_local;
-          const lbls = b.gdlLabels;
+          const kl = b.K_local || b.k_local || [];
+          const lbls = b.dofLabels || b.gdlLabels || ['U1X','U1Y','U1θ','U2X','U2Y','U2θ'];
           return `
             <div style="margin-bottom: 14px;">
-              <h5 style="color: #38bdf8; margin-bottom: 4px;">Barra ${b.id} (L = ${b.L.toFixed(1)} cm):</h5>
+              <h5 style="color: #38bdf8; margin-bottom: 4px;">Barra ${b.barNum} (L = ${Number(b.L || 0).toFixed(1)} cm):</h5>
               <div class="matrix-scroll">
                 <table class="matrix-table">
                   <thead><tr><th>GDL</th>${lbls.map(l => `<th>${l}</th>`).join('')}</tr></thead>
                   <tbody>
                     ${kl.map((row, rI) => `
                       <tr>
-                        <td style="color:#38bdf8; font-weight:700;">${lbls[rI]}</td>
-                        ${row.map((v, cI) => `<td class="${rI === cI ? 'matrix-diag' : ''}">${v.toFixed(2)}</td>`).join('')}
+                        <td style="color:#38bdf8; font-weight:700;">${lbls[rI] || ''}</td>
+                        ${row.map((v, cI) => `<td class="${rI === cI ? 'matrix-diag' : ''}">${Number(v || 0).toFixed(2)}</td>`).join('')}
                       </tr>
                     `).join('')}
                   </tbody>
@@ -466,7 +495,7 @@
               ${k.map((row, rI) => `
                 <tr>
                   <td style="color:#38bdf8; font-weight:700;">${lbls[rI]}</td>
-                  ${row.map((v, cI) => `<td class="${rI === cI ? 'matrix-diag' : ''}">${v !== 0 ? v.toFixed(1) : '<span style="color:#334155;">0</span>'}</td>`).join('')}
+                  ${row.map((v, cI) => `<td class="${rI === cI ? 'matrix-diag' : ''}">${Math.abs(v) > 1e-9 ? Number(v).toFixed(1) : '<span style="color:#334155;">0</span>'}</td>`).join('')}
                 </tr>
               `).join('')}
             </tbody>
@@ -477,15 +506,18 @@
       // 8. Renderizar Tabla 6: Desplazamientos y Reacciones
       const tbDisp = document.getElementById('tbodyDispTable');
       if (tbDisp && sol.calculatedDisplacements) {
-        tbDisp.innerHTML = sol.calculatedDisplacements.map(d => `
-          <tr>
-            <td class="cell-subhdr">${d.order}</td>
-            <td class="cell-val">${d.uLbl}</td>
-            <td class="cell-val">${d.dLbl}</td>
-            <td class="cell-green">${d.value.toFixed(8)}</td>
-            <td><strong>${d.unit}</strong></td>
-          </tr>
-        `).join('');
+        tbDisp.innerHTML = sol.calculatedDisplacements.map(d => {
+          const val = Number(d.value != null ? d.value : d.dispFinal) || 0;
+          return `
+            <tr>
+              <td class="cell-subhdr">${d.order}</td>
+              <td class="cell-val">${d.uLbl}</td>
+              <td class="cell-val">${d.dLbl}</td>
+              <td class="cell-green">${Math.abs(val) < 0.0001 && val !== 0 ? val.toExponential(5) : val.toFixed(6)}</td>
+              <td><strong>${d.unit}</strong></td>
+            </tr>
+          `;
+        }).join('');
       }
 
       const tbReact = document.getElementById('tbodyReactTable');
@@ -495,7 +527,7 @@
             <td class="cell-subhdr">${r.order}</td>
             <td class="cell-val">${r.uLbl}</td>
             <td class="cell-val">${r.C_expr}</td>
-            <td class="cell-green">${r.reactionFinal.toFixed(4)}</td>
+            <td class="cell-green">${Number(r.reactionFinal || 0).toFixed(4)}</td>
             <td><strong>${r.unit}</strong></td>
           </tr>
         `).join('');

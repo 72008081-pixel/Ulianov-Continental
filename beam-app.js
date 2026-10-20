@@ -29,25 +29,119 @@
     };
     let currentSolution = null;
 
+    // Sincronizador de etiquetas y visibilidad de sección
+    function updateSecLabelsAndVisibility() {
+        const lblB = document.getElementById('lblParamB');
+        const lblH = document.getElementById('lblParamH');
+        const lblP3 = document.getElementById('lblParamP3');
+        const lblP4 = document.getElementById('lblParamP4');
+        const steinerWrap = document.getElementById('steinerWrap');
+
+        const secType = currentState.sec_type || 'RECTANGULAR';
+        if (secType === 'T_SECTION' || secType === 'SECCION_T') {
+            if (lblB) lblB.textContent = 'b_alma (cm)';
+            if (lblH) lblH.textContent = 'h_alma (cm)';
+            if (lblP3) lblP3.textContent = 'b_ala (cm)';
+            if (lblP4) lblP4.textContent = 't_ala (cm)';
+        } else if (secType === 'I_SECTION' || secType === 'DOBLE_T') {
+            if (lblB) lblB.textContent = 'b_ala (cm)';
+            if (lblH) lblH.textContent = 'H_tot (cm)';
+            if (lblP3) lblP3.textContent = 't_ala (cm)';
+            if (lblP4) lblP4.textContent = 't_alma (cm)';
+        } else if (secType === 'CIRCULAR') {
+            if (lblB) lblB.textContent = 'Diámetro D (cm)';
+            if (lblH) lblH.textContent = '—';
+            if (lblP3) lblP3.textContent = '—';
+            if (lblP4) lblP4.textContent = '—';
+        } else if (secType === 'TUBULAR_CIRCULAR') {
+            if (lblB) lblB.textContent = 'D_ext (cm)';
+            if (lblH) lblH.textContent = 'd_int (cm)';
+            if (lblP3) lblP3.textContent = '—';
+            if (lblP4) lblP4.textContent = '—';
+        } else if (secType === 'CAJON_HUECO' || secType === 'BOX') {
+            if (lblB) lblB.textContent = 'B_ext (cm)';
+            if (lblH) lblH.textContent = 'H_ext (cm)';
+            if (lblP3) lblP3.textContent = 'b_int (cm)';
+            if (lblP4) lblP4.textContent = 'h_int (cm)';
+        } else if (secType === 'DIRECTO_A_I') {
+            if (lblB) lblB.textContent = 'Área A (cm²)';
+            if (lblH) lblH.textContent = 'Inercia Iz (cm⁴)';
+            if (lblP3) lblP3.textContent = '—';
+            if (lblP4) lblP4.textContent = '—';
+        } else {
+            if (lblB) lblB.textContent = 'b (cm)';
+            if (lblH) lblH.textContent = 'h (cm)';
+            if (lblP3) lblP3.textContent = '—';
+            if (lblP4) lblP4.textContent = '—';
+        }
+
+        if (steinerWrap) {
+            if (secType === 'STEINER_COMPUESTA' || secType === 'STEINER_CUSTOM') {
+                steinerWrap.style.display = 'block';
+            } else {
+                steinerWrap.style.display = 'none';
+            }
+        }
+    }
+
+    // Sincronizador de UI de Asistente Rápido de Tramos
+    function refreshQuickSpansUI() {
+        const numSel = document.getElementById('quickNumBars');
+        const unitSel = document.getElementById('quickDistUnit');
+        const container = document.getElementById('quickSpanInputsContainer');
+        if (!container || !numSel) return;
+
+        const activeSpans = (currentState.bars || []).filter(b => (b.xf || 0) > (b.xi || 0));
+        if (activeSpans.length > 0) {
+            numSel.value = Math.min(12, Math.max(1, activeSpans.length));
+        }
+
+        const n = parseInt(numSel.value, 10) || 3;
+        const unit = unitSel ? unitSel.value : 'm';
+        const scale = unit === 'm' ? 0.01 : 1.0;
+
+        let html = '';
+        for (let i = 0; i < n; i++) {
+            const b = currentState.bars && currentState.bars[i];
+            let defaultVal = 2;
+            if (b && (b.xf > b.xi)) {
+                defaultVal = Math.round(((b.xf - b.xi) * scale) * 100) / 100;
+            }
+            html += `
+                <div class="span-pill">
+                    <span>L${i + 1}:</span>
+                    <input type="number" step="any" class="quick-span-val" data-idx="${i}" value="${defaultVal}">
+                    <span>${unit}</span>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+    }
+
     // Inicialización del DOM
     function init() {
+        // Cargar estado guardado de la viga si existe en localStorage
+        try {
+            const sync = localStorage.getItem('cerebro_active_beam_sync');
+            if (sync) {
+                const parsed = JSON.parse(sync);
+                if (parsed && ((parsed.bars && parsed.bars.length > 0) || (parsed.nodes && parsed.nodes.length > 0))) {
+                    currentState = parsed;
+                }
+            }
+        } catch(e) {}
+
         setupPresetSelector();
         setupQuickSpans();
         setupSectionControls();
         setupMatrixTabs();
         setupDownloadButtons();
 
-        renderBarsTable();
-        renderNodesTable();
-        renderSpansLoadsTable();
-        renderObliqueTable();
-        renderSteinerTable();
+        loadStateIntoUI();
 
         setupViewModesAndWizard();
         setupCanvasInteractivity();
         setupGalleryAndReportModals();
-
-        recomputeAll();
     }
 
     // ── GESTIÓN DE PRESETS ───────────────────────────────────────
@@ -57,9 +151,10 @@
 
         if (sel) {
             sel.addEventListener('change', () => {
+                if (!sel.value) return;
                 const p = BeamSolver.getPreset(sel.value);
                 if (p) {
-                    currentState = p;
+                    currentState = JSON.parse(JSON.stringify(p));
                     loadStateIntoUI();
                 }
             });
@@ -81,6 +176,7 @@
                         bars: [
                             { xi: 0.0, yi: 0.0, xf: 200.0, yf: 0.0, q: 0.0, P_tramo: 0.0, a_dist: 0.0 }
                         ],
+                        dist_loads: [],
                         oblique_loads: [],
                         nodes: [
                             { cond: 'FIJO', Px: 0.0, Py: 0.0, Mz: 0.0 },
@@ -94,20 +190,44 @@
     }
 
     function loadStateIntoUI() {
-        // Cargar sección
-        document.getElementById('inpGlobalE').value = currentState.E || 2100000;
-        document.getElementById('inpSecType').value = currentState.sec_type || 'RECTANGULAR';
-        document.getElementById('inpSecB').value = currentState.b || 15;
-        document.getElementById('inpSecH').value = currentState.h || 30;
-        document.getElementById('inpSecP3').value = currentState.p3 || 0;
-        document.getElementById('inpSecP4').value = currentState.p4 || 0;
-        document.getElementById('inpPropMode').value = currentState.prop_mode || 'CONSTANTE';
+        // 1. Cargar sección
+        const inpE = document.getElementById('inpGlobalE');
+        const inpType = document.getElementById('inpSecType');
+        const inpB = document.getElementById('inpSecB');
+        const inpH = document.getElementById('inpSecH');
+        const inpP3 = document.getElementById('inpSecP3');
+        const inpP4 = document.getElementById('inpSecP4');
+        const inpMode = document.getElementById('inpPropMode');
 
+        if (inpE) inpE.value = currentState.E != null ? currentState.E : 2100000;
+        if (inpType) inpType.value = currentState.sec_type || 'RECTANGULAR';
+        if (inpB) inpB.value = currentState.b != null ? currentState.b : 15;
+        if (inpH) inpH.value = currentState.h != null ? currentState.h : 30;
+        if (inpP3) inpP3.value = currentState.p3 != null ? currentState.p3 : 0;
+        if (inpP4) inpP4.value = currentState.p4 != null ? currentState.p4 : 0;
+        if (inpMode) inpMode.value = currentState.prop_mode || 'CONSTANTE';
+
+        // Actualizar etiquetas de sección y visibilidad de Steiner
+        updateSecLabelsAndVisibility();
+
+        // 2. Sincronizar Asistente Rápido de Tramos
+        refreshQuickSpansUI();
+
+        // 3. Forzar sincronización de Cargas Distribuidas en Tabla 3.1
+        syncDistLoadsFromBars(true);
+
+        // 4. Renderizar todas las tablas de datos
         renderSteinerTable();
         renderBarsTable();
         renderNodesTable();
         renderSpansLoadsTable();
         renderObliqueTable();
+
+        // 5. Sincronizar selector de casos / presets
+        const selPreset = document.getElementById('selectPreset');
+        if (selPreset) {
+            selPreset.value = currentState.id || '';
+        }
 
         recomputeAll();
     }
@@ -119,33 +239,9 @@
         const container = document.getElementById('quickSpanInputsContainer');
         const btnApply = document.getElementById('btnApplyQuickSpans');
 
-        function renderSpanInputs() {
-            if (!container || !numSel) return;
-            const n = parseInt(numSel.value, 10) || 3;
-            const unit = unitSel ? unitSel.value : 'm';
-            const scale = unit === 'm' ? 0.01 : 1.0;
-
-            let html = '';
-            for (let i = 0; i < n; i++) {
-                const b = currentState.bars && currentState.bars[i];
-                let defaultVal = 2;
-                if (b && (b.xf > b.xi)) {
-                    defaultVal = (b.xf - b.xi) * scale;
-                }
-                html += `
-                    <div class="span-pill">
-                        <span>L${i + 1}:</span>
-                        <input type="number" step="any" class="quick-span-val" data-idx="${i}" value="${defaultVal}">
-                        <span>${unit}</span>
-                    </div>
-                `;
-            }
-            container.innerHTML = html;
-        }
-
-        if (numSel) numSel.addEventListener('change', renderSpanInputs);
-        if (unitSel) unitSel.addEventListener('change', renderSpanInputs);
-        renderSpanInputs();
+        if (numSel) numSel.addEventListener('change', refreshQuickSpansUI);
+        if (unitSel) unitSel.addEventListener('change', refreshQuickSpansUI);
+        refreshQuickSpansUI();
 
         if (btnApply) {
             btnApply.addEventListener('click', () => {
@@ -232,53 +328,7 @@
             currentState.p4 = parseFloat(inpP4.value) || 0;
             currentState.prop_mode = inpMode.value;
 
-            // Actualizar etiquetas de parámetros según tipo
-            const lblB = document.getElementById('lblParamB');
-            const lblH = document.getElementById('lblParamH');
-            const lblP3 = document.getElementById('lblParamP3');
-            const lblP4 = document.getElementById('lblParamP4');
-
-            if (currentState.sec_type === 'T_SECTION' || currentState.sec_type === 'SECCION_T') {
-                if (lblB) lblB.textContent = 'b_alma (cm)';
-                if (lblH) lblH.textContent = 'h_alma (cm)';
-                if (lblP3) lblP3.textContent = 'b_ala (cm)';
-                if (lblP4) lblP4.textContent = 't_ala (cm)';
-            } else if (currentState.sec_type === 'I_SECTION' || currentState.sec_type === 'DOBLE_T') {
-                if (lblB) lblB.textContent = 'b_ala (cm)';
-                if (lblH) lblH.textContent = 'H_tot (cm)';
-                if (lblP3) lblP3.textContent = 't_ala (cm)';
-                if (lblP4) lblP4.textContent = 't_alma (cm)';
-            } else if (currentState.sec_type === 'CIRCULAR') {
-                if (lblB) lblB.textContent = 'Diámetro D (cm)';
-                if (lblH) lblH.textContent = '—';
-                if (lblP3) lblP3.textContent = '—';
-                if (lblP4) lblP4.textContent = '—';
-            } else if (currentState.sec_type === 'TUBULAR_CIRCULAR') {
-                if (lblB) lblB.textContent = 'D_ext (cm)';
-                if (lblH) lblH.textContent = 'd_int (cm)';
-                if (lblP3) lblP3.textContent = '—';
-                if (lblP4) lblP4.textContent = '—';
-            } else if (currentState.sec_type === 'CAJON_HUECO' || currentState.sec_type === 'BOX') {
-                if (lblB) lblB.textContent = 'B_ext (cm)';
-                if (lblH) lblH.textContent = 'H_ext (cm)';
-                if (lblP3) lblP3.textContent = 'b_int (cm)';
-                if (lblP4) lblP4.textContent = 'h_int (cm)';
-            } else if (currentState.sec_type === 'DIRECTO_A_I') {
-                if (lblB) lblB.textContent = 'Área A (cm²)';
-                if (lblH) lblH.textContent = 'Inercia Iz (cm⁴)';
-                if (lblP3) lblP3.textContent = '—';
-                if (lblP4) lblP4.textContent = '—';
-            } else {
-                if (lblB) lblB.textContent = 'b (cm)';
-                if (lblH) lblH.textContent = 'h (cm)';
-                if (lblP3) lblP3.textContent = '—';
-                if (lblP4) lblP4.textContent = '—';
-            }
-
-            if ((currentState.sec_type === 'STEINER_COMPUESTA' || currentState.sec_type === 'STEINER_CUSTOM') && steinerWrap) {
-                steinerWrap.style.display = 'block';
-            }
-
+            updateSecLabelsAndVisibility();
             recomputeAll();
         };
 
@@ -458,17 +508,21 @@
     }
 
     // ── RENDERIZADO Y EDICIÓN DE TABLA 3.1: EXCLUSIVAMENTE CARGAS DISTRIBUIDAS ────
-    function syncDistLoadsFromBars() {
-        if (!currentState.dist_loads || currentState.dist_loads.length === 0) {
+    function syncDistLoadsFromBars(force = false) {
+        if (force || !currentState.dist_loads || currentState.dist_loads.length === 0) {
             currentState.dist_loads = [];
             (currentState.bars || []).forEach((b, i) => {
-                if (Math.abs(b.q || 0) > 1e-9 || Math.abs(b.q_input || 0) > 1e-9) {
+                const hasLoad = (Math.abs(b.q || 0) > 1e-9) || (b.q_input !== undefined && b.q_input !== null && b.q_input !== '' && Math.abs(parseFloat(b.q_input) || 0) > 1e-9);
+                if (hasLoad) {
                     const spanLen = Math.abs((b.xf || 0) - (b.xi || 0)) || 200;
+                    const wVal = (b.q_input !== undefined && b.q_input !== null && b.q_input !== '') 
+                        ? parseFloat(b.q_input) 
+                        : (b.q_unit === 'kgf/m' ? (parseFloat(b.q || 0) * 100) : parseFloat(b.q || 0));
                     currentState.dist_loads.push({
                         barIdx: i,
-                        w: (b.q_input !== undefined && b.q_input !== null && b.q_input !== '') ? b.q_input : (b.q_unit === 'kgf/m' ? (b.q * 100) : b.q),
+                        w: wVal,
                         unit: b.q_unit || 'kgf/m',
-                        L_dist: (b.L_dist !== undefined && b.L_dist !== null && b.L_dist !== '') ? b.L_dist : spanLen
+                        L_dist: (b.L_dist !== undefined && b.L_dist !== null && b.L_dist !== '') ? parseFloat(b.L_dist) : spanLen
                     });
                 }
             });
