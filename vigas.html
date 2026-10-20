@@ -1242,6 +1242,110 @@
             border-radius: 10px;
             user-select: none;
         }
+
+        /* ── ESTILOS MATRICIALES NEÓN DE ALTO CONTRASTE (WCAG AAA) ──── */
+        .neon-matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono, monospace);
+            font-size: 11px;
+            text-align: right;
+            background: #090e1a;
+        }
+        .neon-matrix-table th {
+            background: #0f1c34;
+            color: #00f0ff;
+            padding: 7px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .neon-matrix-table td {
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+        }
+        .cell-gdl-header {
+            background: #0d182e !important;
+            color: #00f0ff !important;
+            font-weight: 800;
+            text-align: center;
+            border-right: 2px solid rgba(0, 240, 255, 0.3) !important;
+        }
+        .cell-diag-active {
+            background: rgba(0, 255, 136, 0.18) !important;
+            color: #00ff88 !important;
+            font-weight: 900;
+            text-shadow: 0 0 6px rgba(0, 255, 136, 0.35);
+        }
+        .cell-val-active {
+            color: #f8fafc;
+            font-weight: 600;
+        }
+        .cell-val-zero {
+            color: #475569 !important;
+        }
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background: #0d182e !important;
+            z-index: 3;
+            box-shadow: 2px 0 6px rgba(0,0,0,0.4);
+        }
+        .matrix-card-neon {
+            margin-bottom: 20px;
+            background: #091224;
+            border: 1px solid rgba(0, 240, 255, 0.22);
+            border-radius: 10px;
+            padding: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .matrix-card-title {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #00f0ff;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .matrix-subhead {
+            font-weight: 700;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+        .row-restricted-neon {
+            background: rgba(245, 158, 11, 0.15) !important;
+            border-left: 4px solid #fbbf24 !important;
+        }
+        .row-restricted-neon td {
+            color: #f8fafc !important;
+        }
+        .row-restricted-neon .cell-gdl-header {
+            color: #fbbf24 !important;
+        }
+        .row-restricted-neon .cell-c-expr {
+            color: #ffd700 !important;
+            font-weight: 800;
+        }
+        .row-free-neon {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        .row-free-neon td {
+            color: #f8fafc;
+        }
+        .tool-btn-neon-amber {
+            background: rgba(251, 191, 36, 0.15);
+            border: 1px solid #fbbf24;
+            color: #fbbf24;
+        }
+        .tool-btn-neon-amber:hover {
+            background: rgba(251, 191, 36, 0.28);
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
+            color: #fff;
+        }
 </style>
 </head>
 <body>
@@ -1253,9 +1357,9 @@
                 <div class="brand-logo">📐</div>
                 <div class="brand-title-wrap">
                     <h1>
-                        CEREBRO ESTRUCTURAL <span class="brand-badge">v9.0 · Definitivo · Código abierto</span>
+                        CEREBRO ESTRUCTURAL <span class="brand-badge">v10.0 · Edición Neón Profesional</span>
                     </h1>
-                    <div class="brand-subtitle">Análisis Matricial de Vigas Continuas e Inclinadas • PLANTILLA ULIANOV v9.0</div>
+                    <div class="brand-subtitle">Análisis Matricial de Vigas Continuas e Inclinadas • PLANTILLA ULIANOV v10.0</div>
                 </div>
             </div>
 
@@ -1330,6 +1434,7 @@
             <button type="button" class="view-mode-btn" id="btnModeClassic">⚡ Modo Experto (Todas las Tablas)</button>
         </div>
         <div class="view-action-buttons">
+            <button type="button" class="tool-btn-neon tool-btn-neon-amber" id="btnQuickPizarra" title="Cargar inmediatamente el problema de 5 tramos (11 m) de la pizarra del ingeniero">⚡ Ejemplo Pizarra (11 m)</button>
             <button type="button" class="tool-btn-neon" id="btnOpenGallery">📚 Galería de Ejemplos</button>
             <button type="button" class="tool-btn-neon tool-btn-neon-emerald" id="btnOpenReport">📄 Memoria de Cálculo (PDF/Imprimir)</button>
         </div>
@@ -1903,19 +2008,19 @@
     </section>
     <!-- ══ PIE DE PÁGINA ════════════════════════════════════════════ -->
     <footer class="footer">
-        CEREBRO ESTRUCTURAL v9.0 • Análisis Estructural II • Desarrollado por el Ing. Ulianov Cuba Valencia • Cusco, Perú
+        CEREBRO ESTRUCTURAL v10.0 • Análisis Estructural II • Desarrollado por el Ing. Ulianov Cuba Valencia • Cusco, Perú
         • <a href="https://github.com/72008081-pixel/Ulianov-Continental" target="_blank" rel="noopener">Repositorio en GitHub</a>
     </footer>
 
     <!-- Dependencias de cálculo y autenticación -->
     <!-- Sistema de Registro Libre Liquid Glass, Términos y Condiciones y Control de Comunidad (100% Gratuito MIT) -->
     <script src="auth.js?v=8.1"></script>
-    <script src="beam-solver.js?v=8.1"></script>
-    <script src="beam-canvas.js?v=8.1"></script>
+    <script src="beam-solver.js?v=10.0"></script>
+    <script src="beam-canvas.js?v=10.0"></script>
     <script src="assets/exceljs.min.js"></script>
     <script src="beam-excel-generator.js?v=7.0"></script>
-    <script src="beam-app.js?v=9.1"></script>
-<script src="beam-diagrams.js?v=1.2"></script>
+    <script src="beam-app.js?v=10.0"></script>
+<script src="beam-diagrams.js?v=10.0"></script>
 <script>
     // ── GESTIÓN DE DIAGRAMAS INTERNOS V Y M CON ZOOM Y CROSSHAIR ────
     (function(){

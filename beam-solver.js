@@ -715,11 +715,11 @@
             let C_expr = C_num;
             if (hay === 'NO') {
                 if (Math.abs(C_num) < 1e-12) {
-                    C_expr = `R_${uLbl}`;
+                    C_expr = `${uLbl}`;
                 } else if (C_num < 0) {
-                    C_expr = `R_${uLbl}${C_num}`;
+                    C_expr = `${uLbl}${C_num}`;
                 } else {
-                    C_expr = `R_${uLbl}+${C_num}`;
+                    C_expr = `${uLbl}+${C_num}`;
                 }
             }
 

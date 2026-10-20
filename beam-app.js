@@ -148,11 +148,23 @@
     function setupPresetSelector() {
         const sel = document.getElementById('selectPreset');
         const btnClear = document.getElementById('btnClearExercise');
+        const btnQuickPizarra = document.getElementById('btnQuickPizarra');
 
         if (sel) {
             sel.addEventListener('change', () => {
                 if (!sel.value) return;
                 const p = BeamSolver.getPreset(sel.value);
+                if (p) {
+                    currentState = JSON.parse(JSON.stringify(p));
+                    loadStateIntoUI();
+                }
+            });
+        }
+
+        if (btnQuickPizarra) {
+            btnQuickPizarra.addEventListener('click', () => {
+                if (sel) sel.value = 'ejemplo_5_pizarra';
+                const p = BeamSolver.getPreset('ejemplo_5_pizarra');
                 if (p) {
                     currentState = JSON.parse(JSON.stringify(p));
                     loadStateIntoUI();
@@ -1654,26 +1666,27 @@
                 const labels = bd.dofLabels;
 
                 return `
-                    <div style="margin-bottom: 20px; background: #ffffff; border: 2px solid #cbd5e1; border-radius: 10px; padding: 12px;">
-                        <div style="font-size: 13.5px; font-weight: 900; color: #000000; margin-bottom: 8px;">
-                            Tramo Barra [${bIdx + 1}] (Nudo ${bd.nodeStart} ➔ Nudo ${bd.nodeEnd}): Longitud L = ${bd.L.toFixed(2)} cm, E = ${bd.E} kgf/cm²
+                    <div class="matrix-card-neon">
+                        <div class="matrix-card-title">
+                            <span>⚡ Tramo Barra [${bIdx + 1}] (Nudo ${bd.nodeStart} ➔ Nudo ${bd.nodeEnd})</span>
+                            <span style="font-size: 11.5px; color: #94a3b8; font-family: monospace;">L = ${bd.L.toFixed(2)} cm • E = ${bd.E.toLocaleString()} kgf/cm² • I = ${bd.I ? bd.I.toFixed(1) : '—'} cm⁴</span>
                         </div>
                         <div class="grid-equal-2">
                             <div>
-                                <div style="font-weight: 800; font-size: 12px; margin-bottom: 4px;">Matriz de Rigidez Local [k]₆ₓ₆ (kgf y cm):</div>
+                                <div class="matrix-subhead" style="color: #00f0ff;">Matriz de Rigidez Local [k]₆ₓ₆ (kgf y cm):</div>
                                 <div class="table-scroll">
-                                    <table class="excel-table">
+                                    <table class="neon-matrix-table">
                                         <thead>
                                             <tr>
-                                                <th>GDL</th>
+                                                <th class="cell-gdl-header">GDL</th>
                                                 ${labels.map(l => `<th>${l}</th>`).join('')}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             ${kl.map((row, rI) => `
                                                 <tr>
-                                                    <td class="cell-auto-subhdr">${labels[rI]}</td>
-                                                    ${row.map((val, cI) => `<td style="${rI === cI ? 'background: #C6EFCE; font-weight:800;' : ''}">${val.toFixed(2)}</td>`).join('')}
+                                                    <td class="cell-gdl-header">${labels[rI]}</td>
+                                                    ${row.map((val, cI) => `<td class="${rI === cI ? 'cell-diag-active' : (Math.abs(val) > 1e-4 ? 'cell-val-active' : 'cell-val-zero')}">${val !== 0 ? val.toFixed(2) : '0.00'}</td>`).join('')}
                                                 </tr>
                                             `).join('')}
                                         </tbody>
@@ -1681,20 +1694,20 @@
                                 </div>
                             </div>
                             <div>
-                                <div style="font-weight: 800; font-size: 12px; margin-bottom: 4px;">Matriz Extendida [K_ext]₆ₓ₃₆ (Ensamblaje Global):</div>
-                                <div class="table-scroll" style="max-height: 220px;">
-                                    <table class="excel-table">
+                                <div class="matrix-subhead" style="color: #a855f7;">Matriz Extendida [K_ext]₆ₓ₃₆ (Ensamblaje Global):</div>
+                                <div class="table-scroll" style="max-height: 250px;">
+                                    <table class="neon-matrix-table">
                                         <thead>
                                             <tr>
-                                                <th>GDL</th>
-                                                ${currentSolution.gdlAllLabels.map(l => `<th style="font-size:10px;">${l}</th>`).join('')}
+                                                <th class="cell-gdl-header sticky-col">GDL</th>
+                                                ${currentSolution.gdlAllLabels.map(l => `<th style="font-size:9.5px;">${l}</th>`).join('')}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             ${ke.map((row, rI) => `
                                                 <tr>
-                                                    <td class="cell-auto-subhdr">${labels[rI]}</td>
-                                                    ${row.map(val => `<td style="font-size:10px; ${val !== 0 ? 'background:#FFF2CC; font-weight:800;' : 'color:#94a3b8;'}">${val !== 0 ? val.toFixed(1) : '0'}</td>`).join('')}
+                                                    <td class="cell-gdl-header sticky-col">${labels[rI]}</td>
+                                                    ${row.map(val => `<td class="${Math.abs(val) > 1e-4 ? 'cell-val-active' : 'cell-val-zero'}">${val !== 0 ? val.toFixed(1) : '0'}</td>`).join('')}
                                                 </tr>
                                             `).join('')}
                                         </tbody>
@@ -1713,23 +1726,28 @@
             const kg = currentSolution.K_global;
             const labels = currentSolution.gdlAllLabels;
             paneGlobal.innerHTML = `
-                <div style="font-weight: 800; font-size: 12px; margin-bottom: 6px;">
-                    Matriz de Rigidez Global Ensamblada [K]₃₆ₓ₃₆ (Diagonal principal resaltada en verde):
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: 800; font-size: 13px; color: #00f0ff;">
+                        📐 Matriz de Rigidez Global Ensamblada [K]₃₆ₓ₃₆
+                    </span>
+                    <span style="font-size: 11px; color: #34d399; font-family: monospace;">
+                        ✔ Simétrica [K] = [K]ᵀ • Diagonal Principal [K_ii] en Verde Neón
+                    </span>
                 </div>
-                <div class="table-scroll" style="max-height: 520px;">
-                    <table class="excel-table">
+                <div class="table-scroll" style="max-height: 520px; border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 8px;">
+                    <table class="neon-matrix-table">
                         <thead>
                             <tr>
-                                <th>GDL</th>
+                                <th class="cell-gdl-header sticky-col">GDL</th>
                                 ${labels.map(l => `<th style="font-size: 10px;">${l}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
                             ${kg.map((row, rI) => `
                                 <tr>
-                                    <td class="cell-auto-subhdr" style="font-size: 10px;">${labels[rI]}</td>
+                                    <td class="cell-gdl-header sticky-col">${labels[rI]}</td>
                                     ${row.map((val, cI) => `
-                                        <td style="font-size: 10px; ${rI === cI ? 'background: #C6EFCE; font-weight:900;' : (val !== 0 ? 'background: #FFFFFF;' : 'color: #94a3b8;')}">
+                                        <td class="${rI === cI ? 'cell-diag-active' : (Math.abs(val) > 1e-4 ? 'cell-val-active' : 'cell-val-zero')}">
                                             ${val !== 0 ? val.toFixed(1) : '0'}
                                         </td>
                                     `).join('')}
@@ -1745,34 +1763,39 @@
         const paneFull = document.getElementById('paneFullEq');
         if (paneFull && currentSolution.equationRows) {
             paneFull.innerHTML = `
-                <div style="font-weight: 800; font-size: 12px; margin-bottom: 6px;">
-                    Ecuación Matricial Completa: [C] = [K] · [D] (Filas restringidas resaltadas en amarillo brillante):
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: 800; font-size: 13px; color: #fbbf24;">
+                        📋 Sistema Matricial Completo: {Q} = [K] · {D}
+                    </span>
+                    <span style="font-size: 11px; color: #fbbf24; background: rgba(245, 158, 11, 0.15); padding: 3px 8px; border-radius: 4px; border: 1px solid #fbbf24;">
+                        ★ Filas de Grados Restringidos (Apoyos) Resaltadas en Ámbar Neón
+                    </span>
                 </div>
-                <div class="table-scroll" style="max-height: 520px;">
-                    <table class="excel-table">
+                <div class="table-scroll" style="max-height: 520px; border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 8px;">
+                    <table class="neon-matrix-table">
                         <thead>
                             <tr>
-                                <th>GDL</th>
-                                <th>[C]</th>
+                                <th class="cell-gdl-header sticky-col">GDL</th>
+                                <th style="color: #fbbf24;">{Q} Cargas / Reacc.</th>
                                 <th>=</th>
                                 ${currentSolution.gdlAllLabels.map(l => `<th style="font-size: 10px;">${l}</th>`).join('')}
                                 <th>*</th>
-                                <th>[D]</th>
+                                <th style="color: #00f0ff;">{D} Desplaz.</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${currentSolution.equationRows.map(er => `
-                                <tr style="${er.isRestricted ? 'background: #FFFF00; font-weight: 800;' : ''}">
-                                    <td class="cell-auto-subhdr">${er.uLbl}</td>
-                                    <td class="cell-auto-celeste">${er.C_expr}</td>
-                                    <td>=</td>
+                                <tr class="${er.isRestricted ? 'row-restricted-neon' : 'row-free-neon'}">
+                                    <td class="cell-gdl-header sticky-col">${er.uLbl}</td>
+                                    <td class="cell-c-expr">${er.C_expr}</td>
+                                    <td style="color: #64748b;">=</td>
                                     ${er.K_row.map((val, cI) => `
-                                        <td style="font-size: 10px; ${er.dofIndex === cI ? 'background: #C6EFCE; font-weight: 900;' : (val !== 0 ? '' : 'color: #94a3b8;')}">
+                                        <td class="${er.dofIndex === cI ? 'cell-diag-active' : (Math.abs(val) > 1e-4 ? 'cell-val-active' : 'cell-val-zero')}">
                                             ${val !== 0 ? val.toFixed(1) : '0'}
                                         </td>
                                     `).join('')}
-                                    <td>*</td>
-                                    <td class="cell-auto-green font-mono">${er.D_expr}</td>
+                                    <td style="color: #64748b;">*</td>
+                                    <td style="color: ${er.isRestricted ? '#94a3b8' : '#00f0ff'}; font-weight: bold; font-family: monospace;">${er.D_expr}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -1790,22 +1813,22 @@
             paneRedKLL.innerHTML = `
                 <div class="grid-equal-2">
                     <div>
-                        <div style="font-weight: 800; font-size: 12px; margin-bottom: 6px;">
-                            Matriz Reducida de Grados Libres [K_LL] (${fDofs.length}×${fDofs.length}):
+                        <div style="font-weight: 800; font-size: 12.5px; color: #00f0ff; margin-bottom: 6px;">
+                            Matriz Reducida de Grados Libres [K₁₁] (${fDofs.length}×${fDofs.length}):
                         </div>
                         <div class="table-scroll">
-                            <table class="excel-table">
+                            <table class="neon-matrix-table">
                                 <thead>
                                     <tr>
-                                        <th>GDL</th>
+                                        <th class="cell-gdl-header">GDL</th>
                                         ${fDofs.map(f => `<th>${f.uLbl}</th>`).join('')}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${kll.map((row, rI) => `
                                         <tr>
-                                            <td class="cell-auto-subhdr">${fDofs[rI].uLbl}</td>
-                                            ${row.map(val => `<td>${val.toFixed(2)}</td>`).join('')}
+                                            <td class="cell-gdl-header">${fDofs[rI].uLbl}</td>
+                                            ${row.map((val, cI) => `<td class="${rI === cI ? 'cell-diag-active' : 'cell-val-active'}">${val.toFixed(2)}</td>`).join('')}
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -1813,22 +1836,22 @@
                         </div>
                     </div>
                     <div>
-                        <div style="font-weight: 800; font-size: 12px; margin-bottom: 6px;">
-                            Matriz Inversa [K_LL]⁻¹ (Equivalente a MINVERSE en Excel):
+                        <div style="font-weight: 800; font-size: 12.5px; color: #10b981; margin-bottom: 6px;">
+                            Matriz Inversa [K₁₁]⁻¹ (Equivalente a MINVERSE en Excel):
                         </div>
                         <div class="table-scroll">
-                            <table class="excel-table">
+                            <table class="neon-matrix-table">
                                 <thead>
                                     <tr>
-                                        <th>GDL</th>
+                                        <th class="cell-gdl-header">GDL</th>
                                         ${fDofs.map(f => `<th>${f.uLbl}</th>`).join('')}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${kllInv.map((row, rI) => `
                                         <tr>
-                                            <td class="cell-auto-subhdr">${fDofs[rI].uLbl}</td>
-                                            ${row.map(val => `<td class="font-mono">${val.toExponential(4)}</td>`).join('')}
+                                            <td class="cell-gdl-header">${fDofs[rI].uLbl}</td>
+                                            ${row.map(val => `<td class="font-mono" style="color: #34d399;">${val.toExponential(4)}</td>`).join('')}
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -1846,30 +1869,30 @@
             const fDofs = currentSolution.freeDofs;
             const rDofs = currentSolution.restDofs;
             paneRedKRL.innerHTML = `
-                <div style="font-weight: 800; font-size: 12px; margin-bottom: 6px;">
-                    Ecuación Matricial Reducida para Cargas y Reacciones: [C_restringidos] = [K_RL] · [D_libres]:
+                <div style="font-weight: 800; font-size: 12.5px; color: #34d399; margin-bottom: 6px;">
+                    Ecuación Matricial Reducida para Cargas y Reacciones: {Q_restringidos} = [K₂₁] · {D_libres}:
                 </div>
                 <div class="table-scroll">
-                    <table class="excel-table">
+                    <table class="neon-matrix-table">
                         <thead>
                             <tr>
-                                <th>GDL APOYO</th>
-                                <th>[C_apoyo]</th>
+                                <th class="cell-gdl-header">GDL APOYO</th>
+                                <th style="color: #fbbf24;">{Q_apoyo}</th>
                                 <th>=</th>
                                 ${fDofs.map(f => `<th>${f.uLbl}</th>`).join('')}
                                 <th>*</th>
-                                <th>[D_libres]</th>
+                                <th style="color: #00f0ff;">{D_libres}</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${krl.map((row, rI) => `
                                 <tr>
-                                    <td class="cell-auto-peach">${rDofs[rI].uLbl}</td>
-                                    <td class="cell-auto-yellow">${rDofs[rI].C_expr}</td>
-                                    <td>=</td>
-                                    ${row.map(val => `<td>${val.toFixed(2)}</td>`).join('')}
-                                    <td>*</td>
-                                    <td class="cell-auto-green font-mono">${currentSolution.calculatedDisplacements[rI] ? currentSolution.calculatedDisplacements[rI].value.toFixed(8) : ''}</td>
+                                    <td class="cell-gdl-header">${rDofs[rI].uLbl}</td>
+                                    <td class="cell-c-expr">${rDofs[rI].C_expr}</td>
+                                    <td style="color: #64748b;">=</td>
+                                    ${row.map(val => `<td class="${Math.abs(val) > 1e-4 ? 'cell-val-active' : 'cell-val-zero'}">${val.toFixed(2)}</td>`).join('')}
+                                    <td style="color: #64748b;">*</td>
+                                    <td class="font-mono" style="color: #00f0ff; font-weight: bold;">${currentSolution.calculatedDisplacements[rI] ? currentSolution.calculatedDisplacements[rI].value.toFixed(8) : '0.00000000'}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
