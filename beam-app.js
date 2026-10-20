@@ -1957,7 +1957,7 @@
                 if (btn2) btn2.innerHTML = '⏳ Generando Excel (.xlsx)...';
 
                 try {
-                    await BeamExcelGenerator.downloadBeamExcel(currentState, 'PLANTILLA_ULIANOV_VIGAS_12_NODOS_METODO_RIGIDEZ.xlsx');
+                    await BeamExcelGenerator.downloadBeamExcel(currentState, 'PLANTILLA_ULIANOV_VIGAS_5_PESTAÑAS.xlsx');
                     if (btn1) btn1.innerHTML = '✔ ¡Excel Descargado!';
                     if (btn2) btn2.innerHTML = '✔ ¡Excel Descargado!';
                 } catch (e) {

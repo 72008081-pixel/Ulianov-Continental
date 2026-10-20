@@ -916,7 +916,7 @@
             setFormulaWithResult(ws, rCd, 4, `IF(Q${rCd}="NO","",N(${pColLet}${rNodal}))`, cRow.P_nudo);
             setFormulaWithResult(ws, rCd, 5, `IF(Q${rCd}="NO","",${eqTramoFormula})`, cRow.C_tramo);
             setFormulaWithResult(ws, rCd, 6, `IF(Q${rCd}="NO","",D${rCd}+E${rCd})`, cRow.C_num);
-            setFormulaWithResult(ws, rCd, 7, `IF(Q${rCd}="NO","",IF(L${rCd}="NO",IF(F${rCd}=0,"R_"&C${rCd},IF(F${rCd}<0,"R_"&C${rCd}&F${rCd},"R_"&C${rCd}&"+"&F${rCd})),F${rCd}))`, cRow.C_expr);
+            setFormulaWithResult(ws, rCd, 7, `IF(Q${rCd}="NO","",IF(L${rCd}="NO",IF(F${rCd}=0,B${rCd},IF(F${rCd}<0,B${rCd}&F${rCd},B${rCd}&"+"&F${rCd})),F${rCd}))`, cRow.C_expr);
             setFormulaWithResult(ws, rCd, 8, `C${rCd}`, cRow.uLbl);
 
             for (let cMc = 2; cMc <= 8; cMc++) {
@@ -1228,7 +1228,81 @@
     /**
      * Descarga el libro Excel con la pestaña única PLANTILLA ULIANOV en el navegador
      */
-    async function downloadBeamExcel(config, filename = 'PLANTILLA_ULIANOV_VIGAS_AUTOMATIZADA.xlsx') {
+    async function downloadBeamExcel(config, filename = 'PLANTILLA_ULIANOV_VIGAS_5_PESTAÑAS.xlsx') {
+        const xpLib = (typeof XlsxPopulate !== 'undefined') ? XlsxPopulate : (typeof window !== 'undefined' ? window.XlsxPopulate : null);
+        if (xpLib && typeof fetch !== 'undefined') {
+            try {
+                const resp = await fetch('PLANTILLA_MAESTRA_5_PESTANAS_ULIANOV.xlsx');
+                if (resp.ok) {
+                    const arrayBuf = await resp.arrayBuffer();
+                    const wb5 = await xpLib.fromDataAsync(arrayBuf);
+                    const wsMix = wb5.sheet('3.1 MIXTAS');
+                    if (wsMix) {
+                        const solver = (typeof BeamSolver !== 'undefined' && BeamSolver.solveBeam) ? BeamSolver.solveBeam(config) : null;
+                        const E_val = parseFloat(config.E) || 2100000;
+                        const b_val = parseFloat(config.b) || 25;
+                        const h_val = parseFloat(config.h) || 50;
+                        wsMix.cell('C2').value(E_val);
+                        wsMix.cell('C3').value(b_val);
+                        wsMix.cell('C4').value(h_val);
+
+                        const bars = (solver && solver.barsTable) ? solver.barsTable : (config.bars || []);
+                        for (let i = 0; i < 10; i++) {
+                            const r = 9 + i;
+                            const b = bars[i];
+                            const isActive = b && (b.active || (b.xi !== undefined && b.xf !== undefined && b.xf !== null && b.xf !== ''));
+                            if (isActive) {
+                                wsMix.cell('C' + r).value(parseFloat(b.xi) || 0);
+                                wsMix.cell('D' + r).value(parseFloat(b.yi) || 0);
+                                wsMix.cell('E' + r).value(parseFloat(b.xf) || 0);
+                                wsMix.cell('F' + r).value(parseFloat(b.yf) || 0);
+                            } else {
+                                wsMix.cell('C' + r).value(null);
+                                wsMix.cell('D' + r).value(null);
+                                wsMix.cell('E' + r).value(null);
+                                wsMix.cell('F' + r).value(null);
+                            }
+                        }
+
+                        const nodes = (solver && solver.nodesTable) ? solver.nodesTable : (config.nodes || []);
+                        for (let n = 0; n < 11; n++) {
+                            const node = nodes[n];
+                            const rX = 504 + n * 3;
+                            const rY = 505 + n * 3;
+                            const rZ = 506 + n * 3;
+                            if (node && node.active) {
+                                const isRestrX = (node.hayDx === 'NO' || node.cond === 'EMPOTRADO' || node.cond === 'FIJO');
+                                const isRestrY = (node.hayDy === 'NO' || node.cond === 'EMPOTRADO' || node.cond === 'FIJO' || node.cond === 'RODILLO');
+                                const isRestrZ = (node.hayDz === 'NO' || node.cond === 'EMPOTRADO');
+                                wsMix.cell('N' + rX).value(isRestrX ? 'RESTRINGIDO' : 'LIBRE');
+                                wsMix.cell('N' + rY).value(isRestrY ? 'RESTRINGIDO' : 'LIBRE');
+                                wsMix.cell('N' + rZ).value(isRestrZ ? 'RESTRINGIDO' : 'LIBRE');
+                            } else {
+                                wsMix.cell('N' + rX).value('LIBRE');
+                                wsMix.cell('N' + rY).value('LIBRE');
+                                wsMix.cell('N' + rZ).value('LIBRE');
+                            }
+                        }
+                    }
+
+                    const outBlob = await wb5.outputAsync();
+                    if (typeof window !== 'undefined' && window.URL) {
+                        const url = window.URL.createObjectURL(outBlob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                        return true;
+                    }
+                }
+            } catch (err) {
+                console.warn('Fallo cargando plantilla 5 pestañas, usando generador ExcelJS:', err);
+            }
+        }
+
         const wb = await generateBeamWorkbook(config);
         // Hoja visual independiente: cuatro diagramas exportados tal como aparecen en pantalla.
         if (typeof document !== 'undefined') {
