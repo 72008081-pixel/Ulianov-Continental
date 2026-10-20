@@ -1357,9 +1357,9 @@
                 <div class="brand-logo">📐</div>
                 <div class="brand-title-wrap">
                     <h1>
-                        CEREBRO ESTRUCTURAL <span class="brand-badge">v10.0 · Edición Neón Profesional</span>
+                        CEREBRO ESTRUCTURAL <span class="brand-badge">v10.1 · Edición Neón Profesional</span>
                     </h1>
-                    <div class="brand-subtitle">Análisis Matricial de Vigas Continuas e Inclinadas • PLANTILLA ULIANOV v10.0</div>
+                    <div class="brand-subtitle">Análisis Matricial de Vigas Continuas e Inclinadas • PLANTILLA ULIANOV v10.1</div>
                 </div>
             </div>
 
@@ -1956,6 +1956,7 @@
                     <input id="diagZoomY" type="range" min="50" max="250" value="100" style="accent-color:#f59e0b; width: 140px;">
                     <strong id="diagZoomYVal" style="color:#f59e0b">100%</strong>
                 </div>
+                <button type="button" id="btnResetDiagSliders" class="tool-btn" style="background: #1e293b; color: #f8fafc; font-size: 11px;">↺ Restablecer</button>
                 <span style="font-size: 11px; color: var(--text-muted);">💡 Rueda del mouse: Zoom en el plano cartesiano • Clic sostenido y arrastre: Desplazar viga • Doble clic: Restablecer</span>
             </div>
 
@@ -2008,61 +2009,26 @@
     </section>
     <!-- ══ PIE DE PÁGINA ════════════════════════════════════════════ -->
     <footer class="footer">
-        CEREBRO ESTRUCTURAL v10.0 • Análisis Estructural II • Desarrollado por el Ing. Ulianov Cuba Valencia • Cusco, Perú
+        CEREBRO ESTRUCTURAL v10.1 • Análisis Estructural II • Desarrollado por el Ing. Ulianov Cuba Valencia • Cusco, Perú
         • <a href="https://github.com/72008081-pixel/Ulianov-Continental" target="_blank" rel="noopener">Repositorio en GitHub</a>
     </footer>
 
     <!-- Dependencias de cálculo y autenticación -->
     <!-- Sistema de Registro Libre Liquid Glass, Términos y Condiciones y Control de Comunidad (100% Gratuito MIT) -->
     <script src="auth.js?v=8.1"></script>
-    <script src="beam-solver.js?v=10.0"></script>
-    <script src="beam-canvas.js?v=10.0"></script>
+    <script src="beam-solver.js?v=10.1"></script>
+    <script src="beam-canvas.js?v=10.1"></script>
     <script src="assets/exceljs.min.js"></script>
     <script src="beam-excel-generator.js?v=7.0"></script>
-    <script src="beam-app.js?v=10.0"></script>
-<script src="beam-diagrams.js?v=10.0"></script>
+    <script src="beam-app.js?v=10.1"></script>
+<script src="beam-diagrams.js?v=10.1"></script>
 <script>
-    // ── GESTIÓN DE DIAGRAMAS INTERNOS V Y M CON ZOOM Y CROSSHAIR ────
+    // ═════════════════════════════════════════════════════════════════════
+    // CONTROLADOR MAESTRO DE LOS 4 DIAGRAMAS (DFC, DMF Y CURVAS ELÁSTICAS 1 Y 2)
+    // Pan/Arrastre 1:1, Zoom (Rueda/Botones), Estirar (X/Y) y Auto-Encuadre Seguro
+    // ═════════════════════════════════════════════════════════════════════
     (function(){
-        let currentZoomX = 1.0;
-        let currentZoomY = 1.0;
-
-        const drawDiags = () => {
-            const sol = window.CerebroApp?.getSolution();
-            const spans = window.BeamDiagrams?.calculate(sol) || [];
-            
-            const zxInp = document.getElementById('diagZoomX');
-            const zyInp = document.getElementById('diagZoomY');
-            const zxVal = document.getElementById('diagZoomXVal');
-            const zyVal = document.getElementById('diagZoomYVal');
-            
-            if (zxInp) {
-                currentZoomX = (parseFloat(zxInp.value) || 100) / 100.0;
-                if (zxVal) zxVal.textContent = Math.round(currentZoomX * 100) + '%';
-            }
-            if (zyInp) {
-                currentZoomY = (parseFloat(zyInp.value) || 100) / 100.0;
-                if (zyVal) zyVal.textContent = Math.round(currentZoomY * 100) + '%';
-            }
-
-            const svgV = document.getElementById('beamShearDiagram');
-            const svgM = document.getElementById('beamMomentDiagram');
-            if (window.BeamDiagrams) {
-                BeamDiagrams.render(svgV, spans, 'V', { zoomX: currentZoomX, zoomY: currentZoomY });
-                BeamDiagrams.render(svgM, spans, 'M', { zoomX: currentZoomX, zoomY: currentZoomY });
-            }
-        };
-
-        document.addEventListener('beam:recomputed', drawDiags);
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('diagZoomX')?.addEventListener('input', drawDiags);
-            document.getElementById('diagZoomY')?.addEventListener('input', drawDiags);
-            drawDiags();
-        });
-    })();
-
-    // ── GESTIÓN DE CURVA ELÁSTICA CON PLANO CARTESIANO (0,0), VALORES DISCRETOS Y PAN/ZOOM ────
-    (function(){
+        'use strict';
         const NS = 'http://www.w3.org/2000/svg';
         const $ = id => document.getElementById(id);
         const num = n => Number.isFinite(+n) ? +n : 0;
@@ -2075,9 +2041,147 @@
             return el;
         }
 
-        let zoomXFactor = 1.0;
-        let zoomYFactor = 1.0;
+        // ── REGISTRO DE CONTROLADORES PAN & ZOOM POR SVG ─────────────
+        const pzControllers = {};
 
+        function registerPanZoom(svgId, defaultVb, btnInId, btnOutId, btnResetId) {
+            const svg = $(svgId);
+            if (!svg) return null;
+
+            let curX = defaultVb[0];
+            let curY = defaultVb[1];
+            let curW = defaultVb[2];
+            let curH = defaultVb[3];
+
+            function applyVb() {
+                svg.setAttribute('viewBox', `${curX.toFixed(2)} ${curY.toFixed(2)} ${curW.toFixed(2)} ${curH.toFixed(2)}`);
+            }
+
+            function resetView() {
+                curX = defaultVb[0];
+                curY = defaultVb[1];
+                curW = defaultVb[2];
+                curH = defaultVb[3];
+                applyVb();
+            }
+
+            function zoomAt(factor, clientX, clientY) {
+                const rect = svg.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                const mouseX = clientX !== undefined ? (clientX - rect.left) : (rect.width / 2);
+                const mouseY = clientY !== undefined ? (clientY - rect.top) : (rect.height / 2);
+
+                const pX = curX + (mouseX / rect.width) * curW;
+                const pY = curY + (mouseY / rect.height) * curH;
+
+                const nextW = curW * factor;
+                const nextH = curH * factor;
+                const origW = defaultVb[2];
+                if (nextW < origW * 0.05 || nextW > origW * 20.0) return;
+
+                curW = nextW;
+                curH = nextH;
+                curX = pX - (mouseX / rect.width) * curW;
+                curY = pY - (mouseY / rect.height) * curH;
+                applyVb();
+            }
+
+            // 1. Desplazamiento por Arrastre (Pan) con Pointer Capture
+            let isDragging = false;
+            let startPtrX = 0, startPtrY = 0;
+            let startVbX = 0, startVbY = 0;
+
+            svg.style.touchAction = 'none';
+            svg.style.cursor = 'grab';
+
+            svg.addEventListener('pointerdown', e => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                isDragging = true;
+                startPtrX = e.clientX;
+                startPtrY = e.clientY;
+                startVbX = curX;
+                startVbY = curY;
+                svg.style.cursor = 'grabbing';
+                svg.dataset.isPanning = 'true';
+                try { svg.setPointerCapture(e.pointerId); } catch (_) {}
+            });
+
+            svg.addEventListener('pointermove', e => {
+                if (!isDragging) return;
+                e.preventDefault();
+                const rect = svg.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                const scaleX = curW / rect.width;
+                const scaleY = curH / rect.height;
+                const dx = (e.clientX - startPtrX) * scaleX;
+                const dy = (e.clientY - startPtrY) * scaleY;
+                curX = startVbX - dx;
+                curY = startVbY - dy;
+                applyVb();
+            });
+
+            const stopDrag = e => {
+                if (!isDragging) return;
+                isDragging = false;
+                svg.style.cursor = 'grab';
+                try { svg.releasePointerCapture(e.pointerId); } catch (_) {}
+                setTimeout(() => { svg.dataset.isPanning = 'false'; }, 60);
+            };
+
+            svg.addEventListener('pointerup', stopDrag);
+            svg.addEventListener('pointercancel', stopDrag);
+
+            // 2. Rueda del ratón: Zoom continuo centrado en puntero
+            svg.addEventListener('wheel', e => {
+                e.preventDefault();
+                const factor = e.deltaY < 0 ? 0.85 : 1.18;
+                zoomAt(factor, e.clientX, e.clientY);
+            }, { passive: false });
+
+            // 3. Doble clic: Restablecer encuadre
+            svg.addEventListener('dblclick', e => {
+                e.preventDefault();
+                resetView();
+            });
+
+            // 4. Botones interactivos en cabecera
+            $(btnInId)?.addEventListener('click', () => zoomAt(0.80));
+            $(btnOutId)?.addEventListener('click', () => zoomAt(1.25));
+            $(btnResetId)?.addEventListener('click', resetView);
+
+            applyVb();
+
+            const ctrl = { resetView, zoomAt, applyVb };
+            pzControllers[svgId] = ctrl;
+            return ctrl;
+        }
+
+        // ── GESTIÓN DE DIAGRAMAS DFC Y DMF (CORTANTE Y MOMENTO) ──────
+        function drawDiags() {
+            const sol = window.CerebroApp?.getSolution();
+            const spans = window.BeamDiagrams?.calculate(sol) || [];
+
+            const zxInp = $('diagZoomX');
+            const zyInp = $('diagZoomY');
+            const zxVal = $('diagZoomXVal');
+            const zyVal = $('diagZoomYVal');
+
+            const currentZoomX = (parseFloat(zxInp?.value) || 100) / 100.0;
+            const currentZoomY = (parseFloat(zyInp?.value) || 100) / 100.0;
+
+            if (zxVal) zxVal.textContent = Math.round(currentZoomX * 100) + '%';
+            if (zyVal) zyVal.textContent = Math.round(currentZoomY * 100) + '%';
+
+            const svgV = $('beamShearDiagram');
+            const svgM = $('beamMomentDiagram');
+            if (window.BeamDiagrams) {
+                BeamDiagrams.render(svgV, spans, 'V', { zoomX: currentZoomX, zoomY: currentZoomY });
+                BeamDiagrams.render(svgM, spans, 'M', { zoomX: currentZoomX, zoomY: currentZoomY });
+            }
+        }
+
+        // ── GESTIÓN DE CURVAS ELÁSTICAS 1 Y 2 CON AUTO-ENCUADRE SEGURO ─
         function renderElastic() {
             const sol = window.CerebroApp && CerebroApp.getSolution();
             const state = window.CerebroApp && CerebroApp.getCurrentState();
@@ -2099,18 +2203,14 @@
                 return;
             }
 
-            const zxInp = $('elasticZoomX');
-            const zyInp = $('elasticZoomY');
-            const zxVal = $('elasticZoomXVal');
-            const zyVal = $('elasticZoomYVal');
-            if (zxInp) {
-                zoomXFactor = (parseFloat(zxInp.value) || 100) / 100.0;
-                if (zxVal) zxVal.textContent = Math.round(zoomXFactor * 100) + '%';
-            }
-            if (zyInp) {
-                zoomYFactor = (parseFloat(zyInp.value) || 100) / 100.0;
-                if (zyVal) zyVal.textContent = Math.round(zoomYFactor * 100) + '%';
-            }
+            const strength = num($('elasticAmplification')?.value) || 30;
+            const zoomXFactor = (parseFloat($('elasticZoomX')?.value) || 100) / 100.0;
+            const zoomYFactor = (parseFloat($('elasticZoomY')?.value) || 100) / 100.0;
+
+            if ($('elasticAmplificationValue')) $('elasticAmplificationValue').textContent = strength + '×';
+            if ($('lblStrengthVal')) $('lblStrengthVal').textContent = strength + '×';
+            if ($('elasticZoomXVal')) $('elasticZoomXVal').textContent = Math.round(zoomXFactor * 100) + '%';
+            if ($('elasticZoomYVal')) $('elasticZoomYVal').textContent = Math.round(zoomYFactor * 100) + '%';
 
             const positions = [{ x: num(bars[0].xi), y: num(bars[0].yi) }];
             bars.forEach(b => positions.push({ x: num(b.xf), y: num(b.yf) }));
@@ -2120,15 +2220,11 @@
                 theta: num(sol.D_full[3 * i + 2])
             }));
 
-            const strength = num($('elasticAmplification')?.value) || 30;
-            if ($('elasticAmplificationValue')) $('elasticAmplificationValue').textContent = strength + '×';
-            if ($('lblStrengthVal')) $('lblStrengthVal').textContent = strength + '×';
-
             const allPoints = [];
             const orig = positions.map(p => ({ x: p.x, y: p.y }));
             const deformed = positions.map((p, i) => ({
                 x: p.x + strength * dofs[i].ux,
-                y: p.y + strength * dofs[i].uy * zoomYFactor
+                y: p.y + strength * dofs[i].uy
             }));
 
             const smooth = [];
@@ -2145,19 +2241,15 @@
                     const v = h1 * trans0 + h2 * L * d0.theta + h3 * trans1 + h4 * L * d1.theta;
                     const axial = (1 - t) * axial0 + t * axial1;
                     const x = a.x + (b.x - a.x) * t + strength * (c * axial - s * v);
-                    const y = a.y + (b.y - a.y) * t + strength * (s * axial + c * v) * zoomYFactor;
+                    const y = a.y + (b.y - a.y) * t + strength * (s * axial + c * v);
                     smooth.push({ x, y });
                 }
             }
 
             allPoints.push(...orig, ...deformed, ...smooth);
-            let minX = 0; // Origen cartesiano fijado en 0,0
-            let maxX = Math.max(...allPoints.map(p => p.x), 100);
-            let minY = Math.min(...allPoints.map(p => p.y), -5);
-            let maxY = Math.max(...allPoints.map(p => p.y), 5);
-
+            const minX = 0;
+            const maxX = Math.max(...allPoints.map(p => p.x), 100);
             const width = Math.max(maxX - minX, 1);
-            const height = Math.max(maxY - minY, 1);
 
             const W_svg = 850;
             const H_svg = 320;
@@ -2170,11 +2262,17 @@
             const plotH = H_svg - padTop - padBot;
 
             const scaleX = plotW / width;
-            const scaleY = plotH / height;
 
-            // Funciones de mapeo a pantalla con origen cartesiano explícito (0,0)
+            // Auto-encuadre vertical dinámico libre de desbordamientos:
+            // Encuentra la máxima deflexión absoluta de la deformada desde el eje y=0
+            const maxAbsY = Math.max(...allPoints.map(p => Math.abs(p.y)), 0.001);
+            // safeHalfH garantiza que con cualquier amplificación la curva nunca salga del visor
+            const safeHalfH = Math.max((plotH / 2) - 26, 20);
+            const scaleY = (safeHalfH / maxAbsY) * zoomYFactor;
+            const yBaseline = padTop + (plotH / 2); // Eje centrado exactamente en 155px
+
             const screenX = x => padLeft + (x - minX) * scaleX;
-            const screenY = y => (padTop + plotH / 2) - y * scaleY;
+            const screenY = y => yBaseline - y * scaleY;
 
             const path = points => points.map((p, i) => (i ? 'L ' : 'M ') + screenX(p.x).toFixed(2) + ' ' + screenY(p.y).toFixed(2)).join(' ');
 
@@ -2253,11 +2351,12 @@
                         fill: '#fbbf24', stroke: '#090d16', 'stroke-width': 2.0
                     }));
 
-                    // Etiqueta flotante con Nudo y Desplazamiento δy
+                    // Etiqueta flotante con Nudo y Desplazamiento δy (posicionada dinámicamente)
                     const pillW = 78;
                     const pillH = 22;
-                    const tx = p.x;
-                    const ty = p.y - 12;
+                    const tx = Math.max(padLeft + 35, Math.min(padLeft + plotW - 35, p.x));
+                    // Si el nudo está deformado hacia abajo, poner la etiqueta arriba; si hacia arriba, ponerla abajo
+                    const ty = p.y >= yBaseline ? (p.y - 12) : (p.y + 26);
 
                     gNode.appendChild(element('rect', {
                         x: tx - pillW / 2, y: ty - pillH + 4,
@@ -2298,7 +2397,7 @@
                 svg.appendChild(element('text', {
                     x: padLeft + plotW, y: H_svg - 10,
                     fill: '#64748b', 'font-size': '10.5', 'text-anchor': 'end'
-                }, 'Gris: viga original • Amarillo: nudos • Rueda mouse: Zoom • Arrastre: Pan'));
+                }, 'Gris: viga original • Amarillo: nudos • Rueda: Zoom • Arrastre: Mover'));
             }
 
             const maxDisp = Math.max(...dofs.map(d => Math.hypot(d.ux, d.uy)));
@@ -2354,166 +2453,59 @@
             }
         }
 
-        // ══════════════════════════════════════════════════════════════
-        // 6. CONTROLADOR UNIVERSAL DE PAN & ZOOM (4 DIAGRAMAS)
-        // ══════════════════════════════════════════════════════════════
-        function setupPanZoomControllers() {
-            const configs = [
-                {
-                    svgId: 'elasticPolygon',
-                    btnIn: 'btnZoomInPoly',
-                    btnOut: 'btnZoomOutPoly',
-                    btnReset: 'btnResetPoly',
-                    defaultVb: [0, 0, 850, 320]
-                },
-                {
-                    svgId: 'elasticSmooth',
-                    btnIn: 'btnZoomInSmooth',
-                    btnOut: 'btnZoomOutSmooth',
-                    btnReset: 'btnResetSmooth',
-                    defaultVb: [0, 0, 850, 320]
-                },
-                {
-                    svgId: 'beamShearDiagram',
-                    btnIn: 'btnZoomInShear',
-                    btnOut: 'btnZoomOutShear',
-                    btnReset: 'btnResetShear',
-                    defaultVb: [0, 0, 900, 320]
-                },
-                {
-                    svgId: 'beamMomentDiagram',
-                    btnIn: 'btnZoomInMoment',
-                    btnOut: 'btnZoomOutMoment',
-                    btnReset: 'btnResetMoment',
-                    defaultVb: [0, 0, 900, 320]
-                }
-            ];
+        // ── INICIALIZACIÓN UNIFICADA DE CONTROLADORES Y EVENTOS ───────
+        function initDiagramControllers() {
+            // Registrar los 4 diagramas con sus controles de Pan & Zoom
+            registerPanZoom('elasticPolygon', [0, 0, 850, 320], 'btnZoomInPoly', 'btnZoomOutPoly', 'btnResetPoly');
+            registerPanZoom('elasticSmooth', [0, 0, 850, 320], 'btnZoomInSmooth', 'btnZoomOutSmooth', 'btnResetSmooth');
+            registerPanZoom('beamShearDiagram', [0, 0, 900, 320], 'btnZoomInShear', 'btnZoomOutShear', 'btnResetShear');
+            registerPanZoom('beamMomentDiagram', [0, 0, 900, 320], 'btnZoomInMoment', 'btnZoomOutMoment', 'btnResetMoment');
 
-            configs.forEach(cfg => {
-                const svg = document.getElementById(cfg.svgId);
-                if (!svg) return;
-
-                let [curX, curY, curW, curH] = cfg.defaultVb;
-                let isDown = false;
-                let startX = 0, startY = 0;
-                let startVbX = 0, startVbY = 0;
-
-                function applyVb() {
-                    svg.setAttribute('viewBox', `${curX.toFixed(2)} ${curY.toFixed(2)} ${curW.toFixed(2)} ${curH.toFixed(2)}`);
-                }
-
-                // Mouse Drag (Pan)
-                svg.addEventListener('mousedown', e => {
-                    if (e.button !== 0) return;
-                    isDown = true;
-                    startX = e.clientX;
-                    startY = e.clientY;
-                    startVbX = curX;
-                    startVbY = curY;
-                    svg.style.cursor = 'grabbing';
-                    svg.dataset.isPanning = 'true';
-                });
-
-                window.addEventListener('mousemove', e => {
-                    if (!isDown) return;
-                    const dx = e.clientX - startX;
-                    const dy = e.clientY - startY;
-
-                    const rect = svg.getBoundingClientRect();
-                    if (!rect.width || !rect.height) return;
-
-                    const scaleX = curW / rect.width;
-                    const scaleY = curH / rect.height;
-
-                    curX = startVbX - dx * scaleX;
-                    curY = startVbY - dy * scaleY;
-                    applyVb();
-                });
-
-                window.addEventListener('mouseup', () => {
-                    if (isDown) {
-                        isDown = false;
-                        svg.style.cursor = 'grab';
-                        setTimeout(() => { svg.dataset.isPanning = 'false'; }, 50);
-                    }
-                });
-
-                // Mouse Wheel (Zoom centrado en cursor)
-                svg.addEventListener('wheel', e => {
-                    e.preventDefault();
-                    const rect = svg.getBoundingClientRect();
-                    if (!rect.width || !rect.height) return;
-
-                    const mouseX = e.clientX - rect.left;
-                    const mouseY = e.clientY - rect.top;
-
-                    const pX = curX + (mouseX / rect.width) * curW;
-                    const pY = curY + (mouseY / rect.height) * curH;
-
-                    const factor = e.deltaY < 0 ? 0.82 : 1.20;
-                    const nextW = curW * factor;
-                    const nextH = curH * factor;
-
-                    const origW = cfg.defaultVb[2];
-                    if (nextW < origW * 0.08 || nextW > origW * 12.0) return;
-
-                    curW = nextW;
-                    curH = nextH;
-                    curX = pX - (mouseX / rect.width) * curW;
-                    curY = pY - (mouseY / rect.height) * curH;
-                    applyVb();
-                }, { passive: false });
-
-                // Doble clic para restablecer vista
-                svg.addEventListener('dblclick', () => {
-                    [curX, curY, curW, curH] = cfg.defaultVb;
-                    applyVb();
-                });
-
-                // Botones interactivos
-                document.getElementById(cfg.btnIn)?.addEventListener('click', () => {
-                    const factor = 0.80;
-                    const cx = curX + curW / 2;
-                    const cy = curY + curH / 2;
-                    curW *= factor;
-                    curH *= factor;
-                    curX = cx - curW / 2;
-                    curY = cy - curH / 2;
-                    applyVb();
-                });
-
-                document.getElementById(cfg.btnOut)?.addEventListener('click', () => {
-                    const factor = 1.25;
-                    const cx = curX + curW / 2;
-                    const cy = curY + curH / 2;
-                    curW *= factor;
-                    curH *= factor;
-                    curX = cx - curW / 2;
-                    curY = cy - curH / 2;
-                    applyVb();
-                });
-
-                document.getElementById(cfg.btnReset)?.addEventListener('click', () => {
-                    [curX, curY, curW, curH] = cfg.defaultVb;
-                    applyVb();
-                });
-            });
-        }
-
-        document.addEventListener('beam:recomputed', renderElastic);
-        document.addEventListener('DOMContentLoaded', () => {
+            // Sliders de la curva elástica
             $('elasticAmplification')?.addEventListener('input', renderElastic);
             $('elasticZoomX')?.addEventListener('input', renderElastic);
             $('elasticZoomY')?.addEventListener('input', renderElastic);
+
+            // Botón de restablecer vista y sliders de curva elástica
             $('btnResetElasticZoom')?.addEventListener('click', () => {
                 if ($('elasticAmplification')) $('elasticAmplification').value = 30;
                 if ($('elasticZoomX')) $('elasticZoomX').value = 100;
                 if ($('elasticZoomY')) $('elasticZoomY').value = 100;
+                pzControllers['elasticPolygon']?.resetView();
+                pzControllers['elasticSmooth']?.resetView();
                 renderElastic();
             });
-            setupPanZoomControllers();
+
+            // Sliders de diagramas DFC y DMF
+            $('diagZoomX')?.addEventListener('input', drawDiags);
+            $('diagZoomY')?.addEventListener('input', drawDiags);
+
+            // Botón de restablecer vista y sliders de diagramas DFC y DMF
+            $('btnResetDiagSliders')?.addEventListener('click', () => {
+                if ($('diagZoomX')) $('diagZoomX').value = 100;
+                if ($('diagZoomY')) $('diagZoomY').value = 100;
+                pzControllers['beamShearDiagram']?.resetView();
+                pzControllers['beamMomentDiagram']?.resetView();
+                drawDiags();
+            });
+
+            // Trazado inicial
+            drawDiags();
+            renderElastic();
+        }
+
+        // Suscripción a eventos de recálculo
+        document.addEventListener('beam:recomputed', () => {
+            drawDiags();
             renderElastic();
         });
+
+        // Asegurar ejecución inmediata tanto en carga diferida como en DOMContentLoaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initDiagramControllers);
+        } else {
+            initDiagramControllers();
+        }
     })();
 </script>
 
