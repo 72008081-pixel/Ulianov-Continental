@@ -828,7 +828,254 @@
             font-weight: 700;
             color: #f8fafc;
         }
-    </style>
+    
+        /* ── MODO GUIADO Y MODO EXPERTO (ESTILO NEÓN LIQUID GLASS) ──── */
+        .view-mode-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 10px 20px;
+            background: rgba(15, 23, 42, 0.82);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-bottom: 1px solid rgba(0, 240, 255, 0.22);
+            position: relative;
+            z-index: 40;
+        }
+        .view-mode-tabs {
+            display: flex;
+            gap: 6px;
+            background: rgba(3, 7, 18, 0.65);
+            padding: 4px;
+            border-radius: 99px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .view-mode-btn {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            padding: 7px 16px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .view-mode-btn.active {
+            background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
+            color: #ffffff;
+            box-shadow: 0 0 16px rgba(0, 240, 255, 0.35);
+        }
+        .view-mode-btn:hover:not(.active) {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .view-action-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .tool-btn-neon {
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid rgba(0, 240, 255, 0.35);
+            color: #00f0ff;
+            padding: 7px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
+        }
+        .tool-btn-neon:hover {
+            background: rgba(0, 240, 255, 0.22);
+            border-color: #00f0ff;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.45);
+            transform: translateY(-1px);
+        }
+        .tool-btn-neon-emerald {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #34d399;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+        }
+        .tool-btn-neon-emerald:hover {
+            background: rgba(16, 185, 129, 0.25);
+            border-color: #34d399;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+
+        /* WIZARD DE PASOS GUIADOS */
+        .wizard-nav {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 12px 20px 6px 20px;
+            padding: 10px 14px;
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(20px);
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        }
+        .wizard-step {
+            flex: 1;
+            min-width: 140px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .wizard-step .step-num {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            color: #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 11px;
+        }
+        .wizard-step.active {
+            background: rgba(0, 240, 255, 0.12);
+            border-color: #00f0ff;
+            color: #ffffff;
+            box-shadow: 0 0 16px rgba(0, 240, 255, 0.25);
+        }
+        .wizard-step.active .step-num {
+            background: #00f0ff;
+            color: #030712;
+            box-shadow: 0 0 8px #00f0ff;
+        }
+        .wizard-step:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+
+        .guided-hidden {
+            display: none !important;
+        }
+
+        /* REALCE NEÓN FLUORESCENTE EN TEXTOS Y TARJETAS */
+        .input-card, .canvas-card, .diagram-card {
+            background: rgba(17, 24, 39, 0.8) !important;
+            backdrop-filter: blur(28px) !important;
+            -webkit-backdrop-filter: blur(28px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.14) !important;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+        }
+        .input-card-title span {
+            color: #ffffff !important;
+            text-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+        }
+        .neon-green-glow {
+            color: #00ff88 !important;
+            text-shadow: 0 0 8px rgba(0, 255, 136, 0.45);
+        }
+        .neon-cyan-glow {
+            color: #00f0ff !important;
+            text-shadow: 0 0 8px rgba(0, 240, 255, 0.45);
+        }
+        .neon-amber-glow {
+            color: #fbbf24 !important;
+            text-shadow: 0 0 8px rgba(251, 191, 36, 0.45);
+        }
+
+        /* TOAST FLOTANTE EN CANVAS PARA CLIC INTERACTIVO EN APOYOS */
+        #canvasInteractiveToast {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(16px);
+            border: 1.5px solid #00f0ff;
+            border-radius: 99px;
+            padding: 7px 18px;
+            font-size: 12px;
+            font-weight: 800;
+            color: #00f0ff;
+            box-shadow: 0 0 24px rgba(0, 240, 255, 0.4);
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 30;
+        }
+        #canvasInteractiveToast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* MODALES LIQUID GLASS (GALERÍA Y MEMORIA) */
+        .cb-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: rgba(3, 7, 18, 0.88);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            opacity: 1;
+            transition: opacity 0.25s ease;
+        }
+        .cb-modal-overlay.cb-hidden {
+            display: none !important;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .cb-modal-container {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(36px) saturate(190%);
+            border: 1.5px solid rgba(255, 255, 255, 0.18);
+            border-top: 1.5px solid rgba(0, 240, 255, 0.5);
+            border-radius: 20px;
+            max-width: 920px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 24px;
+            box-shadow: 0 35px 90px rgba(0, 0, 0, 0.85);
+            color: #f8fafc;
+            animation: cbGlassPop 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .gallery-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.22s ease;
+        }
+        .gallery-card:hover {
+            background: rgba(0, 240, 255, 0.08);
+            border-color: #00f0ff;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 240, 255, 0.2);
+        }
+</style>
 </head>
 <body>
 
@@ -911,7 +1158,51 @@
     </section>
 
     <!-- ══ WORKSPACE PRINCIPAL (CANVAS + ENTRADAS) ══════════════════ -->
-    <main class="workspace">
+        <!-- ══ BARRA DE MODO DE VISTA Y ACCIONES RÁPIDAS ═════════════════ -->
+    <div class="view-mode-bar">
+        <div class="view-mode-tabs">
+            <button type="button" class="view-mode-btn active" id="btnModeGuided">✨ Modo Guiado (Paso a Paso)</button>
+            <button type="button" class="view-mode-btn" id="btnModeClassic">⚡ Modo Experto (Todas las Tablas)</button>
+        </div>
+        <div class="view-action-buttons">
+            <button type="button" class="tool-btn-neon" id="btnOpenGallery">📚 Galería de Ejemplos</button>
+            <button type="button" class="tool-btn-neon tool-btn-neon-emerald" id="btnOpenReport">📄 Memoria de Cálculo (PDF/Imprimir)</button>
+        </div>
+    </div>
+
+    <!-- ══ WIZARD DE PASOS GUIADOS (MODO GUIADO) ═════════════════════ -->
+    <div id="wizardStepNav" class="wizard-nav">
+        <button type="button" class="wizard-step active" data-step="1">
+            <span class="step-num">1</span>
+            <div>
+                <div style="font-weight: 800; font-size: 12px; color: #fff;">Geometría y Apoyos</div>
+                <div style="font-size: 10px; color: #94a3b8;">Tramos, cotas y nudos</div>
+            </div>
+        </button>
+        <button type="button" class="wizard-step" data-step="2">
+            <span class="step-num">2</span>
+            <div>
+                <div style="font-weight: 800; font-size: 12px; color: #fff;">Sección y Material</div>
+                <div style="font-size: 10px; color: #94a3b8;">b, h, Inercia e Iz</div>
+            </div>
+        </button>
+        <button type="button" class="wizard-step" data-step="3">
+            <span class="step-num">3</span>
+            <div>
+                <div style="font-weight: 800; font-size: 12px; color: #fff;">Cargas (q, P, M)</div>
+                <div style="font-size: 10px; color: #94a3b8;">Tabla 3.1, puntuales y oblicuas</div>
+            </div>
+        </button>
+        <button type="button" class="wizard-step" data-step="4">
+            <span class="step-num">4</span>
+            <div>
+                <div style="font-weight: 800; font-size: 12px; color: #fff;">Diagramas y Matrices</div>
+                <div style="font-size: 10px; color: #94a3b8;">Cortante V(x), Momento M(x) y [K]</div>
+            </div>
+        </button>
+    </div>
+
+<main class="workspace">
 
         <!-- ── COLUMNA IZQUIERDA: CANVAS INTERACTIVO ──────────────── -->
         <section class="canvas-card">
@@ -931,6 +1222,7 @@
             </div>
 
             <div class="canvas-stage">
+                <div id="canvasInteractiveToast">✨ Clic en apoyo: Modificado</div>
                 <canvas id="canvasGraficaFinal" width="1360" height="480"></canvas>
 
                 <!-- Tarjeta flotante en canvas -->
@@ -977,7 +1269,7 @@
         <section class="inputs-column">
 
             <!-- 1. SECCIÓN TRANSVERSAL, STEINER Y MÓDULO E -->
-            <div class="input-card">
+            <div class="input-card" id="cardSection">
                 <div class="input-card-head">
                     <div class="input-card-title">
                         <span>1. Sección Transversal, Steiner y Módulo E</span>
@@ -1070,7 +1362,7 @@
 
             <!-- 2. ASISTENTE Y TABLA DE TRAMOS (BARRAS) -->
             <!-- 2. GEOMETRÍA DE TRAMOS Y COORDENADAS DE NUDOS -->
-            <div class="input-card">
+            <div class="input-card" id="cardBars">
                 <div class="input-card-head">
                     <div class="input-card-title">
                         <span>2. Geometría de Tramos y Coordenadas de Nudos</span>
@@ -1110,7 +1402,7 @@
             </div>
 
             <!-- 3. EVALUACIÓN NODAL Y APOYOS (HASTA 12 NUDOS) -->
-            <div class="input-card">
+            <div class="input-card" id="cardNodes">
                 <div class="input-card-head">
                     <div class="input-card-title">
                         <span>3. Evaluación Nodal y Apoyos (Hasta 12 Nudos)</span>
@@ -1135,7 +1427,7 @@
             </div>
 
             <!-- 3.1 CARGAS DISTRIBUIDAS (EXCLUSIVAMENTE PARA DISTRIBUIDAS) -->
-            <div class="input-card">
+            <div class="input-card" id="cardDistLoads">
                 <div class="input-card-head" style="flex-wrap: wrap; gap: 8px;">
                     <div class="input-card-title">
                         <span>3.1 Cargas Distribuidas (Por Tramo o Zona Cargada)</span>
@@ -1171,7 +1463,7 @@
             </div>
 
             <!-- 4. DESCOMPONEDOR DE CARGAS OBLICUAS (TRIÁNGULO O ÁNGULO) -->
-            <div class="input-card">
+            <div class="input-card" id="cardOblique">
                 <div class="input-card-head">
                     <div class="input-card-title">
                         <span>4. Descomponedor de Cargas Oblicuas / Inclinadas</span>
@@ -1194,7 +1486,7 @@
     </main>
 
     <!-- ══ PESTAÑAS INFERIORES: RESULTADOS Y AUDITORÍA MATRICIAL ════ -->
-    <section class="results-section">
+    <section class="results-section" id="cardMatrices">
         <div class="input-card">
             <div class="card-header-bar" style="border-bottom: none; padding-bottom: 0;">
                 <div class="tabs-nav">
@@ -1349,7 +1641,7 @@
     </section>
 
     <!-- DIAGRAMAS DE ESFUERZOS INTERNOS -->
-    <section class="results-section" id="beamInternalDiagramSection">
+    <section class="results-section" id="cardDiagrams">
         <div class="input-card" style="padding:18px">
             <div class="mini-card-head" style="color: var(--accent-amber); font-size: 15px; font-weight: 700; margin-bottom: 6px;">
                 <span>📉 Diagramas de Esfuerzos Internos: Fuerza Cortante (DFC) y Momento Flector (DMF)</span>
@@ -1668,5 +1960,75 @@
         });
     })();
 </script>
+
+    <!-- ══ MODAL: GALERÍA DE EJEMPLOS DE EXAMEN ══════════════════════ -->
+    <div id="cb-gallery-modal" class="cb-modal-overlay cb-hidden">
+        <div class="cb-modal-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 12px;">
+                <div>
+                    <h3 style="font-size: 18px; font-weight: 800; color: #00f0ff; margin: 0;">📚 Galería de Ejemplos Típicos de Examen</h3>
+                    <p style="font-size: 12px; color: #94a3b8; margin: 4px 0 0;">Selecciona una viga tipo para cargarla al instante en el simulador</p>
+                </div>
+                <button type="button" id="btnCloseGallery" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer;">✕</button>
+            </div>
+            <div class="gallery-grid">
+                <div class="gallery-card" data-preset="presentacion_pdf">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="font-size: 10px; font-weight: 800; color: #00f0ff; background: rgba(0,240,255,0.15); padding: 2px 7px; border-radius: 4px;">EJERCICIO MAESTRO</span>
+                        <span style="font-size: 11px; color: #94a3b8;">7 Nudos · 6 Tramos</span>
+                    </div>
+                    <h4 style="font-size: 13.5px; font-weight: 700; color: #fff; margin: 0 0 6px;">Viga Completa Presentación PDF</h4>
+                    <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.4; margin: 0 0 10px;">Carga puntual oblicua de 2500 Kgf (3:4), momento horario M=800 Kgf·m, cargas distribuidas y apoyos mixtos.</p>
+                    <button type="button" class="tool-btn-neon" style="width: 100%; justify-content: center; font-size: 11px;">Cargar Ejercicio</button>
+                </div>
+                <div class="gallery-card" data-preset="cuaderno_distribuidas">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="font-size: 10px; font-weight: 800; color: #34d399; background: rgba(16,185,129,0.15); padding: 2px 7px; border-radius: 4px;">DISTRIBUIDAS</span>
+                        <span style="font-size: 11px; color: #94a3b8;">8 Nudos · 7 Tramos</span>
+                    </div>
+                    <h4 style="font-size: 13.5px; font-weight: 700; color: #fff; margin: 0 0 6px;">Viga con Distribuidas en Varios Tramos</h4>
+                    <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.4; margin: 0 0 10px;">Cargas uniformes q=15 Kgf/cm y q=20 Kgf/cm en vanos independientes con apoyos fijos y rodillos.</p>
+                    <button type="button" class="tool-btn-neon" style="width: 100%; justify-content: center; font-size: 11px;">Cargar Ejercicio</button>
+                </div>
+                <div class="gallery-card" data-preset="ejemplos_ingeniero">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="font-size: 10px; font-weight: 800; color: #fbbf24; background: rgba(251,191,36,0.15); padding: 2px 7px; border-radius: 4px;">CLÁSICO CÁTEDRA</span>
+                        <span style="font-size: 11px; color: #94a3b8;">7 Nudos · 6 Tramos</span>
+                    </div>
+                    <h4 style="font-size: 13.5px; font-weight: 700; color: #fff; margin: 0 0 6px;">Viga Continua Isostática e Hiperestática</h4>
+                    <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.4; margin: 0 0 10px;">Viga continua simétrica con cargas verticales puntuales en nudos y apoyos distribuidos.</p>
+                    <button type="button" class="tool-btn-neon" style="width: 100%; justify-content: center; font-size: 11px;">Cargar Ejercicio</button>
+                </div>
+                <div class="gallery-card" data-preset="viga_steiner_t">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="font-size: 10px; font-weight: 800; color: #818cf8; background: rgba(129,140,248,0.15); padding: 2px 7px; border-radius: 4px;">SECCIÓN COMPUESTA</span>
+                        <span style="font-size: 11px; color: #94a3b8;">5 Nudos · 4 Tramos</span>
+                    </div>
+                    <h4 style="font-size: 13.5px; font-weight: 700; color: #fff; margin: 0 0 6px;">Viga con Sección T y Teorema de Steiner</h4>
+                    <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.4; margin: 0 0 10px;">Inercia y centroide calculados analíticamente por Steiner con cargas de 12 y 18 Kgf/cm.</p>
+                    <button type="button" class="tool-btn-neon" style="width: 100%; justify-content: center; font-size: 11px;">Cargar Ejercicio</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL: MEMORIA DE CÁLCULO ACADÉMICA (IMPRIMIBLE / PDF) ══════ -->
+    <div id="cb-report-modal" class="cb-modal-overlay cb-hidden">
+        <div class="cb-modal-container" style="max-width: 980px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 12px;">
+                <div>
+                    <h3 style="font-size: 18px; font-weight: 800; color: #34d399; margin: 0;">📄 Memoria de Cálculo Académica para Examen</h3>
+                    <p style="font-size: 12px; color: #94a3b8; margin: 4px 0 0;">Reporte formal paso a paso listo para imprimir o enviar como PDF</p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="btnPrintReport" class="tool-btn-neon tool-btn-neon-emerald">🖨️ Imprimir / Guardar en PDF</button>
+                    <button type="button" id="btnCloseReport" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer;">✕</button>
+                </div>
+            </div>
+            <div id="reportContentArea" style="margin-top: 16px; background: #ffffff; color: #0f172a; border-radius: 12px; padding: 24px; font-family: 'Segoe UI', Calibri, sans-serif; font-size: 12.5px; line-height: 1.6;">
+                <!-- Se llena dinámicamente con JS -->
+            </div>
+        </div>
+    </div>
 </body>
 </html>
