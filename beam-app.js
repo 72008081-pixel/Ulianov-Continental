@@ -910,6 +910,11 @@
         const container = document.getElementById('beamEquivalentCardsContainer');
         if (!container) return;
 
+        const fFem = document.getElementById('formulaFemTitle');
+        if (fFem && typeof renderLatex === 'function') {
+            fFem.innerHTML = renderLatex('\\{Q_{\\text{equiv}}\\} = \\left\\{ \\frac{q \\cdot a}{2}, \\; \\frac{q \\cdot a^2}{12} \\right\\}', false);
+        }
+
         if (!sol || !sol.success || !sol.barsTable) {
             container.innerHTML = '<div style="grid-column: 1 / -1; color:#64748b; font-size:12px; padding:12px; text-align:center;">Sin solución calculada.</div>';
             return;
@@ -1033,7 +1038,7 @@
                     <text x="${((x1 + x2) / 2).toFixed(1)}" y="83" fill="#94a3b8" font-size="10" font-family="monospace" text-anchor="middle">a = ${L_m} m (${L_cm} cm)</text>
 
                     <!-- ══ NIVEL 2: PUNTUALES HACIA ABAJO (q·a / 2 ↓) ═══════════════════ -->
-                    <text x="14" y="104" fill="#00f0ff" font-size="10.5" font-weight="800" font-family="sans-serif">2. Cargas Puntuales Extremas (Hacia Abajo ↓):</text>
+                    <text x="14" y="104" fill="#00f0ff" font-size="10.5" font-weight="800" font-family="sans-serif">2. Cargas Puntuales Extremas (P = q·a / 2 ↓):</text>
 
                     <!-- Línea de Viga Nivel 2 -->
                     <line x1="${x1}" y1="138" x2="${x2}" y2="138" stroke="#334155" stroke-width="3.5" stroke-linecap="round" />
@@ -1042,27 +1047,27 @@
 
                     <!-- Flecha Puntual Izquierda HACIA ABAJO ↓ -->
                     <line x1="${x1}" y1="116" x2="${x1}" y2="158" stroke="#00f0ff" stroke-width="2.8" marker-end="url(#arrow-cyan-down-${b.barNum})" />
-                    <text x="${x1 + 10}" y="152" fill="#00f0ff" font-size="10.5" font-weight="bold" font-family="monospace">q·a/2 = ${ViVal} kgf (↓)</text>
+                    <text x="${x1 + 10}" y="152" fill="#00f0ff" font-size="10" font-weight="bold" font-family="monospace">P_i = ${ViVal} kgf (↓)</text>
 
                     <!-- Flecha Puntual Derecha HACIA ABAJO ↓ -->
                     <line x1="${x2}" y1="116" x2="${x2}" y2="158" stroke="#00f0ff" stroke-width="2.8" marker-end="url(#arrow-cyan-down-${b.barNum})" />
-                    <text x="${x2 - 10}" y="152" fill="#00f0ff" font-size="10.5" font-weight="bold" font-family="monospace" text-anchor="end">q·a/2 = ${VjVal} kgf (↓)</text>
+                    <text x="${x2 - 10}" y="152" fill="#00f0ff" font-size="10" font-weight="bold" font-family="monospace" text-anchor="end">P_j = ${VjVal} kgf (↓)</text>
 
-                    <!-- ══ NIVEL 3: MOMENTOS HACIA ADENTRO (q·a² / 12 ⤻ ⤺) ════════════════ -->
-                    <text x="14" y="188" fill="#10b981" font-size="10.5" font-weight="800" font-family="sans-serif">3. Momentos de Fijación (Hacia Adentro ⤻ ⤺):</text>
+                    <!-- ══ NIVEL 3: MOMENTOS HACIA ADENTRO (q·a² / 12 ↺ ↻) ════════════════ -->
+                    <text x="14" y="188" fill="#10b981" font-size="10.5" font-weight="800" font-family="sans-serif">3. Momentos de Fijación Hacia Adentro (M = q·a² / 12 ↺ ↻):</text>
 
                     <!-- Línea de Viga Nivel 3 -->
                     <line x1="${x1}" y1="228" x2="${x2}" y2="228" stroke="#334155" stroke-width="3.5" stroke-linecap="round" />
                     <circle cx="${x1}" cy="228" r="4.5" fill="#10b981" />
                     <circle cx="${x2}" cy="228" r="4.5" fill="#f59e0b" />
 
-                    <!-- Flecha Curva Izquierda HACIA ADENTRO ⤻ (Antihorario hacia el interior del tramo) -->
+                    <!-- Flecha Curva Izquierda HACIA ADENTRO ↺ (Antihorario hacia el interior del tramo) -->
                     <path d="M ${x1 - 18} 240 A 22 22 0 0 1 ${x1 + 18} 218" fill="none" stroke="#10b981" stroke-width="2.8" marker-end="url(#arrow-green-inward-${b.barNum})" />
-                    <text x="${x1 + 22}" y="214" fill="#10b981" font-size="10.5" font-weight="bold" font-family="monospace">q·a²/12 = ${MiVal} kgf·cm (⤻ hacia adentro)</text>
+                    <text x="${x1 + 22}" y="214" fill="#10b981" font-size="10" font-weight="bold" font-family="monospace">M_i = ${MiVal} kgf·cm (↺)</text>
 
-                    <!-- Flecha Curva Derecha HACIA ADENTRO ⤺ (Horario hacia el interior del tramo) -->
+                    <!-- Flecha Curva Derecha HACIA ADENTRO ↻ (Horario hacia el interior del tramo) -->
                     <path d="M ${x2 + 18} 240 A 22 22 0 0 0 ${x2 - 18} 218" fill="none" stroke="#f59e0b" stroke-width="2.8" marker-end="url(#arrow-amber-inward-${b.barNum})" />
-                    <text x="${x2 - 22}" y="214" fill="#f59e0b" font-size="10.5" font-weight="bold" font-family="monospace" text-anchor="end">q·a²/12 = ${MjVal} kgf·cm (⤺ hacia adentro)</text>
+                    <text x="${x2 - 22}" y="214" fill="#f59e0b" font-size="10" font-weight="bold" font-family="monospace" text-anchor="end">M_j = ${MjVal} kgf·cm (↻)</text>
                 </svg>
             `;
 
@@ -1519,6 +1524,16 @@
         if(tbR)tbR.innerHTML=(currentSolution?.calculatedReactions||[]).map(r=>
             '<tr><td><strong>'+r.uLbl+'</strong></td><td class="cell-auto-green">'+fmt(r.reactionFinal)+'</td><td>'+r.unit+'</td></tr>'
         ).join('')||'<tr><td colspan="3">Sin reacciones</td></tr>';
+
+        // Renderizado de fórmulas matriciales oficiales en LaTeX KaTeX
+        const fR = document.getElementById('formulaReactions');
+        if (fR && typeof renderLatex === 'function') {
+            fR.innerHTML = renderLatex('\\{R\\} = [K_{21}] \\cdot \\{D\\} - \\{Q_{\\text{rest}}\\}', false);
+        }
+        const fD = document.getElementById('formulaDisplacements');
+        if (fD && typeof renderLatex === 'function') {
+            fD.innerHTML = renderLatex('\\{D\\} = [K_{11}]^{-1} \\cdot \\{Q_{\\text{lib}}\\}', false);
+        }
     }
 
     // ── RENDERIZADO DE PANELES MATRICIALES (PASO A PASO) ─────────

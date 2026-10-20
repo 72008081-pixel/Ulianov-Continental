@@ -806,20 +806,35 @@
             border: 1px solid rgba(0, 240, 255, 0.3);
         }
         .eq-card-loads {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
             font-size: 11px;
-            margin-top: 8px;
+            margin-top: 10px;
         }
         .eq-load-node {
-            background: #111a2e;
-            border-radius: 6px;
-            padding: 8px;
-            border-left: 3px solid #10b981;
+            background: #0d1527;
+            border-radius: 8px;
+            padding: 10px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-left: 3.5px solid #00f0ff;
         }
         .eq-load-node.node-j {
             border-left-color: #f59e0b;
+        }
+        .latex-eq-container {
+            overflow-x: auto;
+            padding: 2px 4px;
+            background: rgba(3, 7, 18, 0.5);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            margin: 3px 0 6px;
+        }
+        .latex-eq-container .katex-display {
+            margin: 2px 0 !important;
+        }
+        .latex-eq-container .katex {
+            font-size: 1.05em !important;
         }
         .eq-node-title {
             font-weight: 700;
@@ -1163,9 +1178,9 @@
                 <div class="brand-logo">📐</div>
                 <div class="brand-title-wrap">
                     <h1>
-                        CEREBRO ESTRUCTURAL <span class="brand-badge">v8.1 · Gratis · Código abierto</span>
+                        CEREBRO ESTRUCTURAL <span class="brand-badge">v9.0 · Definitivo · Código abierto</span>
                     </h1>
-                    <div class="brand-subtitle">Análisis Matricial de Vigas Continuas e Inclinadas • PLANTILLA ULIANOV v8.1</div>
+                    <div class="brand-subtitle">Análisis Matricial de Vigas Continuas e Inclinadas • PLANTILLA ULIANOV v9.0</div>
                 </div>
             </div>
 
@@ -1332,7 +1347,7 @@
             <div class="equivalent-loads-section" style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
                 <div class="mini-card-head" style="color: var(--accent-sky); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-weight: 700; font-size: 13px;">⚡ Separación de Cargas Equivalentes por Tramo con Carga Distribuida (FEM)</span>
-                    <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">{Q_equiv} = {q·L/2, q·L²/12}</span>
+                    <span id="formulaFemTitle" style="font-size: 11px; color: var(--text-muted);">{Q_equiv} = {q·L/2, q·L²/12}</span>
                 </div>
                 <div id="beamEquivalentCardsContainer" class="equivalent-cards-grid">
                     <!-- Se llena reactivamente con JS -->
@@ -1591,7 +1606,7 @@
                         <div class="mini-card">
                             <div class="mini-card-head" style="color: var(--accent-emerald);">
                                 <span>Reacciones en Apoyos</span>
-                                <span class="mini-card-formula">{R} = [K₂₁] · {D} − {Q_rest}</span>
+                                <span class="mini-card-formula" id="formulaReactions">{R} = [K₂₁] · {D} − {Q_rest}</span>
                             </div>
                             <div class="table-wrap">
                                 <table class="results-table">
@@ -1609,7 +1624,7 @@
                         <div class="mini-card">
                             <div class="mini-card-head" style="color: var(--accent-sky);">
                                 <span>Desplazamientos y Deflexiones Nodales</span>
-                                <span class="mini-card-formula">{D} = [K₁₁]⁻¹ · {Q_lib}</span>
+                                <span class="mini-card-formula" id="formulaDisplacements">{D} = [K₁₁]⁻¹ · {Q_lib}</span>
                             </div>
                             <div class="table-wrap">
                                 <table class="results-table">
@@ -1768,7 +1783,7 @@
     </section>
     <!-- ══ PIE DE PÁGINA ════════════════════════════════════════════ -->
     <footer class="footer">
-        CEREBRO ESTRUCTURAL v8.1 • Análisis Estructural II • Desarrollado por el Ing. Ulianov Cuba Valencia • Cusco, Perú
+        CEREBRO ESTRUCTURAL v9.0 • Análisis Estructural II • Desarrollado por el Ing. Ulianov Cuba Valencia • Cusco, Perú
         • <a href="https://github.com/72008081-pixel/Ulianov-Continental" target="_blank" rel="noopener">Repositorio en GitHub</a>
     </footer>
 

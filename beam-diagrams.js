@@ -204,10 +204,13 @@ function render(svg, spans, kind, options = {}){
         'stroke-width': 1.8
     });
 
-    // 3. Shading Neón Bajo la Curva y Trazado de Curva
+    // 3. Shading Neón Bajo la Curva, Trazado de Curva y Líneas Verticales de Cierre / Salto
     let vZeroPoints = [];
+    let mZeroPoints = [];
 
-    for(const span of spans){
+    // Trazar cada tramo individual con sombreado y contorno
+    for(let sIdx = 0; sIdx < spans.length; sIdx++){
+        const span = spans[sIdx];
         const pts = span.points;
         if(!pts.length) continue;
 
@@ -233,6 +236,7 @@ function render(svg, spans, kind, options = {}){
             'stroke-linejoin': 'round'
         });
 
+        // Líneas punteadas verticales delimitadoras de tramos
         node('line', {
             x1: px(span.start), y1: padY - 10,
             x2: px(span.start), y2: H - padY + 10,
@@ -240,6 +244,7 @@ function render(svg, spans, kind, options = {}){
             'stroke-dasharray': '3 5'
         });
 
+        // Búsqueda de cruces por cero en Cortante (V = 0)
         if(kind === 'V'){
             for(let i = 0; i < pts.length - 1; i++){
                 const pA = pts[i];
@@ -251,17 +256,119 @@ function render(svg, spans, kind, options = {}){
                 }
             }
         }
+
+        // Búsqueda de cruces por cero en Momento (M = 0 puntos de inflexión)
+        if(kind === 'M'){
+            for(let i = 0; i < pts.length - 1; i++){
+                const pA = pts[i];
+                const pB = pts[i + 1];
+                if((pA.M > 0 && pB.M < 0) || (pA.M < 0 && pB.M > 0)){
+                    const denom = (pA.M - pB.M);
+                    const xZero = Math.abs(denom) > 1e-6 ? (pA.x + pA.M * (pB.x - pA.x) / denom) : pA.x;
+                    mZeroPoints.push(xZero);
+                }
+            }
+        }
     }
 
-    // 4. Resaltar Puntos Clave: V = 0 y M_máx
+    // Búsqueda de cruces por cero en saltos verticales nodales (ej. cargas puntuales o reacciones que cambian signo)
     if(kind === 'V'){
+        for(let k = 0; k < spans.length - 1; k++){
+            const pEnd = spans[k].points[spans[k].points.length - 1];
+            const pNext = spans[k + 1].points[0];
+            if(pEnd && pNext){
+                if((pEnd.V > 0 && pNext.V < 0) || (pEnd.V < 0 && pNext.V > 0)){
+                    vZeroPoints.push(pEnd.x);
+                }
+            }
+        }
+    }
+
+    // ══ LÍNEAS VERTICALES DE CIERRE Y SALTOS ENTRE TRAMOS (CÁTEDRA INGENIERO) ══
+    if(spans.length > 0){
+        const firstSpan = spans[0];
+        const lastSpan = spans[spans.length - 1];
+        const firstPt = firstSpan.points[0];
+        const lastPt = lastSpan.points[lastSpan.points.length - 1];
+
+        // 1. Línea vertical inicial en x = 0 (sube o baja desde el eje basal según la reacción)
+        if(firstPt && Math.abs(firstPt[kind]) > 1e-4){
+            node('line', {
+                x1: px(firstPt.x), y1: baselineY,
+                x2: px(firstPt.x), y2: py(firstPt[kind]),
+                stroke: colorStroke,
+                'stroke-width': 2.8,
+                'stroke-linecap': 'round'
+            });
+        }
+
+        // 2. Líneas verticales de salto nodal entre tramos consecutivos (transición de cortante / momento)
+        for(let k = 0; k < spans.length - 1; k++){
+            const pEnd = spans[k].points[spans[k].points.length - 1];
+            const pNext = spans[k + 1].points[0];
+            if(pEnd && pNext && Math.abs(pEnd[kind] - pNext[kind]) > 1e-4){
+                node('line', {
+                    x1: px(pEnd.x), y1: py(pEnd[kind]),
+                    x2: px(pEnd.x), y2: py(pNext[kind]),
+                    stroke: colorStroke,
+                    'stroke-width': 2.8,
+                    'stroke-linecap': 'round'
+                });
+            }
+        }
+
+        // 3. Línea vertical final de cierre en x = L_total (cierra el diagrama al eje basal)
+        if(lastPt && Math.abs(lastPt[kind]) > 1e-4){
+            node('line', {
+                x1: px(lastPt.x), y1: py(lastPt[kind]),
+                x2: px(lastPt.x), y2: baselineY,
+                stroke: colorStroke,
+                'stroke-width': 2.8,
+                'stroke-linecap': 'round'
+            });
+        }
+
+        // 4. Líneas verticales internas de saltos por cargas puntuales dentro de cada tramo
+        for(const span of spans){
+            const pts = span.points;
+            for(let i = 0; i < pts.length - 1; i++){
+                if(Math.abs(pts[i].x - pts[i + 1].x) < 1e-6 && Math.abs(pts[i][kind] - pts[i + 1][kind]) > 1e-4){
+                    node('line', {
+                        x1: px(pts[i].x), y1: py(pts[i][kind]),
+                        x2: px(pts[i].x), y2: py(pts[i + 1][kind]),
+                        stroke: colorStroke,
+                        'stroke-width': 2.8,
+                        'stroke-linecap': 'round'
+                    });
+                }
+            }
+        }
+    }
+
+    // 4. Resaltar Puntos Clave: V = 0, V_máx, M_máx y M = 0
+    if(kind === 'V'){
+        // Puntos de cortante cero (V = 0) que generan Momento Máximo
         const uniqueVZero = vZeroPoints.filter((x, idx) => idx === 0 || Math.abs(x - vZeroPoints[idx - 1]) > 5.0);
         for(const x0 of uniqueVZero){
             const cx = px(x0);
             const cy = baselineY;
-            node('circle', { cx, cy, r: 5.5, fill: '#00f0ff', stroke: '#090d16', 'stroke-width': 2.0 });
-            node('circle', { cx, cy, r: 8.5, fill: 'none', stroke: 'rgba(0, 240, 255, 0.5)', 'stroke-width': 1.5 });
-            const tagY = cy > H / 2 ? cy - 14 : cy + 18;
+
+            // Obtener el momento correspondiente en esta posición x0
+            let Mx0 = 0;
+            for(let i = 0; i < all.length - 1; i++){
+                if(x0 >= all[i].x && x0 <= all[i + 1].x){
+                    const dx = all[i + 1].x - all[i].x;
+                    const t = dx > 1e-6 ? (x0 - all[i].x) / dx : 0;
+                    Mx0 = all[i].M + t * (all[i + 1].M - all[i].M);
+                    break;
+                }
+            }
+
+            node('circle', { cx, cy, r: 6.0, fill: '#00f0ff', stroke: '#090d16', 'stroke-width': 2.2 });
+            node('circle', { cx, cy, r: 10.0, fill: 'none', stroke: 'rgba(0, 240, 255, 0.6)', 'stroke-width': 1.6 });
+            
+            const tagY = cy > H / 2 ? cy - 16 : cy + 20;
+            const mText = Math.abs(Mx0) > 1e-3 ? ` ➔ M_máx=${(Mx0 / 100).toFixed(1)} kgf·m` : '';
             node('text', {
                 x: cx, y: tagY,
                 fill: '#00f0ff',
@@ -269,27 +376,97 @@ function render(svg, spans, kind, options = {}){
                 'font-weight': 'bold',
                 'text-anchor': 'middle',
                 'font-family': 'monospace'
-            }, 'V=0 @ ' + (x0 / 100).toFixed(2) + 'm');
+            }, `V=0 @ ${(x0 / 100).toFixed(2)}m${mText}`);
+        }
+
+        // Cortantes máximos absolutos
+        let maxV = all[0];
+        let minV = all[0];
+        for(const p of all){
+            if(p.V > maxV.V) maxV = p;
+            if(p.V < minV.V) minV = p;
+        }
+        if(maxV && Math.abs(maxV.V) > 1e-4){
+            const cx = px(maxV.x);
+            const cy = py(maxV.V);
+            node('circle', { cx, cy, r: 4.5, fill: '#38bdf8', stroke: '#090d16', 'stroke-width': 1.8 });
+            node('text', {
+                x: cx, y: cy - 8,
+                fill: '#38bdf8',
+                'font-size': '9.5px',
+                'font-weight': 'bold',
+                'text-anchor': 'middle',
+                'font-family': 'monospace'
+            }, `+${maxV.V.toFixed(1)}`);
+        }
+        if(minV && Math.abs(minV.V) > 1e-4 && minV !== maxV){
+            const cx = px(minV.x);
+            const cy = py(minV.V);
+            node('circle', { cx, cy, r: 4.5, fill: '#38bdf8', stroke: '#090d16', 'stroke-width': 1.8 });
+            node('text', {
+                x: cx, y: cy + 14,
+                fill: '#38bdf8',
+                'font-size': '9.5px',
+                'font-weight': 'bold',
+                'text-anchor': 'middle',
+                'font-family': 'monospace'
+            }, `${minV.V.toFixed(1)}`);
         }
     } else {
+        // En Momento Flector M:
         let maxPt = all[0];
+        let minPt = all[0];
         for(const p of all){
-            if(Math.abs(p.M) > Math.abs(maxPt.M)) maxPt = p;
+            if(p.M > maxPt.M) maxPt = p;
+            if(p.M < minPt.M) minPt = p;
         }
-        if(maxPt && Math.abs(maxPt.M) > 1e-4){
+
+        // 1. Momento Máximo Positivo (Sagante / tramo)
+        if(maxPt && maxPt.M > 1e-4){
             const cx = px(maxPt.x);
             const cy = py(maxPt.M);
-            node('circle', { cx, cy, r: 6.0, fill: '#f59e0b', stroke: '#090d16', 'stroke-width': 2.0 });
-            node('circle', { cx, cy, r: 9.5, fill: 'none', stroke: 'rgba(245, 158, 11, 0.5)', 'stroke-width': 1.5 });
-            const tagY = cy < baselineY ? cy - 12 : cy + 18;
+            node('circle', { cx, cy, r: 6.5, fill: '#f59e0b', stroke: '#090d16', 'stroke-width': 2.2 });
+            node('circle', { cx, cy, r: 10.5, fill: 'none', stroke: 'rgba(245, 158, 11, 0.6)', 'stroke-width': 1.6 });
             node('text', {
-                x: cx, y: tagY,
-                fill: '#f59e0b',
+                x: cx, y: cy - 12,
+                fill: '#fbbf24',
                 'font-size': '11px',
                 'font-weight': 'bold',
                 'text-anchor': 'middle',
                 'font-family': 'monospace'
-            }, 'M_máx = ' + maxPt.M.toFixed(1) + ' kgf·cm');
+            }, `M_máx(+) = ${(maxPt.M / 100).toFixed(1)} kgf·m (@ ${(maxPt.x / 100).toFixed(2)}m)`);
+        }
+
+        // 2. Momento Máximo Negativo (Hogging / sobre apoyos)
+        if(minPt && minPt.M < -1e-4 && minPt !== maxPt){
+            const cx = px(minPt.x);
+            const cy = py(minPt.M);
+            node('circle', { cx, cy, r: 6.0, fill: '#ef4444', stroke: '#090d16', 'stroke-width': 2.0 });
+            node('circle', { cx, cy, r: 9.5, fill: 'none', stroke: 'rgba(239, 68, 68, 0.6)', 'stroke-width': 1.5 });
+            node('text', {
+                x: cx, y: cy + 16,
+                fill: '#f87171',
+                'font-size': '10.5px',
+                'font-weight': 'bold',
+                'text-anchor': 'middle',
+                'font-family': 'monospace'
+            }, `M_máx(-) = ${(minPt.M / 100).toFixed(1)} kgf·m (@ ${(minPt.x / 100).toFixed(2)}m)`);
+        }
+
+        // 3. Puntos de inflexión (M = 0)
+        const uniqueMZero = mZeroPoints.filter((x, idx) => idx === 0 || Math.abs(x - mZeroPoints[idx - 1]) > 5.0);
+        for(const x0 of uniqueMZero){
+            const cx = px(x0);
+            const cy = baselineY;
+            node('circle', { cx, cy, r: 4.5, fill: '#10b981', stroke: '#090d16', 'stroke-width': 1.8 });
+            node('text', {
+                x: cx, y: cy > H / 2 ? cy - 10 : cy + 14,
+                fill: '#34d399',
+                'font-size': '9px',
+                'font-weight': 'bold',
+                'text-anchor': 'middle',
+                'font-family': 'monospace'
+            }, `Inflexión (${(x0 / 100).toFixed(2)}m)`);
         }
     }
 
