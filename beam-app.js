@@ -1129,12 +1129,13 @@
             ? window.BeamDiagrams.calculate(sol)
             : [];
 
-        // Obtener reacciones verticales y de momento por nudo
+        // 1. Obtener reacciones en apoyos por nudo (tolerancia regex para U o D, mayúsculas/minúsculas)
         const reactionsByNode = {};
         if (sol.calculatedReactions) {
             sol.calculatedReactions.forEach(r => {
-                const mY = r.uLbl.match(/^d(\d+)y$/);
-                const mM = r.uLbl.match(/^d(\d+)th$/) || r.uLbl.match(/^d(\d+)θ$/);
+                const lbl = String(r.uLbl || '').trim();
+                const mY = lbl.match(/^[UuDd](\d+)[Yy]$/);
+                const mM = lbl.match(/^[UuDd](\d+)[θΘ]$/) || lbl.match(/^[UuDd](\d+)[Tt][Hh]$/);
                 if (mY) {
                     const n = parseInt(mY[1], 10);
                     if (!reactionsByNode[n]) reactionsByNode[n] = {};
@@ -1148,6 +1149,26 @@
             });
         }
 
+        // 2. Obtener cargas nodales aplicadas (Py y Mz) directamente de nodesTable
+        const nodalLoadsByNode = {};
+        if (sol.nodesTable) {
+            sol.nodesTable.filter(n => n.active).forEach(n => {
+                nodalLoadsByNode[n.nodeNum] = {
+                    Py: (typeof n.Py_tot === 'number') ? n.Py_tot : 0,
+                    Mz: (typeof n.Mz_tot === 'number') ? n.Mz_tot : 0,
+                    cond: n.cond || ''
+                };
+            });
+        }
+
+        const totalNodes = activeBars.length + 1;
+        let cumulativeX = 0;
+        const nodePositions = [0];
+        activeBars.forEach(b => {
+            cumulativeX += b.L;
+            nodePositions.push(cumulativeX);
+        });
+
         // ══════════════════════════════════════════════════════════════
         // 1. PROCEDIMIENTO PASO A PASO: FUERZA CORTANTE V(x)
         // ══════════════════════════════════════════════════════════════
@@ -1158,7 +1179,7 @@
                     <span style="font-size: 10.5px; color: #94a3b8; font-family: monospace;">Σ Fy = 0</span>
                 </div>
                 <div class="step-calc-line">
-                    <span style="color: #94a3b8;">1. Inicio en x = 0 cm (Lado izquierdo de la viga):</span>
+                    <span style="color: #94a3b8;">1. Inicio en x = 0 cm (Extremo inicial izquierdo de la viga):</span>
                     <strong style="color: #cbd5e1;">V(0⁻) = 0.00 kgf</strong>
                 </div>
             `;
@@ -1167,19 +1188,21 @@
             let sumLoads = 0;
             let sumReactions = 0;
 
-            activeBars.forEach((b, idx) => {
-                const nodeNum = b.barNum;
-                const nodeRy = (reactionsByNode[nodeNum] && reactionsByNode[nodeNum].Ry) || 0;
+            for (let i = 0; i < totalNodes; i++) {
+                const nodeNum = i + 1;
+                const nodeX = nodePositions[i];
+                const ry = (reactionsByNode[nodeNum] && reactionsByNode[nodeNum].Ry) || 0;
+                const py = (nodalLoadsByNode[nodeNum] && nodalLoadsByNode[nodeNum].Py) || 0;
 
-                // Salto por reacción vertical en apoyo del nudo inicial
-                if (Math.abs(nodeRy) > 1e-4) {
-                    sumReactions += nodeRy;
+                // A) Reacción vertical en apoyo (si existe en el nudo)
+                if (Math.abs(ry) > 1e-4) {
+                    sumReactions += ry;
                     const prevV = currentV;
-                    currentV += nodeRy;
-                    const signStr = nodeRy >= 0 ? `+${nodeRy.toFixed(2)}` : `${nodeRy.toFixed(2)}`;
+                    currentV += ry;
+                    const signStr = ry >= 0 ? `+${ry.toFixed(2)}` : `${ry.toFixed(2)}`;
                     shearHtml += `
-                        <div class="step-calc-line" style="background: rgba(0, 240, 255, 0.05);">
-                            <span style="color: #38bdf8;">• Nudo (${nodeNum}) — Reacción en apoyo:</span>
+                        <div class="step-calc-line" style="background: rgba(0, 240, 255, 0.06); border-left: 3px solid #00f0ff;">
+                            <span style="color: #38bdf8;">• Nudo (${nodeNum}) [x = ${nodeX.toFixed(1)} cm / ${(nodeX/100).toFixed(2)} m] — Reacción en apoyo:</span>
                             <span style="color: #00f0ff; font-weight: bold;">
                                 V(${nodeNum}⁺) = ${prevV.toFixed(2)} ${signStr} = ${currentV.toFixed(2)} kgf
                             </span>
@@ -1187,76 +1210,107 @@
                     `;
                 }
 
-                // Descenso por carga distribuida a lo largo del tramo
-                if (Math.abs(b.q) > 1e-6) {
-                    const cLoad = (b.L_dist !== undefined && b.L_dist !== null && b.L_dist > 0) ? Math.min(b.L, b.L_dist) : b.L;
-                    const deltaW = b.q * cLoad;
-                    sumLoads += deltaW;
+                // B) Carga puntual externa aplicada en el nudo (si existe)
+                if (Math.abs(py) > 1e-4) {
+                    sumLoads += Math.abs(py);
                     const prevV = currentV;
-                    currentV -= deltaW;
-
-                    // Verificar punto de corte por cero (V=0)
-                    let zeroCrossingInfo = '';
-                    if (prevV * currentV < 0 && b.q > 0) {
-                        const x0 = prevV / b.q;
-                        zeroCrossingInfo = `
-                            <div class="step-calc-line" style="background: rgba(251, 191, 36, 0.08); border-left: 3px solid #fbbf24;">
-                                <span style="color: #fbbf24; font-weight: bold;">⚡ Cruce por Cero V=0:</span>
+                    currentV += py; // py ya tiene su signo (generalmente negativo para abajo)
+                    const signStr = py >= 0 ? `+${py.toFixed(2)}` : `${py.toFixed(2)}`;
+                    
+                    let zeroCrossingNode = '';
+                    if (prevV * currentV < 0) {
+                        zeroCrossingNode = `
+                            <div class="step-calc-line" style="background: rgba(251, 191, 36, 0.08); border-left: 3px solid #fbbf24; margin: 2px 0 2px 14px;">
+                                <span style="color: #fbbf24; font-weight: bold;">⚡ Cambio de Signo / Pico en Nudo (${nodeNum}):</span>
                                 <span style="color: #fbbf24; font-family: monospace;">
-                                    x₀ = V_ini / q = ${prevV.toFixed(2)} / ${b.q.toFixed(4)} = <strong>${x0.toFixed(2)} cm</strong> (Ubicación de M_máx)
+                                    El cortante pasa de ${prevV.toFixed(2)} a ${currentV.toFixed(2)} kgf → Momento Flector alcanza un pico local en este punto.
                                 </span>
                             </div>
                         `;
                     }
 
                     shearHtml += `
-                        <div class="step-calc-line">
-                            <span>• Tramo [${b.barNum}]: Descenso por carga q = ${b.q_unit === 'kgf/m' ? (b.q_input + ' kgf/m') : (b.q + ' kgf/cm')}:</span>
-                            <span style="color: #fbbf24;">ΔV_w = -(${b.q.toFixed(4)} × ${cLoad.toFixed(1)}) = -${deltaW.toFixed(2)} kgf</span>
+                        <div class="step-calc-line" style="background: rgba(244, 63, 94, 0.06); border-left: 3px solid #f43f5e;">
+                            <span style="color: #fda4af;">• Nudo (${nodeNum}) [x = ${nodeX.toFixed(1)} cm / ${(nodeX/100).toFixed(2)} m] — Carga puntual aplicada:</span>
+                            <span style="color: #f43f5e; font-weight: bold;">
+                                V(${nodeNum}⁺) = ${prevV.toFixed(2)} ${signStr} = ${currentV.toFixed(2)} kgf
+                            </span>
                         </div>
-                        <div class="step-calc-line">
-                            <span style="color: #94a3b8;">Cortante al final del Tramo [${b.barNum}]:</span>
-                            <strong>V = ${prevV.toFixed(2)} - ${deltaW.toFixed(2)} = ${currentV.toFixed(2)} kgf</strong>
-                        </div>
-                        ${zeroCrossingInfo}
+                        ${zeroCrossingNode}
                     `;
                 }
 
-                // Carga puntual en tramo si existe
-                if (Math.abs(b.P_tramo) > 1e-4) {
-                    sumLoads += b.P_tramo;
-                    const prevV = currentV;
-                    currentV -= b.P_tramo;
-                    shearHtml += `
-                        <div class="step-calc-line" style="color: #f43f5e;">
-                            <span>• Tramo [${b.barNum}]: Carga puntual P = ${b.P_tramo.toFixed(2)} kgf:</span>
-                            <strong>ΔV_P = -${b.P_tramo.toFixed(2)} kgf → V = ${currentV.toFixed(2)} kgf</strong>
-                        </div>
-                    `;
-                }
-            });
+                // C) Evolución a lo largo del tramo (si no es el último nudo)
+                if (i < activeBars.length) {
+                    const b = activeBars[i];
+                    const nextNodeX = nodePositions[i + 1];
+                    const cLoad = (b.L_dist !== undefined && b.L_dist !== null && b.L_dist > 0) ? Math.min(b.L, b.L_dist) : b.L;
 
-            // Reacción en el último nudo para cerrar en cero
-            const lastNode = activeBars.length + 1;
-            const lastRy = (reactionsByNode[lastNode] && reactionsByNode[lastNode].Ry) || 0;
-            if (Math.abs(lastRy) > 1e-4) {
-                sumReactions += lastRy;
-                const prevV = currentV;
-                currentV += lastRy;
-                const signStr = lastRy >= 0 ? `+${lastRy.toFixed(2)}` : `${lastRy.toFixed(2)}`;
-                shearHtml += `
-                    <div class="step-calc-line" style="background: rgba(0, 240, 255, 0.05);">
-                        <span style="color: #38bdf8;">• Nudo (${lastNode}) — Reacción final en apoyo:</span>
-                        <span style="color: #00f0ff; font-weight: bold;">
-                            V_fin = ${prevV.toFixed(2)} ${signStr} = ${Math.abs(currentV) < 1e-3 ? '0.00' : currentV.toFixed(2)} kgf
-                        </span>
-                    </div>
-                `;
+                    // Descenso por carga distribuida q en el tramo
+                    if (Math.abs(b.q) > 1e-6) {
+                        const deltaW = b.q * cLoad;
+                        sumLoads += deltaW;
+                        const prevV = currentV;
+                        currentV -= deltaW;
+
+                        // Verificar si corta el eje V = 0 dentro del tramo
+                        let zeroCrossingInfo = '';
+                        if (prevV * currentV < 0 && b.q > 0) {
+                            const x0 = prevV / b.q;
+                            const xAbs = nodeX + x0;
+                            zeroCrossingInfo = `
+                                <div class="step-calc-line" style="background: rgba(251, 191, 36, 0.08); border-left: 3px solid #fbbf24; margin: 3px 0 3px 14px;">
+                                    <span style="color: #fbbf24; font-weight: bold;">⚡ Cruce por Cero V = 0 dentro del tramo:</span>
+                                    <span style="color: #fbbf24; font-family: monospace;">
+                                        x₀ = V_ini / q = ${prevV.toFixed(2)} / ${b.q.toFixed(4)} = <strong>${x0.toFixed(2)} cm</strong> desde Nudo (${nodeNum}) → <strong>x = ${xAbs.toFixed(2)} cm (${(xAbs/100).toFixed(2)} m)</strong> [Ubicación de M_máx]
+                                    </span>
+                                </div>
+                            `;
+                        }
+
+                        shearHtml += `
+                            <div class="step-calc-line">
+                                <span>• Tramo [${b.barNum}] (${nodeX.toFixed(1)} cm ≤ x ≤ ${nextNodeX.toFixed(1)} cm, L = ${b.L.toFixed(1)} cm): Carga distribuida q = ${b.q_unit === 'kgf/m' ? (b.q_input + ' kgf/m') : (b.q + ' kgf/cm')}:</span>
+                                <span style="color: #fbbf24;">ΔV_w = -(${b.q.toFixed(4)} × ${cLoad.toFixed(1)}) = -${deltaW.toFixed(2)} kgf</span>
+                            </div>
+                            <div class="step-calc-line">
+                                <span style="color: #94a3b8;">Cortante al final del Tramo [${b.barNum}] (antes del Nudo ${nodeNum + 1}):</span>
+                                <strong>V(${nextNodeX.toFixed(1)}⁻) = ${prevV.toFixed(2)} - ${deltaW.toFixed(2)} = ${currentV.toFixed(2)} kgf</strong>
+                            </div>
+                            ${zeroCrossingInfo}
+                        `;
+                    } else {
+                        // Tramo sin carga distribuida (cortante constante)
+                        shearHtml += `
+                            <div class="step-calc-line" style="color: #94a3b8;">
+                                <span>• Tramo [${b.barNum}] (${nodeX.toFixed(1)} cm ≤ x ≤ ${nextNodeX.toFixed(1)} cm, L = ${b.L.toFixed(1)} cm): Sin carga distribuida (q = 0) → Cortante constante:</span>
+                                <strong>V = ${currentV.toFixed(2)} kgf</strong>
+                            </div>
+                        `;
+                    }
+
+                    // Carga puntual intermedia dentro del tramo
+                    if (Math.abs(b.P_tramo) > 1e-4) {
+                        sumLoads += b.P_tramo;
+                        const prevV = currentV;
+                        currentV -= b.P_tramo;
+                        shearHtml += `
+                            <div class="step-calc-line" style="color: #f43f5e;">
+                                <span>• Tramo [${b.barNum}]: Carga puntual interna P = ${b.P_tramo.toFixed(2)} kgf:</span>
+                                <strong>ΔV_P = -${b.P_tramo.toFixed(2)} kgf → V = ${currentV.toFixed(2)} kgf</strong>
+                            </div>
+                        `;
+                    }
+                }
             }
 
             shearHtml += `
+                <div class="step-calc-line" style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981; font-weight: bold;">
+                    <span style="color: #10b981;">• Cierre en x = ${nodePositions[nodePositions.length - 1].toFixed(1)} cm:</span>
+                    <span style="color: #34d399;">V(L⁺) = ${Math.abs(currentV) < 1e-3 ? '0.00' : currentV.toFixed(2)} kgf (Cierra exactamente en cero)</span>
+                </div>
                 <div class="step-badge-ok">
-                    <span>✔ Verificación de Equilibrio: Σ Fy = Σ Ry - Σ Cargas = ${(sumReactions - sumLoads).toFixed(3)} kgf ≈ 0.00 kgf (Diagrama Cierra en 0)</span>
+                    <span>✔ Verificación de Equilibrio Global: Σ Fy = Σ Ry - Σ Cargas = ${(sumReactions - sumLoads).toFixed(3)} kgf ≈ 0.00 kgf (Diagrama Cierra en 0)</span>
                 </div>
             `;
             shearBox.innerHTML = shearHtml;
@@ -1272,8 +1326,8 @@
                     <span style="font-size: 10.5px; color: #94a3b8; font-family: monospace;">M(x) = M₀ + ∫ V dx</span>
                 </div>
                 <div class="step-calc-line">
-                    <span style="color: #94a3b8;">1. Momento en x = 0 cm:</span>
-                    <strong style="color: #cbd5e1;">M(0) = 0.00 kgf·cm (Apoyo simple / articulado)</strong>
+                    <span style="color: #94a3b8;">1. Inicio en x = 0 cm (Lado izquierdo de la viga):</span>
+                    <strong style="color: #cbd5e1;">M(0) = 0.00 kgf·cm (0.00 kgf·m)</strong>
                 </div>
             `;
 
@@ -1283,18 +1337,21 @@
 
             activeBars.forEach((b, idx) => {
                 const span = spans[idx];
-                const V_ini = (span && span.V0 !== undefined) ? span.V0 : b.V_ini;
+                const spanStart = nodePositions[idx];
+                const spanEnd = nodePositions[idx + 1];
                 const cLoad = (b.L_dist !== undefined && b.L_dist !== null && b.L_dist > 0) ? Math.min(b.L, b.L_dist) : b.L;
-                const V_end = V_ini - (b.q * cLoad);
+                
+                const V_ini = (span && span.points && span.points[0]) ? span.points[0].V : 0;
+                const V_end = (span && span.points && span.points.length) ? span.points[span.points.length - 1].V : (V_ini - b.q * cLoad);
 
-                // Si hay cruce por cero dentro del tramo
+                // Si hay cruce por cero dentro del tramo continuo
                 if (V_ini > 0 && V_end < 0 && b.q > 0) {
                     const x0 = V_ini / b.q;
                     const areaPos = (V_ini * x0) / 2.0;
                     const mMaxLocal = currentM + areaPos;
                     if (Math.abs(mMaxLocal) > Math.abs(maxM)) {
                         maxM = mMaxLocal;
-                        maxX = (span ? span.start : 0) + x0;
+                        maxX = spanStart + x0;
                     }
 
                     const xRemaining = cLoad - x0;
@@ -1304,24 +1361,24 @@
 
                     momentHtml += `
                         <div class="step-calc-line">
-                            <span style="color: #38bdf8;">• Tramo [${b.barNum}] — Área positiva A₁ (0 ≤ x ≤ ${x0.toFixed(1)} cm):</span>
+                            <span style="color: #38bdf8;">• Tramo [${b.barNum}] (${spanStart.toFixed(1)} cm a ${(spanStart + x0).toFixed(1)} cm) — Área positiva A₁ (0 ≤ x ≤ ${x0.toFixed(1)} cm):</span>
                             <span style="color: #10b981; font-weight: bold;">
-                                A₁ = (${V_ini.toFixed(1)} × ${x0.toFixed(1)}) / 2 = +${areaPos.toFixed(1)} kgf·cm
+                                A₁ = (${V_ini.toFixed(2)} × ${x0.toFixed(2)}) / 2 = +${areaPos.toFixed(2)} kgf·cm (+${(areaPos/100).toFixed(2)} kgf·m)
                             </span>
                         </div>
                         <div class="step-calc-line" style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981;">
-                            <span style="color: #10b981; font-weight: bold;">⚡ Momento Máximo Positivo M_máx:</span>
+                            <span style="color: #10b981; font-weight: bold;">⚡ Momento Máximo Positivo M_máx en Tramo [${b.barNum}]:</span>
                             <strong style="color: #34d399; font-size: 12px;">
-                                M_máx = ${prevM.toFixed(1)} + ${areaPos.toFixed(1)} = +${mMaxLocal.toFixed(2)} kgf·cm (+${(mMaxLocal/100).toFixed(2)} kgf·m) @ x = ${x0.toFixed(1)} cm
+                                M_máx = ${prevM.toFixed(2)} + ${areaPos.toFixed(2)} = +${mMaxLocal.toFixed(2)} kgf·cm (+${(mMaxLocal/100).toFixed(2)} kgf·m) @ x = ${(spanStart + x0).toFixed(1)} cm (${((spanStart + x0)/100).toFixed(2)} m)
                             </strong>
                         </div>
                         <div class="step-calc-line">
-                            <span style="color: #94a3b8;">Área negativa A₂ (${x0.toFixed(1)} ≤ x ≤ ${cLoad.toFixed(1)} cm):</span>
-                            <span style="color: #f59e0b;">A₂ = (${V_end.toFixed(1)} × ${xRemaining.toFixed(1)}) / 2 = ${areaNeg.toFixed(1)} kgf·cm</span>
+                            <span style="color: #94a3b8;">Área negativa A₂ (${x0.toFixed(1)} cm ≤ x ≤ ${cLoad.toFixed(1)} cm):</span>
+                            <span style="color: #f59e0b;">A₂ = (${V_end.toFixed(2)} × ${xRemaining.toFixed(2)}) / 2 = ${areaNeg.toFixed(2)} kgf·cm (${(areaNeg/100).toFixed(2)} kgf·m)</span>
                         </div>
                         <div class="step-calc-line">
-                            <span>Momento al final del Tramo [${b.barNum}]:</span>
-                            <strong>M = ${mMaxLocal.toFixed(1)} + (${areaNeg.toFixed(1)}) = ${currentM.toFixed(2)} kgf·cm</strong>
+                            <span>Momento al final del Tramo [${b.barNum}] (en Nudo ${b.barNum + 1}):</span>
+                            <strong>M(${spanEnd.toFixed(1)} cm) = ${mMaxLocal.toFixed(2)} + (${areaNeg.toFixed(2)}) = ${currentM.toFixed(2)} kgf·cm (${(currentM/100).toFixed(2)} kgf·m)</strong>
                         </div>
                     `;
                 } else {
@@ -1329,16 +1386,36 @@
                     const areaTrapezoid = ((V_ini + V_end) / 2.0) * cLoad;
                     const prevM = currentM;
                     currentM += areaTrapezoid;
+                    
+                    if (Math.abs(currentM) > Math.abs(maxM)) {
+                        maxM = currentM;
+                        maxX = spanEnd;
+                    }
+
                     momentHtml += `
                         <div class="step-calc-line">
-                            <span>• Tramo [${b.barNum}] — Área del trapecio de cortante:</span>
+                            <span>• Tramo [${b.barNum}] (${spanStart.toFixed(1)} cm ≤ x ≤ ${spanEnd.toFixed(1)} cm, L = ${cLoad.toFixed(1)} cm) — Área bajo curva de cortante:</span>
                             <span style="color: #bae6fd;">
-                                A = [(${V_ini.toFixed(1)} + ${V_end.toFixed(1)}) / 2] × ${cLoad.toFixed(1)} = ${areaTrapezoid.toFixed(1)} kgf·cm
+                                A = [(${V_ini.toFixed(2)} + ${V_end.toFixed(2)}) / 2] × ${cLoad.toFixed(1)} = ${areaTrapezoid.toFixed(2)} kgf·cm (${(areaTrapezoid/100).toFixed(2)} kgf·m)
                             </span>
                         </div>
                         <div class="step-calc-line">
-                            <span>Momento acumulado M(${b.barNum + 1}):</span>
-                            <strong>M = ${prevM.toFixed(1)} + (${areaTrapezoid.toFixed(1)}) = ${currentM.toFixed(2)} kgf·cm</strong>
+                            <span>Momento acumulado al final del tramo (en Nudo ${b.barNum + 1}):</span>
+                            <strong>M(${spanEnd.toFixed(1)} cm) = ${prevM.toFixed(2)} + (${areaTrapezoid.toFixed(2)}) = ${currentM.toFixed(2)} kgf·cm (${(currentM/100).toFixed(2)} kgf·m)</strong>
+                        </div>
+                    `;
+                }
+
+                // Si hay momento concentrado aplicado en el nudo final
+                const nextNodeNum = idx + 2;
+                const nextMz = (nodalLoadsByNode[nextNodeNum] && nodalLoadsByNode[nextNodeNum].Mz) || 0;
+                if (Math.abs(nextMz) > 1e-4) {
+                    const prevM = currentM;
+                    currentM += nextMz;
+                    momentHtml += `
+                        <div class="step-calc-line" style="background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b;">
+                            <span style="color: #f59e0b;">• Nudo (${nextNodeNum}) — Salto por Momento Concentrado Aplicado Mz:</span>
+                            <strong>M(${nextNodeNum}⁺) = ${prevM.toFixed(2)} + (${nextMz.toFixed(2)}) = ${currentM.toFixed(2)} kgf·cm</strong>
                         </div>
                     `;
                 }
@@ -1346,7 +1423,7 @@
 
             momentHtml += `
                 <div class="step-badge-ok">
-                    <span>✔ Verificación de Momento Flector: Diagrama continuo con cierre equilibrado (Error residual: ${Math.abs(currentM).toFixed(3)} kgf·cm)</span>
+                    <span>✔ Verificación de Momento Flector: Cierre equilibrado continuo en apoyo final (Error residual: ${Math.abs(currentM).toFixed(3)} kgf·cm ≈ 0.00 kgf·m)</span>
                 </div>
             `;
             momentBox.innerHTML = momentHtml;

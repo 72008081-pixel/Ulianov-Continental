@@ -497,8 +497,14 @@ function render(svg, spans, kind, options = {}){
     });
 
     svg.onmousemove = function(e){
+        if(svg.dataset.isPanning === 'true') return;
         const rect = svg.getBoundingClientRect();
-        const mouseX = (e.clientX - rect.left) * (W / rect.width);
+        if(!rect.width) return;
+        const vb = svg.viewBox && svg.viewBox.baseVal;
+        const curW = (vb && vb.width) || W;
+        const curX = (vb && vb.x) || 0;
+        const mouseX = curX + (e.clientX - rect.left) * (curW / rect.width);
+
         if(mouseX < padX || mouseX > padX + plotW * zoomX){
             crossLine.style.display = 'none';
             crossDot.style.display = 'none';
