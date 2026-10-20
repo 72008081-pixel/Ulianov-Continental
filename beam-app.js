@@ -839,7 +839,19 @@
     }
 
     // ── CÁLCULO Y ACTUALIZACIÓN GENERAL (RESOLUCIÓN MATRICIAL) ────
-    // ── TARJETAS VISUALES DE SEPARACIÓN DE CARGAS EQUIVALENTES (2 COLUMNAS CON DIBUJO SVG EN VIVO) ────
+    // ── HELPER DE RENDERIZADO LATEX CON KATEX OFICIAL ───────────
+    function renderLatex(tex, isDisplay = true) {
+        if (window.katex && typeof window.katex.renderToString === 'function') {
+            try {
+                return window.katex.renderToString(tex, { displayMode: isDisplay, throwOnError: false });
+            } catch(e) {
+                console.warn('Error en KaTeX render:', e);
+            }
+        }
+        return `<div style="font-family: 'Times New Roman', serif; font-style: italic; text-align: center; margin: 4px 0; color: #f8fafc;">${tex}</div>`;
+    }
+
+    // ── TARJETAS VISUALES DE SEPARACIÓN DE CARGAS EQUIVALENTES (DESCOMPOSICIÓN EXACTA DEL INGENIERO CON SVG Y LATEX) ────
     function renderEquivalentLoadCards(sol) {
         const container = document.getElementById('beamEquivalentCardsContainer');
         if (!container) return;
@@ -869,140 +881,169 @@
             const cLoad = (b.L_dist !== undefined && b.L_dist !== null && b.L_dist > 0) ? Math.min(b.L, b.L_dist) : b.L;
             const isPartial = Math.abs(cLoad - b.L) > 1e-4;
 
-            // Parámetros geométricos para el SVG del tramo aislado
-            const svgW = 540;
-            const svgH = 205;
-            const x1 = 80;
-            const x2 = 460;
-            const beamY = 125;
+            // Parámetros geométricos para el SVG de descomposición en 3 niveles
+            const svgW = 520;
+            const svgH = 265;
+            const x1 = 70;
+            const x2 = 450;
             const spanPx = x2 - x1; // 380px
             const cPx = spanPx * (cLoad / b.L);
 
-            // Generar flechas distribuidas hacia abajo
+            // Generar flechas distribuidas hacia abajo en Nivel 1
             const numArrows = Math.max(4, Math.min(10, Math.round(cPx / 35)));
             let arrowsSvg = '';
             for (let k = 0; k < numArrows; k++) {
                 const arrX = x1 + (cPx / (numArrows + 1)) * (k + 1);
                 arrowsSvg += `
-                    <line x1="${arrX.toFixed(1)}" y1="80" x2="${arrX.toFixed(1)}" y2="116" stroke="#fbbf24" stroke-width="1.6" marker-end="url(#arrow-amber-${b.barNum})" />
+                    <line x1="${arrX.toFixed(1)}" y1="36" x2="${arrX.toFixed(1)}" y2="52" stroke="#fbbf24" stroke-width="1.6" marker-end="url(#arrow-amber-down-${b.barNum})" />
                 `;
             }
 
-            // SVG del Tramo Aislado con Carga Distribuida y Fuerzas/Momentos Equivalentes FEM
+            // Valores numéricos formateados
+            const qStr = b.q.toFixed(4);
+            const aStr = L_cm;
+            const ViVal = b.V_ini.toFixed(2);
+            const VjVal = b.V_fin.toFixed(2);
+            const MiVal = Math.abs(b.M_ini).toFixed(2);
+            const MjVal = Math.abs(b.M_fin).toFixed(2);
+
+            // Fórmulas en formato LaTeX profesional con KaTeX
+            let texVi = '';
+            let texMi = '';
+            let texVj = '';
+            let texMj = '';
+
+            if (!isPartial) {
+                texVi = `P_i = \\frac{q \\cdot a}{2} = \\frac{${qStr} \\times ${aStr}}{2} = \\mathbf{${ViVal} \\text{ kgf}} \\quad (\\downarrow)`;
+                texMi = `M_i = \\frac{q \\cdot a^2}{12} = \\frac{${qStr} \\times ${aStr}^2}{12} = \\mathbf{${MiVal} \\text{ kgf}\\cdot\\text{cm}} \\quad (\\curvearrowleft)`;
+                texVj = `P_j = \\frac{q \\cdot a}{2} = \\frac{${qStr} \\times ${aStr}}{2} = \\mathbf{${VjVal} \\text{ kgf}} \\quad (\\downarrow)`;
+                texMj = `M_j = \\frac{q \\cdot a^2}{12} = \\frac{${qStr} \\times ${aStr}^2}{12} = \\mathbf{${MjVal} \\text{ kgf}\\cdot\\text{cm}} \\quad (\\curvearrowright)`;
+            } else {
+                const cStr = cLoad.toFixed(1);
+                texVi = `P_i = \\frac{q \\cdot c \\left(a - \\frac{c}{2}\\right) + (M_i + M_j)}{a} = \\mathbf{${ViVal} \\text{ kgf}} \\quad (\\downarrow)`;
+                texMi = `M_i = \\frac{q \\cdot c^2}{12 a^2}\\left(6a^2 - 8ac + 3c^2\\right) = \\mathbf{${MiVal} \\text{ kgf}\\cdot\\text{cm}} \\quad (\\curvearrowleft)`;
+                texVj = `P_j = q \\cdot c - P_i = \\mathbf{${VjVal} \\text{ kgf}} \\quad (\\downarrow)`;
+                texMj = `M_j = \\frac{q \\cdot c^3}{12 a^2}\\left(4a - 3c\\right) = \\mathbf{${MjVal} \\text{ kgf}\\cdot\\text{cm}} \\quad (\\curvearrowright)`;
+            }
+
+            const htmlVi = renderLatex(texVi, true);
+            const htmlMi = renderLatex(texMi, true);
+            const htmlVj = renderLatex(texVj, true);
+            const htmlMj = renderLatex(texMj, true);
+
+            // SVG de Descomposición Exacta del Ingeniero (3 Niveles: Carga q, Puntuales ↓, Momentos hacia adentro ⤻ ⤺)
             const svgElement = `
-                <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%; height:auto; background: #070d18; border-radius: 8px; border: 1px solid #1e293b; margin: 10px 0; overflow: visible;">
+                <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%; height:auto; background: #070d18; border-radius: 10px; border: 1px solid #1e293b; margin: 8px 0; overflow: visible;">
                     <defs>
-                        <marker id="arrow-cyan-${b.barNum}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <!-- Flecha hacia abajo cian para cargas puntuales -->
+                        <marker id="arrow-cyan-down-${b.barNum}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
                             <path d="M 0 0 L 10 5 L 0 10 z" fill="#00f0ff" />
                         </marker>
-                        <marker id="arrow-amber-${b.barNum}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                        <!-- Flecha hacia abajo ámbar para carga distribuida -->
+                        <marker id="arrow-amber-down-${b.barNum}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto">
                             <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24" />
                         </marker>
-                        <marker id="arrow-green-${b.barNum}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <!-- Flecha hacia adentro verde para momento inicial (antihorario) -->
+                        <marker id="arrow-green-inward-${b.barNum}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
                             <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
                         </marker>
-                        <marker id="arrow-orange-${b.barNum}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <!-- Flecha hacia adentro naranja para momento final (horario) -->
+                        <marker id="arrow-amber-inward-${b.barNum}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
                             <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b" />
                         </marker>
                     </defs>
 
+                    <!-- ══ NIVEL 1: CARGA DISTRIBUIDA EN TRAMO ══════════════════════════ -->
+                    <text x="14" y="20" fill="#38bdf8" font-size="10.5" font-weight="800" font-family="sans-serif">1. Carga Distribuida en Tramo:</text>
+
                     <!-- Zona Sombreada de la Carga Distribuida (q) -->
-                    <rect x="${x1}" y="78" width="${cPx.toFixed(1)}" height="42" fill="rgba(251, 191, 36, 0.14)" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="4,2" rx="3" />
+                    <rect x="${x1 + 10}" y="32" width="${(cPx > 0 ? cPx - 20 : spanPx - 20).toFixed(1)}" height="24" fill="rgba(251, 191, 36, 0.15)" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="4,2" rx="2" />
                     ${arrowsSvg}
-                    <!-- Etiqueta de la Carga Distribuida -->
-                    <text x="${(x1 + cPx / 2).toFixed(1)}" y="70" fill="#fbbf24" font-size="11.5" font-weight="bold" font-family="monospace" text-anchor="middle">q = ${qDisp} ${b.q_unit === 'kgf/m' ? `(${b.q.toFixed(4)} kgf/cm)` : ''}</text>
+                    <text x="${((x1 + x2) / 2).toFixed(1)}" y="27" fill="#fbbf24" font-size="11" font-weight="bold" font-family="monospace" text-anchor="middle">q = ${qDisp}</text>
 
-                    <!-- Línea de Viga del Tramo -->
-                    <line x1="${x1}" y1="${beamY}" x2="${x2}" y2="${beamY}" stroke="#38bdf8" stroke-width="6" stroke-linecap="round" />
+                    <!-- Línea de Viga Nivel 1 -->
+                    <line x1="${x1 + 10}" y1="56" x2="${x2 - 10}" y2="56" stroke="#38bdf8" stroke-width="4.5" stroke-linecap="round" />
 
-                    <!-- Nudo Inicial (i) -->
-                    <circle cx="${x1}" cy="${beamY}" r="7" fill="#0b1329" stroke="#38bdf8" stroke-width="2.5" />
-                    <text x="${x1}" y="${beamY + 20}" fill="#94a3b8" font-size="11" font-weight="bold" text-anchor="middle">Nudo (${nI})</text>
+                    <!-- Nudo Inicial (i) en Círculo Rojo (Idéntico a la pizarra del Ingeniero) -->
+                    <circle cx="${x1}" cy="56" r="10.5" fill="#7f1d1d" stroke="#ef4444" stroke-width="2.2" />
+                    <text x="${x1}" y="60" fill="#ffffff" font-size="10.5" font-weight="900" font-family="sans-serif" text-anchor="middle">${nI}</text>
 
-                    <!-- Nudo Final (j) -->
-                    <circle cx="${x2}" cy="${beamY}" r="7" fill="#0b1329" stroke="#38bdf8" stroke-width="2.5" />
-                    <text x="${x2}" y="${beamY + 20}" fill="#94a3b8" font-size="11" font-weight="bold" text-anchor="middle">Nudo (${nF})</text>
+                    <!-- Nudo Final (j) en Círculo Rojo -->
+                    <circle cx="${x2}" cy="56" r="10.5" fill="#7f1d1d" stroke="#ef4444" stroke-width="2.2" />
+                    <text x="${x2}" y="60" fill="#ffffff" font-size="10.5" font-weight="900" font-family="sans-serif" text-anchor="middle">${nF}</text>
 
-                    <!-- Cortante Equivalente Vi (Flecha hacia arriba) -->
-                    <line x1="${x1 - 32}" y1="${beamY + 10}" x2="${x1 - 32}" y2="60" stroke="#00f0ff" stroke-width="2.8" marker-end="url(#arrow-cyan-${b.barNum})" />
-                    <text x="${x1 - 32}" y="52" fill="#00f0ff" font-size="11" font-weight="bold" font-family="monospace" text-anchor="middle">+Vi = +${b.V_ini.toFixed(2)} kgf</text>
+                    <!-- Cota de Longitud a -->
+                    <line x1="${x1}" y1="72" x2="${x2}" y2="72" stroke="#475569" stroke-width="1" stroke-dasharray="2,2" />
+                    <line x1="${x1}" y1="68" x2="${x1}" y2="76" stroke="#475569" stroke-width="1.2" />
+                    <line x1="${x2}" y1="68" x2="${x2}" y2="76" stroke="#475569" stroke-width="1.2" />
+                    <text x="${((x1 + x2) / 2).toFixed(1)}" y="83" fill="#94a3b8" font-size="10" font-family="monospace" text-anchor="middle">a = ${L_m} m (${L_cm} cm)</text>
 
-                    <!-- Cortante Equivalente Vj (Flecha hacia arriba) -->
-                    <line x1="${x2 + 32}" y1="${beamY + 10}" x2="${x2 + 32}" y2="60" stroke="#00f0ff" stroke-width="2.8" marker-end="url(#arrow-cyan-${b.barNum})" />
-                    <text x="${x2 + 32}" y="52" fill="#00f0ff" font-size="11" font-weight="bold" font-family="monospace" text-anchor="middle">+Vj = +${b.V_fin.toFixed(2)} kgf</text>
+                    <!-- ══ NIVEL 2: PUNTUALES HACIA ABAJO (q·a / 2 ↓) ═══════════════════ -->
+                    <text x="14" y="104" fill="#00f0ff" font-size="10.5" font-weight="800" font-family="sans-serif">2. Cargas Puntuales Extremas (Hacia Abajo ↓):</text>
 
-                    <!-- Momento Equivalente Mi (Flecha circular horaria +) -->
-                    <path d="M ${x1 - 18} ${beamY - 14} A 26 26 0 1 1 ${x1 + 20} ${beamY + 14}" fill="none" stroke="#10b981" stroke-width="2.8" marker-end="url(#arrow-green-${b.barNum})" />
-                    <text x="${x1}" y="22" fill="#10b981" font-size="11" font-weight="bold" font-family="monospace" text-anchor="middle">+Mi = +${b.M_ini.toFixed(2)} kgf·cm</text>
-                    <text x="${x1}" y="35" fill="#34d399" font-size="9.5" font-family="sans-serif" text-anchor="middle">(+qL²/12)</text>
+                    <!-- Línea de Viga Nivel 2 -->
+                    <line x1="${x1}" y1="138" x2="${x2}" y2="138" stroke="#334155" stroke-width="3.5" stroke-linecap="round" />
+                    <circle cx="${x1}" cy="138" r="4.5" fill="#00f0ff" />
+                    <circle cx="${x2}" cy="138" r="4.5" fill="#00f0ff" />
 
-                    <!-- Momento Equivalente Mj (Flecha circular antihoraria -) -->
-                    <path d="M ${x2 + 18} ${beamY - 14} A 26 26 0 1 0 ${x2 - 20} ${beamY + 14}" fill="none" stroke="#f59e0b" stroke-width="2.8" marker-end="url(#arrow-orange-${b.barNum})" />
-                    <text x="${x2}" y="22" fill="#f59e0b" font-size="11" font-weight="bold" font-family="monospace" text-anchor="middle">-Mj = ${b.M_fin.toFixed(2)} kgf·cm</text>
-                    <text x="${x2}" y="35" fill="#fbbf24" font-size="9.5" font-family="sans-serif" text-anchor="middle">(-qL²/12)</text>
+                    <!-- Flecha Puntual Izquierda HACIA ABAJO ↓ -->
+                    <line x1="${x1}" y1="116" x2="${x1}" y2="158" stroke="#00f0ff" stroke-width="2.8" marker-end="url(#arrow-cyan-down-${b.barNum})" />
+                    <text x="${x1 + 10}" y="152" fill="#00f0ff" font-size="10.5" font-weight="bold" font-family="monospace">q·a/2 = ${ViVal} kgf (↓)</text>
 
-                    <!-- Cotas y Longitud de Tramo -->
-                    <line x1="${x1}" y1="${beamY + 42}" x2="${x2}" y2="${beamY + 42}" stroke="#475569" stroke-width="1.2" stroke-dasharray="3,3" />
-                    <line x1="${x1}" y1="${beamY + 36}" x2="${x1}" y2="${beamY + 48}" stroke="#475569" stroke-width="1.5" />
-                    <line x1="${x2}" y1="${beamY + 36}" x2="${x2}" y2="${beamY + 48}" stroke="#475569" stroke-width="1.5" />
-                    <text x="${((x1 + x2) / 2).toFixed(1)}" y="${beamY + 56}" fill="#cbd5e1" font-size="10.5" font-family="monospace" text-anchor="middle">L = ${L_m} m (${L_cm} cm) ${isPartial ? `• L_cargada = ${(cLoad).toFixed(1)} cm` : ''}</text>
+                    <!-- Flecha Puntual Derecha HACIA ABAJO ↓ -->
+                    <line x1="${x2}" y1="116" x2="${x2}" y2="158" stroke="#00f0ff" stroke-width="2.8" marker-end="url(#arrow-cyan-down-${b.barNum})" />
+                    <text x="${x2 - 10}" y="152" fill="#00f0ff" font-size="10.5" font-weight="bold" font-family="monospace" text-anchor="end">q·a/2 = ${VjVal} kgf (↓)</text>
+
+                    <!-- ══ NIVEL 3: MOMENTOS HACIA ADENTRO (q·a² / 12 ⤻ ⤺) ════════════════ -->
+                    <text x="14" y="188" fill="#10b981" font-size="10.5" font-weight="800" font-family="sans-serif">3. Momentos de Fijación (Hacia Adentro ⤻ ⤺):</text>
+
+                    <!-- Línea de Viga Nivel 3 -->
+                    <line x1="${x1}" y1="228" x2="${x2}" y2="228" stroke="#334155" stroke-width="3.5" stroke-linecap="round" />
+                    <circle cx="${x1}" cy="228" r="4.5" fill="#10b981" />
+                    <circle cx="${x2}" cy="228" r="4.5" fill="#f59e0b" />
+
+                    <!-- Flecha Curva Izquierda HACIA ADENTRO ⤻ (Antihorario hacia el interior del tramo) -->
+                    <path d="M ${x1 - 18} 240 A 22 22 0 0 1 ${x1 + 18} 218" fill="none" stroke="#10b981" stroke-width="2.8" marker-end="url(#arrow-green-inward-${b.barNum})" />
+                    <text x="${x1 + 22}" y="214" fill="#10b981" font-size="10.5" font-weight="bold" font-family="monospace">q·a²/12 = ${MiVal} kgf·cm (⤻ hacia adentro)</text>
+
+                    <!-- Flecha Curva Derecha HACIA ADENTRO ⤺ (Horario hacia el interior del tramo) -->
+                    <path d="M ${x2 + 18} 240 A 22 22 0 0 0 ${x2 - 18} 218" fill="none" stroke="#f59e0b" stroke-width="2.8" marker-end="url(#arrow-amber-inward-${b.barNum})" />
+                    <text x="${x2 - 22}" y="214" fill="#f59e0b" font-size="10.5" font-weight="bold" font-family="monospace" text-anchor="end">q·a²/12 = ${MjVal} kgf·cm (⤺ hacia adentro)</text>
                 </svg>
             `;
-
-            // Fórmulas analíticas explícitas
-            const formulaVi = isPartial 
-                ? `Vi = [q·c·(L - c/2) + (Mi + Mj)] / L`
-                : `Vi = q·L / 2 = (${b.q.toFixed(4)} × ${L_cm}) / 2`;
-            const formulaVj = isPartial
-                ? `Vj = q·c - Vi = (${b.q.toFixed(4)} × ${cLoad.toFixed(1)}) - ${b.V_ini.toFixed(2)}`
-                : `Vj = q·L / 2 = (${b.q.toFixed(4)} × ${L_cm}) / 2`;
-            const formulaMi = isPartial
-                ? `Mi = [q·c²/(12L²)]·(6L² - 8Lc + 3c²)`
-                : `Mi = +q·L² / 12 = +(${b.q.toFixed(4)} × ${L_cm}²) / 12`;
-            const formulaMj = isPartial
-                ? `Mj = -[q·c³/(12L²)]·(4L - 3c)`
-                : `Mj = -q·L² / 12 = -(${b.q.toFixed(4)} × ${L_cm}²) / 12`;
 
             html += `
                 <div class="eq-card">
                     <div class="eq-card-header">
                         <span class="eq-card-title">Tramo [${b.barNum}]: Nudo (${nI}) → Nudo (${nF})</span>
-                        <span class="eq-badge">L = ${L_m} m (${L_cm} cm)</span>
+                        <span class="eq-badge">L = a = ${L_m} m (${L_cm} cm)</span>
                     </div>
 
-                    <!-- Representación Gráfica Vectorial en Vivo del Tramo Aislado -->
+                    <!-- Representación Gráfica Vectorial en Vivo del Tramo Aislado (3 Niveles del Ingeniero) -->
                     ${svgElement}
 
-                    <!-- Desglose de Fórmulas y Cargas Equivalentes -->
+                    <!-- Desglose de Fórmulas y Cargas en Formato LaTeX Oficial -->
                     <div class="eq-card-loads">
-                        <div class="eq-load-node">
-                            <div class="eq-node-title" style="color: #38bdf8;">Extremo Inicial — Nudo (${nI})</div>
-                            <div class="eq-val-row">
-                                <span class="eq-val-label">Vi equiv:</span>
-                                <span class="eq-val-num" style="color:#00f0ff;">+${b.V_ini.toFixed(2)} kgf</span>
+                        <div class="eq-load-node" style="border-left: 3px solid #00f0ff;">
+                            <div class="eq-node-title" style="color: #38bdf8; display: flex; justify-content: space-between;">
+                                <span>Extremo Inicial — Nudo (${nI})</span>
+                                <span style="font-size: 10px; color: #94a3b8;">x = 0</span>
                             </div>
-                            <div style="font-size: 10px; color: #94a3b8; font-family: monospace; margin-bottom: 4px;">${formulaVi}</div>
-
-                            <div class="eq-val-row">
-                                <span class="eq-val-label">Mi equiv:</span>
-                                <span class="eq-val-num" style="color:#10b981;">+${b.M_ini.toFixed(2)} kgf·cm</span>
-                            </div>
-                            <div style="font-size: 10px; color: #94a3b8; font-family: monospace;">${formulaMi}</div>
+                            <div style="font-size: 11px; color: #94a3b8; margin: 4px 0 2px;">Carga Puntual Equivalente:</div>
+                            <div class="latex-eq-container">${htmlVi}</div>
+                            <div style="font-size: 11px; color: #94a3b8; margin: 6px 0 2px;">Momento de Fijación Equivalente:</div>
+                            <div class="latex-eq-container">${htmlMi}</div>
                         </div>
 
-                        <div class="eq-load-node node-j">
-                            <div class="eq-node-title" style="color: #fbbf24;">Extremo Final — Nudo (${nF})</div>
-                            <div class="eq-val-row">
-                                <span class="eq-val-label">Vj equiv:</span>
-                                <span class="eq-val-num" style="color:#00f0ff;">+${b.V_fin.toFixed(2)} kgf</span>
+                        <div class="eq-load-node node-j" style="border-left: 3px solid #f59e0b;">
+                            <div class="eq-node-title" style="color: #fbbf24; display: flex; justify-content: space-between;">
+                                <span>Extremo Final — Nudo (${nF})</span>
+                                <span style="font-size: 10px; color: #94a3b8;">x = a = ${L_cm} cm</span>
                             </div>
-                            <div style="font-size: 10px; color: #94a3b8; font-family: monospace; margin-bottom: 4px;">${formulaVj}</div>
-
-                            <div class="eq-val-row">
-                                <span class="eq-val-label">Mj equiv:</span>
-                                <span class="eq-val-num" style="color:#f59e0b;">${b.M_fin.toFixed(2)} kgf·cm</span>
-                            </div>
-                            <div style="font-size: 10px; color: #94a3b8; font-family: monospace;">${formulaMj}</div>
+                            <div style="font-size: 11px; color: #94a3b8; margin: 4px 0 2px;">Carga Puntual Equivalente:</div>
+                            <div class="latex-eq-container">${htmlVj}</div>
+                            <div style="font-size: 11px; color: #94a3b8; margin: 6px 0 2px;">Momento de Fijación Equivalente:</div>
+                            <div class="latex-eq-container">${htmlMj}</div>
                         </div>
                     </div>
                 </div>

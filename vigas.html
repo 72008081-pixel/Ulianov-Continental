@@ -6,6 +6,11 @@
     <title>CEREBRO ESTRUCTURAL v6.0 | Vigas Continuas & Exportador de Excel Nativo (Plantilla Ulianov)</title>
     <!-- Google Identity Services (GIS) Oficial -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- KaTeX Oficial para renderizado matemático LaTeX de alta precisión -->
+    <link rel="stylesheet" href="assets/katex.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="assets/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <style>
         /* ── VARIABLES & DESIGN SYSTEM v6.0 (VIGAS CONTINUAS) ────── */
         :root {
@@ -833,6 +838,24 @@
         .eq-val-num {
             font-family: var(--font-mono);
             font-weight: 700;
+            color: #f8fafc;
+        }
+
+        /* ── CONTENEDOR DE FÓRMULAS LATEX KATEX OFICIAL ─────────── */
+        .latex-eq-container {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 5px 10px;
+            margin: 4px 0 6px 0;
+            overflow-x: auto;
+            color: #f8fafc;
+        }
+        .latex-eq-container .katex-display {
+            margin: 2px 0 !important;
+        }
+        .latex-eq-container .katex {
+            font-size: 1.08em;
             color: #f8fafc;
         }
 
