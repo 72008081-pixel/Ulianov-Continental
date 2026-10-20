@@ -170,7 +170,7 @@
     /* ── GRILLA DE MÓDULOS ── */
     .modules-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 24px;
       margin-bottom: 34px;
     }
@@ -415,7 +415,33 @@
           </a>
         </div>
       </div>
+
+    <!-- MÓDULO 3: PÓRTICOS 2D v1.0. Independiente de VIGAS -->
+    <style>
+      .badge-frame {background:rgba(52,211,153,.14);color:#6ee7b7;border:1px solid rgba(52,211,153,.52)}
+      .btn-frame {background:linear-gradient(135deg,#0d9488,#1e40af);color:white;border:1px solid #34d399}
+      .btn-frame:hover {box-shadow:0 6px 20px rgba(52,211,153,.25)}
+      @media(min-width:861px) and (max-width:1120px){.modules-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    </style>
+    <div class="module-card" style="border-color:rgba(52,211,153,.4)">
+      <div class="card-top">
+        <span class="card-badge badge-frame">NUEVO · PÓRTICOS 2D v1.0</span>
+        <div class="module-icon">🏢</div>
+        <h2 class="module-name">Análisis Matricial de Pórticos 2D</h2>
+        <p class="module-summary">Evolución independiente del módulo Vigas. Analiza estructuras con columnas y vigas rígidamente conectadas utilizando 3 grados de libertad por nudo.</p>
+        <ul class="features-list">
+          <li>✔ <strong>Secciones:</strong> rectangular, circular y T con Steiner.</li>
+          <li>✔ <strong>Rigidez:</strong> matrices locales/globales, transformación, ensamblaje y solución.</li>
+          <li>✔ <strong>Diagramas por barra:</strong> axial N, cortante V y momento M colocados sobre cada elemento.</li>
+          <li>✔ <strong>Curva elástica:</strong> deformada real de columnas y vigas, con escala ajustable.</li>
+          <li>✔ <strong>Excel:</strong> resolución, matrices y muestreo de diagramas.</li>
+        </ul>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a href="porticos.html" class="btn-enter-module btn-frame"><span>🚀 Ingresar a Pórticos v1.0</span><span>➔</span></a>
+      </div>
     </div>
+  </div>
 
     <!-- BANNER DE APORTE VOLUNTARIO POR YAPE -->
     <div class="yape-info-banner">
