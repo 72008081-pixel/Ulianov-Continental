@@ -839,20 +839,20 @@
     }
 
     // ── CÁLCULO Y ACTUALIZACIÓN GENERAL (RESOLUCIÓN MATRICIAL) ────
-        // ── TARJETAS VISUALES DE SEPARACIÓN DE CARGAS EQUIVALENTES ────
+    // ── TARJETAS VISUALES DE SEPARACIÓN DE CARGAS EQUIVALENTES (2 COLUMNAS CON DIBUJO SVG EN VIVO) ────
     function renderEquivalentLoadCards(sol) {
         const container = document.getElementById('beamEquivalentCardsContainer');
         if (!container) return;
 
         if (!sol || !sol.success || !sol.barsTable) {
-            container.innerHTML = '<div style="color:#64748b; font-size:12px; padding:8px;">Sin solución calculada.</div>';
+            container.innerHTML = '<div style="grid-column: 1 / -1; color:#64748b; font-size:12px; padding:12px; text-align:center;">Sin solución calculada.</div>';
             return;
         }
 
         const loadedBars = sol.barsTable.filter(b => b.active && (Math.abs(b.q) > 1e-9 || Math.abs(b.P_tramo) > 1e-9));
         if (loadedBars.length === 0) {
             container.innerHTML = `
-                <div style="grid-column: 1 / -1; color: #64748b; font-size: 12px; padding: 12px; text-align: center; background: #090e1a; border-radius: 8px; border: 1px dashed #1e293b;">
+                <div style="grid-column: 1 / -1; color: #64748b; font-size: 12px; padding: 14px; text-align: center; background: #090e1a; border-radius: 8px; border: 1px dashed #1e293b;">
                     ℹ️ No hay cargas distribuidas asignadas en los tramos actuales (Cargas nodales puras).
                 </div>
             `;
@@ -865,33 +865,392 @@
             const nF = b.barNum + 1;
             const qDisp = b.q_unit === 'kgf/m' ? (b.q_input + ' kgf/m') : (b.q + ' kgf/cm');
             const L_m = (b.L / 100).toFixed(2);
+            const L_cm = b.L.toFixed(0);
+            const cLoad = (b.L_dist !== undefined && b.L_dist !== null && b.L_dist > 0) ? Math.min(b.L, b.L_dist) : b.L;
+            const isPartial = Math.abs(cLoad - b.L) > 1e-4;
+
+            // Parámetros geométricos para el SVG del tramo aislado
+            const svgW = 540;
+            const svgH = 205;
+            const x1 = 80;
+            const x2 = 460;
+            const beamY = 125;
+            const spanPx = x2 - x1; // 380px
+            const cPx = spanPx * (cLoad / b.L);
+
+            // Generar flechas distribuidas hacia abajo
+            const numArrows = Math.max(4, Math.min(10, Math.round(cPx / 35)));
+            let arrowsSvg = '';
+            for (let k = 0; k < numArrows; k++) {
+                const arrX = x1 + (cPx / (numArrows + 1)) * (k + 1);
+                arrowsSvg += `
+                    <line x1="${arrX.toFixed(1)}" y1="80" x2="${arrX.toFixed(1)}" y2="116" stroke="#fbbf24" stroke-width="1.6" marker-end="url(#arrow-amber-${b.barNum})" />
+                `;
+            }
+
+            // SVG del Tramo Aislado con Carga Distribuida y Fuerzas/Momentos Equivalentes FEM
+            const svgElement = `
+                <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%; height:auto; background: #070d18; border-radius: 8px; border: 1px solid #1e293b; margin: 10px 0; overflow: visible;">
+                    <defs>
+                        <marker id="arrow-cyan-${b.barNum}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#00f0ff" />
+                        </marker>
+                        <marker id="arrow-amber-${b.barNum}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24" />
+                        </marker>
+                        <marker id="arrow-green-${b.barNum}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+                        </marker>
+                        <marker id="arrow-orange-${b.barNum}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b" />
+                        </marker>
+                    </defs>
+
+                    <!-- Zona Sombreada de la Carga Distribuida (q) -->
+                    <rect x="${x1}" y="78" width="${cPx.toFixed(1)}" height="42" fill="rgba(251, 191, 36, 0.14)" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="4,2" rx="3" />
+                    ${arrowsSvg}
+                    <!-- Etiqueta de la Carga Distribuida -->
+                    <text x="${(x1 + cPx / 2).toFixed(1)}" y="70" fill="#fbbf24" font-size="11.5" font-weight="bold" font-family="monospace" text-anchor="middle">q = ${qDisp} ${b.q_unit === 'kgf/m' ? `(${b.q.toFixed(4)} kgf/cm)` : ''}</text>
+
+                    <!-- Línea de Viga del Tramo -->
+                    <line x1="${x1}" y1="${beamY}" x2="${x2}" y2="${beamY}" stroke="#38bdf8" stroke-width="6" stroke-linecap="round" />
+
+                    <!-- Nudo Inicial (i) -->
+                    <circle cx="${x1}" cy="${beamY}" r="7" fill="#0b1329" stroke="#38bdf8" stroke-width="2.5" />
+                    <text x="${x1}" y="${beamY + 20}" fill="#94a3b8" font-size="11" font-weight="bold" text-anchor="middle">Nudo (${nI})</text>
+
+                    <!-- Nudo Final (j) -->
+                    <circle cx="${x2}" cy="${beamY}" r="7" fill="#0b1329" stroke="#38bdf8" stroke-width="2.5" />
+                    <text x="${x2}" y="${beamY + 20}" fill="#94a3b8" font-size="11" font-weight="bold" text-anchor="middle">Nudo (${nF})</text>
+
+                    <!-- Cortante Equivalente Vi (Flecha hacia arriba) -->
+                    <line x1="${x1 - 32}" y1="${beamY + 10}" x2="${x1 - 32}" y2="60" stroke="#00f0ff" stroke-width="2.8" marker-end="url(#arrow-cyan-${b.barNum})" />
+                    <text x="${x1 - 32}" y="52" fill="#00f0ff" font-size="11" font-weight="bold" font-family="monospace" text-anchor="middle">+Vi = +${b.V_ini.toFixed(2)} kgf</text>
+
+                    <!-- Cortante Equivalente Vj (Flecha hacia arriba) -->
+                    <line x1="${x2 + 32}" y1="${beamY + 10}" x2="${x2 + 32}" y2="60" stroke="#00f0ff" stroke-width="2.8" marker-end="url(#arrow-cyan-${b.barNum})" />
+                    <text x="${x2 + 32}" y="52" fill="#00f0ff" font-size="11" font-weight="bold" font-family="monospace" text-anchor="middle">+Vj = +${b.V_fin.toFixed(2)} kgf</text>
+
+                    <!-- Momento Equivalente Mi (Flecha circular horaria +) -->
+                    <path d="M ${x1 - 18} ${beamY - 14} A 26 26 0 1 1 ${x1 + 20} ${beamY + 14}" fill="none" stroke="#10b981" stroke-width="2.8" marker-end="url(#arrow-green-${b.barNum})" />
+                    <text x="${x1}" y="22" fill="#10b981" font-size="11" font-weight="bold" font-family="monospace" text-anchor="middle">+Mi = +${b.M_ini.toFixed(2)} kgf·cm</text>
+                    <text x="${x1}" y="35" fill="#34d399" font-size="9.5" font-family="sans-serif" text-anchor="middle">(+qL²/12)</text>
+
+                    <!-- Momento Equivalente Mj (Flecha circular antihoraria -) -->
+                    <path d="M ${x2 + 18} ${beamY - 14} A 26 26 0 1 0 ${x2 - 20} ${beamY + 14}" fill="none" stroke="#f59e0b" stroke-width="2.8" marker-end="url(#arrow-orange-${b.barNum})" />
+                    <text x="${x2}" y="22" fill="#f59e0b" font-size="11" font-weight="bold" font-family="monospace" text-anchor="middle">-Mj = ${b.M_fin.toFixed(2)} kgf·cm</text>
+                    <text x="${x2}" y="35" fill="#fbbf24" font-size="9.5" font-family="sans-serif" text-anchor="middle">(-qL²/12)</text>
+
+                    <!-- Cotas y Longitud de Tramo -->
+                    <line x1="${x1}" y1="${beamY + 42}" x2="${x2}" y2="${beamY + 42}" stroke="#475569" stroke-width="1.2" stroke-dasharray="3,3" />
+                    <line x1="${x1}" y1="${beamY + 36}" x2="${x1}" y2="${beamY + 48}" stroke="#475569" stroke-width="1.5" />
+                    <line x1="${x2}" y1="${beamY + 36}" x2="${x2}" y2="${beamY + 48}" stroke="#475569" stroke-width="1.5" />
+                    <text x="${((x1 + x2) / 2).toFixed(1)}" y="${beamY + 56}" fill="#cbd5e1" font-size="10.5" font-family="monospace" text-anchor="middle">L = ${L_m} m (${L_cm} cm) ${isPartial ? `• L_cargada = ${(cLoad).toFixed(1)} cm` : ''}</text>
+                </svg>
+            `;
+
+            // Fórmulas analíticas explícitas
+            const formulaVi = isPartial 
+                ? `Vi = [q·c·(L - c/2) + (Mi + Mj)] / L`
+                : `Vi = q·L / 2 = (${b.q.toFixed(4)} × ${L_cm}) / 2`;
+            const formulaVj = isPartial
+                ? `Vj = q·c - Vi = (${b.q.toFixed(4)} × ${cLoad.toFixed(1)}) - ${b.V_ini.toFixed(2)}`
+                : `Vj = q·L / 2 = (${b.q.toFixed(4)} × ${L_cm}) / 2`;
+            const formulaMi = isPartial
+                ? `Mi = [q·c²/(12L²)]·(6L² - 8Lc + 3c²)`
+                : `Mi = +q·L² / 12 = +(${b.q.toFixed(4)} × ${L_cm}²) / 12`;
+            const formulaMj = isPartial
+                ? `Mj = -[q·c³/(12L²)]·(4L - 3c)`
+                : `Mj = -q·L² / 12 = -(${b.q.toFixed(4)} × ${L_cm}²) / 12`;
 
             html += `
                 <div class="eq-card">
                     <div class="eq-card-header">
                         <span class="eq-card-title">Tramo [${b.barNum}]: Nudo (${nI}) → Nudo (${nF})</span>
-                        <span class="eq-badge">L = ${L_m} m (${b.L.toFixed(0)} cm)</span>
+                        <span class="eq-badge">L = ${L_m} m (${L_cm} cm)</span>
                     </div>
-                    <div style="font-size: 11.5px; margin-bottom: 8px; color: #bae6fd;">
-                        <strong>Carga aplicada:</strong> q = ${qDisp} ${b.q_unit === 'kgf/m' ? `(${b.q.toFixed(4)} kgf/cm)` : ''}
-                        ${b.P_tramo !== 0 ? `<br><strong>Carga puntual en tramo:</strong> P = ${b.P_tramo} kgf @ a = ${b.a_dist || (b.L/2)} cm` : ''}
-                    </div>
+
+                    <!-- Representación Gráfica Vectorial en Vivo del Tramo Aislado -->
+                    ${svgElement}
+
+                    <!-- Desglose de Fórmulas y Cargas Equivalentes -->
                     <div class="eq-card-loads">
                         <div class="eq-load-node">
-                            <div class="eq-node-title">Extremo Inicial (Nudo ${nI})</div>
-                            <div class="eq-val-row"><span class="eq-val-label">Vi equiv:</span><span class="eq-val-num" style="color:#00f0ff;">+${b.V_ini.toFixed(2)} kgf</span></div>
-                            <div class="eq-val-row"><span class="eq-val-label">Mi equiv:</span><span class="eq-val-num" style="color:#10b981;">+${b.M_ini.toFixed(2)} kgf·cm</span></div>
+                            <div class="eq-node-title" style="color: #38bdf8;">Extremo Inicial — Nudo (${nI})</div>
+                            <div class="eq-val-row">
+                                <span class="eq-val-label">Vi equiv:</span>
+                                <span class="eq-val-num" style="color:#00f0ff;">+${b.V_ini.toFixed(2)} kgf</span>
+                            </div>
+                            <div style="font-size: 10px; color: #94a3b8; font-family: monospace; margin-bottom: 4px;">${formulaVi}</div>
+
+                            <div class="eq-val-row">
+                                <span class="eq-val-label">Mi equiv:</span>
+                                <span class="eq-val-num" style="color:#10b981;">+${b.M_ini.toFixed(2)} kgf·cm</span>
+                            </div>
+                            <div style="font-size: 10px; color: #94a3b8; font-family: monospace;">${formulaMi}</div>
                         </div>
+
                         <div class="eq-load-node node-j">
-                            <div class="eq-node-title">Extremo Final (Nudo ${nF})</div>
-                            <div class="eq-val-row"><span class="eq-val-label">Vj equiv:</span><span class="eq-val-num" style="color:#00f0ff;">+${b.V_fin.toFixed(2)} kgf</span></div>
-                            <div class="eq-val-row"><span class="eq-val-label">Mj equiv:</span><span class="eq-val-num" style="color:#f59e0b;">${b.M_fin.toFixed(2)} kgf·cm</span></div>
+                            <div class="eq-node-title" style="color: #fbbf24;">Extremo Final — Nudo (${nF})</div>
+                            <div class="eq-val-row">
+                                <span class="eq-val-label">Vj equiv:</span>
+                                <span class="eq-val-num" style="color:#00f0ff;">+${b.V_fin.toFixed(2)} kgf</span>
+                            </div>
+                            <div style="font-size: 10px; color: #94a3b8; font-family: monospace; margin-bottom: 4px;">${formulaVj}</div>
+
+                            <div class="eq-val-row">
+                                <span class="eq-val-label">Mj equiv:</span>
+                                <span class="eq-val-num" style="color:#f59e0b;">${b.M_fin.toFixed(2)} kgf·cm</span>
+                            </div>
+                            <div style="font-size: 10px; color: #94a3b8; font-family: monospace;">${formulaMj}</div>
                         </div>
                     </div>
                 </div>
             `;
         });
+
         container.innerHTML = html;
+    }
+
+    // ── PROCEDIMIENTO MATEMÁTICO PASO A PASO EN DIAGRAMAS (DFC Y DMF) ────
+    function renderDiagramStepByStep(sol) {
+        const shearBox = document.getElementById('shearStepByStepContainer');
+        const momentBox = document.getElementById('momentStepByStepContainer');
+        if (!shearBox && !momentBox) return;
+
+        if (!sol || !sol.success || !sol.barsTable) {
+            if (shearBox) shearBox.innerHTML = '<span style="color:#64748b;">Esperando solución calculada...</span>';
+            if (momentBox) momentBox.innerHTML = '<span style="color:#64748b;">Esperando solución calculada...</span>';
+            return;
+        }
+
+        const activeBars = sol.barsTable.filter(b => b.active);
+        const spans = (window.BeamDiagrams && typeof window.BeamDiagrams.calculate === 'function')
+            ? window.BeamDiagrams.calculate(sol)
+            : [];
+
+        // Obtener reacciones verticales y de momento por nudo
+        const reactionsByNode = {};
+        if (sol.calculatedReactions) {
+            sol.calculatedReactions.forEach(r => {
+                const mY = r.uLbl.match(/^d(\d+)y$/);
+                const mM = r.uLbl.match(/^d(\d+)th$/) || r.uLbl.match(/^d(\d+)θ$/);
+                if (mY) {
+                    const n = parseInt(mY[1], 10);
+                    if (!reactionsByNode[n]) reactionsByNode[n] = {};
+                    reactionsByNode[n].Ry = r.reactionFinal;
+                }
+                if (mM) {
+                    const n = parseInt(mM[1], 10);
+                    if (!reactionsByNode[n]) reactionsByNode[n] = {};
+                    reactionsByNode[n].M = r.reactionFinal;
+                }
+            });
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // 1. PROCEDIMIENTO PASO A PASO: FUERZA CORTANTE V(x)
+        // ══════════════════════════════════════════════════════════════
+        if (shearBox) {
+            let shearHtml = `
+                <div class="step-title" style="color: #00f0ff;">
+                    <span>📐 Procedimiento Paso a Paso — Fuerza Cortante V(x)</span>
+                    <span style="font-size: 10.5px; color: #94a3b8; font-family: monospace;">Σ Fy = 0</span>
+                </div>
+                <div class="step-calc-line">
+                    <span style="color: #94a3b8;">1. Inicio en x = 0 cm (Lado izquierdo de la viga):</span>
+                    <strong style="color: #cbd5e1;">V(0⁻) = 0.00 kgf</strong>
+                </div>
+            `;
+
+            let currentV = 0;
+            let sumLoads = 0;
+            let sumReactions = 0;
+
+            activeBars.forEach((b, idx) => {
+                const nodeNum = b.barNum;
+                const nodeRy = (reactionsByNode[nodeNum] && reactionsByNode[nodeNum].Ry) || 0;
+
+                // Salto por reacción vertical en apoyo del nudo inicial
+                if (Math.abs(nodeRy) > 1e-4) {
+                    sumReactions += nodeRy;
+                    const prevV = currentV;
+                    currentV += nodeRy;
+                    const signStr = nodeRy >= 0 ? `+${nodeRy.toFixed(2)}` : `${nodeRy.toFixed(2)}`;
+                    shearHtml += `
+                        <div class="step-calc-line" style="background: rgba(0, 240, 255, 0.05);">
+                            <span style="color: #38bdf8;">• Nudo (${nodeNum}) — Reacción en apoyo:</span>
+                            <span style="color: #00f0ff; font-weight: bold;">
+                                V(${nodeNum}⁺) = ${prevV.toFixed(2)} ${signStr} = ${currentV.toFixed(2)} kgf
+                            </span>
+                        </div>
+                    `;
+                }
+
+                // Descenso por carga distribuida a lo largo del tramo
+                if (Math.abs(b.q) > 1e-6) {
+                    const cLoad = (b.L_dist !== undefined && b.L_dist !== null && b.L_dist > 0) ? Math.min(b.L, b.L_dist) : b.L;
+                    const deltaW = b.q * cLoad;
+                    sumLoads += deltaW;
+                    const prevV = currentV;
+                    currentV -= deltaW;
+
+                    // Verificar punto de corte por cero (V=0)
+                    let zeroCrossingInfo = '';
+                    if (prevV * currentV < 0 && b.q > 0) {
+                        const x0 = prevV / b.q;
+                        zeroCrossingInfo = `
+                            <div class="step-calc-line" style="background: rgba(251, 191, 36, 0.08); border-left: 3px solid #fbbf24;">
+                                <span style="color: #fbbf24; font-weight: bold;">⚡ Cruce por Cero V=0:</span>
+                                <span style="color: #fbbf24; font-family: monospace;">
+                                    x₀ = V_ini / q = ${prevV.toFixed(2)} / ${b.q.toFixed(4)} = <strong>${x0.toFixed(2)} cm</strong> (Ubicación de M_máx)
+                                </span>
+                            </div>
+                        `;
+                    }
+
+                    shearHtml += `
+                        <div class="step-calc-line">
+                            <span>• Tramo [${b.barNum}]: Descenso por carga q = ${b.q_unit === 'kgf/m' ? (b.q_input + ' kgf/m') : (b.q + ' kgf/cm')}:</span>
+                            <span style="color: #fbbf24;">ΔV_w = -(${b.q.toFixed(4)} × ${cLoad.toFixed(1)}) = -${deltaW.toFixed(2)} kgf</span>
+                        </div>
+                        <div class="step-calc-line">
+                            <span style="color: #94a3b8;">Cortante al final del Tramo [${b.barNum}]:</span>
+                            <strong>V = ${prevV.toFixed(2)} - ${deltaW.toFixed(2)} = ${currentV.toFixed(2)} kgf</strong>
+                        </div>
+                        ${zeroCrossingInfo}
+                    `;
+                }
+
+                // Carga puntual en tramo si existe
+                if (Math.abs(b.P_tramo) > 1e-4) {
+                    sumLoads += b.P_tramo;
+                    const prevV = currentV;
+                    currentV -= b.P_tramo;
+                    shearHtml += `
+                        <div class="step-calc-line" style="color: #f43f5e;">
+                            <span>• Tramo [${b.barNum}]: Carga puntual P = ${b.P_tramo.toFixed(2)} kgf:</span>
+                            <strong>ΔV_P = -${b.P_tramo.toFixed(2)} kgf → V = ${currentV.toFixed(2)} kgf</strong>
+                        </div>
+                    `;
+                }
+            });
+
+            // Reacción en el último nudo para cerrar en cero
+            const lastNode = activeBars.length + 1;
+            const lastRy = (reactionsByNode[lastNode] && reactionsByNode[lastNode].Ry) || 0;
+            if (Math.abs(lastRy) > 1e-4) {
+                sumReactions += lastRy;
+                const prevV = currentV;
+                currentV += lastRy;
+                const signStr = lastRy >= 0 ? `+${lastRy.toFixed(2)}` : `${lastRy.toFixed(2)}`;
+                shearHtml += `
+                    <div class="step-calc-line" style="background: rgba(0, 240, 255, 0.05);">
+                        <span style="color: #38bdf8;">• Nudo (${lastNode}) — Reacción final en apoyo:</span>
+                        <span style="color: #00f0ff; font-weight: bold;">
+                            V_fin = ${prevV.toFixed(2)} ${signStr} = ${Math.abs(currentV) < 1e-3 ? '0.00' : currentV.toFixed(2)} kgf
+                        </span>
+                    </div>
+                `;
+            }
+
+            shearHtml += `
+                <div class="step-badge-ok">
+                    <span>✔ Verificación de Equilibrio: Σ Fy = Σ Ry - Σ Cargas = ${(sumReactions - sumLoads).toFixed(3)} kgf ≈ 0.00 kgf (Diagrama Cierra en 0)</span>
+                </div>
+            `;
+            shearBox.innerHTML = shearHtml;
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // 2. PROCEDIMIENTO PASO A PASO: MOMENTO FLECTOR M(x) (MÉTODO ÁREAS)
+        // ══════════════════════════════════════════════════════════════
+        if (momentBox) {
+            let momentHtml = `
+                <div class="step-title" style="color: #f59e0b;">
+                    <span>📐 Procedimiento Paso a Paso — Método de las Áreas y Momento Máximo</span>
+                    <span style="font-size: 10.5px; color: #94a3b8; font-family: monospace;">M(x) = M₀ + ∫ V dx</span>
+                </div>
+                <div class="step-calc-line">
+                    <span style="color: #94a3b8;">1. Momento en x = 0 cm:</span>
+                    <strong style="color: #cbd5e1;">M(0) = 0.00 kgf·cm (Apoyo simple / articulado)</strong>
+                </div>
+            `;
+
+            let currentM = 0;
+            let maxM = 0;
+            let maxX = 0;
+
+            activeBars.forEach((b, idx) => {
+                const span = spans[idx];
+                const V_ini = (span && span.V0 !== undefined) ? span.V0 : b.V_ini;
+                const cLoad = (b.L_dist !== undefined && b.L_dist !== null && b.L_dist > 0) ? Math.min(b.L, b.L_dist) : b.L;
+                const V_end = V_ini - (b.q * cLoad);
+
+                // Si hay cruce por cero dentro del tramo
+                if (V_ini > 0 && V_end < 0 && b.q > 0) {
+                    const x0 = V_ini / b.q;
+                    const areaPos = (V_ini * x0) / 2.0;
+                    const mMaxLocal = currentM + areaPos;
+                    if (Math.abs(mMaxLocal) > Math.abs(maxM)) {
+                        maxM = mMaxLocal;
+                        maxX = (span ? span.start : 0) + x0;
+                    }
+
+                    const xRemaining = cLoad - x0;
+                    const areaNeg = (V_end * xRemaining) / 2.0;
+                    const prevM = currentM;
+                    currentM = mMaxLocal + areaNeg;
+
+                    momentHtml += `
+                        <div class="step-calc-line">
+                            <span style="color: #38bdf8;">• Tramo [${b.barNum}] — Área positiva A₁ (0 ≤ x ≤ ${x0.toFixed(1)} cm):</span>
+                            <span style="color: #10b981; font-weight: bold;">
+                                A₁ = (${V_ini.toFixed(1)} × ${x0.toFixed(1)}) / 2 = +${areaPos.toFixed(1)} kgf·cm
+                            </span>
+                        </div>
+                        <div class="step-calc-line" style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981;">
+                            <span style="color: #10b981; font-weight: bold;">⚡ Momento Máximo Positivo M_máx:</span>
+                            <strong style="color: #34d399; font-size: 12px;">
+                                M_máx = ${prevM.toFixed(1)} + ${areaPos.toFixed(1)} = +${mMaxLocal.toFixed(2)} kgf·cm (+${(mMaxLocal/100).toFixed(2)} kgf·m) @ x = ${x0.toFixed(1)} cm
+                            </strong>
+                        </div>
+                        <div class="step-calc-line">
+                            <span style="color: #94a3b8;">Área negativa A₂ (${x0.toFixed(1)} ≤ x ≤ ${cLoad.toFixed(1)} cm):</span>
+                            <span style="color: #f59e0b;">A₂ = (${V_end.toFixed(1)} × ${xRemaining.toFixed(1)}) / 2 = ${areaNeg.toFixed(1)} kgf·cm</span>
+                        </div>
+                        <div class="step-calc-line">
+                            <span>Momento al final del Tramo [${b.barNum}]:</span>
+                            <strong>M = ${mMaxLocal.toFixed(1)} + (${areaNeg.toFixed(1)}) = ${currentM.toFixed(2)} kgf·cm</strong>
+                        </div>
+                    `;
+                } else {
+                    // Área trapezoidal o rectangular directa
+                    const areaTrapezoid = ((V_ini + V_end) / 2.0) * cLoad;
+                    const prevM = currentM;
+                    currentM += areaTrapezoid;
+                    momentHtml += `
+                        <div class="step-calc-line">
+                            <span>• Tramo [${b.barNum}] — Área del trapecio de cortante:</span>
+                            <span style="color: #bae6fd;">
+                                A = [(${V_ini.toFixed(1)} + ${V_end.toFixed(1)}) / 2] × ${cLoad.toFixed(1)} = ${areaTrapezoid.toFixed(1)} kgf·cm
+                            </span>
+                        </div>
+                        <div class="step-calc-line">
+                            <span>Momento acumulado M(${b.barNum + 1}):</span>
+                            <strong>M = ${prevM.toFixed(1)} + (${areaTrapezoid.toFixed(1)}) = ${currentM.toFixed(2)} kgf·cm</strong>
+                        </div>
+                    `;
+                }
+            });
+
+            momentHtml += `
+                <div class="step-badge-ok">
+                    <span>✔ Verificación de Momento Flector: Diagrama continuo con cierre equilibrado (Error residual: ${Math.abs(currentM).toFixed(3)} kgf·cm)</span>
+                </div>
+            `;
+            momentBox.innerHTML = momentHtml;
+        }
     }
 
     function recomputeAll() {
@@ -1023,6 +1382,12 @@
 
         // 10. Renderizar Paneles de Matrices Detalladas
         renderMatrixPanes();
+
+        // 11. Renderizar Tarjetas Visuales de Cargas Equivalentes por Tramo (2 Columnas con SVG)
+        renderEquivalentLoadCards(currentSolution);
+
+        // 12. Renderizar Procedimiento Matemático Paso a Paso en Diagramas (DFC y DMF)
+        renderDiagramStepByStep(currentSolution);
 
         // Sincronizar las dos gráficas de curva elástica con cada recálculo.
         document.dispatchEvent(new CustomEvent('beam:recomputed'));

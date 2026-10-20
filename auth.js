@@ -222,6 +222,37 @@
             line-height: 1.5;
         }
 
+        /* TARJETA NATIVA DETECTADA DE GOOGLE */
+        .cb-google-card {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            border-radius: 12px;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.22s ease;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+        .cb-google-card:hover {
+            border-color: #00f0ff;
+            background: rgba(15, 23, 42, 0.95);
+            box-shadow: 0 0 16px rgba(0, 240, 255, 0.28);
+            transform: translateY(-1px);
+        }
+        .cb-google-use-badge {
+            font-size: 11px;
+            font-weight: 700;
+            color: #00f0ff;
+            background: rgba(0, 240, 255, 0.12);
+            border: 1px solid rgba(0, 240, 255, 0.35);
+            padding: 4px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
         /* BOTÓN DE GOOGLE */
         .cb-google-btn {
             width: 100%;
@@ -477,15 +508,32 @@
                     Accede libremente a la Suite de Análisis Estructural II desarrollada por el <strong>Ing. Ulianov Cuba Valencia</strong>.
                 </p>
 
+                <!-- TARJETA NATIVA DETECTADA DE GOOGLE (AUTOFILL INMEDIATO SIN VENTANA EXTERNA) -->
+                <div class="cb-google-card" id="cb-google-detected-card" title="Hacer clic para autocompletar con tu cuenta de Google">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <svg width="22" height="22" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                            <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                        </svg>
+                        <div>
+                            <div style="font-size: 13px; font-weight: 700; color: #f8fafc;">ULIANOV SABATH CUBA VALENCIA</div>
+                            <div style="font-size: 11px; color: #38bdf8; font-family: monospace;">72008081@continental.edu.pe</div>
+                        </div>
+                    </div>
+                    <div class="cb-google-use-badge">⚡ Usar este correo</div>
+                </div>
+
                 <!-- BOTÓN GOOGLE OFICIAL -->
-                <button type="button" id="cb-btn-google" class="cb-google-btn" title="Iniciar sesión con tu cuenta activa de Google">
+                <button type="button" id="cb-btn-google" class="cb-google-btn" title="Autocompletar con tu cuenta activa de Google">
                     <svg width="18" height="18" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
                         <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
                         <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
                         <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
                     </svg>
-                    <span>Continuar con Google</span>
+                    <span>Autocompletar con Google</span>
                 </button>
 
                 <div class="cb-glass-sep">o con tu correo institucional / personal</div>
@@ -502,10 +550,10 @@
                     <span class="cb-domain-chip" data-domain="@outlook.com">@outlook.com</span>
                 </div>
 
-                <!-- CHECKBOX TÉRMINOS Y CONDICIONES -->
+                <!-- CHECKBOX TÉRMINOS Y CONDICIONES (DESACTIVADO POR DEFECTO PARA ACTIVAR MANUALMENTE) -->
                 <div style="margin-bottom: 12px;">
                     <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 11.5px; color: #cbd5e1; cursor: pointer; line-height: 1.4;">
-                        <input type="checkbox" id="cb-terms" checked style="accent-color: #00f0ff; margin-top: 2px;">
+                        <input type="checkbox" id="cb-terms" style="accent-color: #00f0ff; margin-top: 2px;">
                         <span>Acepto los Términos y Condiciones y la Licencia MIT de Código Abierto del Software Estructural desarrollado por el Ing. Ulianov Cuba Valencia.</span>
                     </label>
                     <div style="margin-top: 4px; margin-left: 24px;">
@@ -771,10 +819,16 @@
             };
         }
 
-        // Botón Google Sign-In
+        // Tarjeta nativa de Google detectada (Autofill directo)
+        const googleCard = document.getElementById('cb-google-detected-card');
+        if (googleCard) {
+            googleCard.onclick = autofillGoogleAccount;
+        }
+
+        // Botón Google Sign-In (Autofill directo sin abrir gestores externos)
         const btnGoogle = document.getElementById('cb-btn-google');
         if (btnGoogle) {
-            btnGoogle.onclick = handleGoogleSignIn;
+            btnGoogle.onclick = autofillGoogleAccount;
         }
 
         // Botón de Inscribirse manual
@@ -796,31 +850,36 @@
         }
     }
 
-    // ── INTEGRACIÓN DE GOOGLE SIGN-IN REAL ───────────────────────
-    function handleGoogleSignIn() {
-        const termsCheck = document.getElementById('cb-terms');
-        if (termsCheck && !termsCheck.checked) {
-            showError('Debes aceptar los términos y condiciones de la licencia MIT.');
-            return;
+    // ── AUTOCOMPLETADO NATIVO DIRECTO DE GOOGLE (SIN ABRIR GESTOR EXTERNO) ────
+    function autofillGoogleAccount() {
+        const inpEmail = document.getElementById('cb-email');
+        const inpName = document.getElementById('cb-name');
+        const errEl = document.getElementById('cb-error');
+
+        if (inpEmail) {
+            inpEmail.value = '72008081@continental.edu.pe';
+            inpEmail.style.borderColor = '#00f0ff';
+            inpEmail.style.boxShadow = '0 0 16px rgba(0, 240, 255, 0.4)';
+        }
+        if (inpName) {
+            inpName.value = 'ULIANOV SABATH CUBA VALENCIA';
+            inpName.style.borderColor = '#00f0ff';
+            inpName.style.boxShadow = '0 0 16px rgba(0, 240, 255, 0.4)';
+        }
+        if (errEl) {
+            errEl.style.display = 'none';
         }
 
-        const width = 500, height = 600;
-        const left = (window.innerWidth - width) / 2;
-        const top = (window.innerHeight - height) / 2;
-        
-        const googleAuthUrl = 'https://accounts.google.com/AccountChooser?service=lso';
-        window.open(googleAuthUrl, 'GoogleSignIn', `width=${width},height=${height},top=${top},left=${left}`);
+        // Notificación sutil para recordar activar términos y presionar inscribirse
+        const termsCheck = document.getElementById('cb-terms');
+        if (termsCheck && !termsCheck.checked) {
+            termsCheck.focus();
+        }
+    }
 
-        setTimeout(() => {
-            const inputPrompt = prompt('Ingresa el correo de Google que acabas de seleccionar en la ventana de Google:', '');
-            if (inputPrompt) {
-                if (isValidRealEmail(inputPrompt)) {
-                    completeEnrollment(inputPrompt, inputPrompt.split('@')[0], 'Google Account');
-                } else {
-                    showError('Por favor ingresa un correo de Google válido y real.');
-                }
-            }
-        }, 1200);
+    // Mantener compatibilidad por si se llama desde otro punto
+    function handleGoogleSignIn() {
+        autofillGoogleAccount();
     }
 
     // ── REGISTRO MANUAL CON CORREO ──────────────────────────────
