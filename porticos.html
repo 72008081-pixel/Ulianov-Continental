@@ -1050,6 +1050,78 @@
             color: #00ff88 !important;
             font-weight: 900;
         }
+    
+        /* ── TARJETAS VISUALES DE SEPARACIÓN DE CARGAS EQUIVALENTES (2 COLUMNAS) ── */
+        .equivalent-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 10px;
+        }
+        @media (max-width: 960px) {
+            .equivalent-cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .eq-card {
+            background: #090e1a;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.45);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .eq-card:hover {
+            border-color: #00f0ff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 240, 255, 0.15);
+        }
+        .eq-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1e293b;
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
+        .eq-card-title {
+            font-weight: 700;
+            font-size: 13px;
+            color: #00f0ff;
+        }
+        .eq-badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 99px;
+            background: rgba(0, 240, 255, 0.15);
+            color: #00f0ff;
+            border: 1px solid rgba(0, 240, 255, 0.3);
+        }
+        .eq-card-loads {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 11px;
+            margin-top: 10px;
+        }
+        .eq-load-node {
+            background: #0d1527;
+            border-radius: 8px;
+            padding: 10px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-left: 3.5px solid #00f0ff;
+        }
+        .eq-load-node.node-j {
+            border-left-color: #f59e0b;
+        }
+        .eq-node-title {
+            font-weight: 700;
+            font-size: 11px;
+            color: #e2e8f0;
+            margin-bottom: 4px;
+        }
+    
     </style>
 
 </head>
@@ -1061,8 +1133,8 @@
             <div class="brand-box">
                 <div class="brand-logo">🏢</div>
                 <div class="brand-title-wrap">
-                    <h1>CEREBRO ESTRUCTURAL <span class="brand-badge">PÓRTICOS v4.2</span></h1>
-                    <div class="brand-subtitle">Análisis Matricial de Rigidez Directo · Plantilla Ulianov · 3 GDL por Nudo · Parche v4.2 Resultados Vigas & 100% Español</div>
+                    <h1>CEREBRO ESTRUCTURAL <span class="brand-badge">PÓRTICOS v7.1</span></h1>
+                    <div class="brand-subtitle">Análisis Matricial de Rigidez Directo · Plantilla Ulianov · 3 GDL por Nudo · Parche v7.1 Cargas Equivalentes FEM & 100% Equivalencia con Vigas</div>
                 </div>
             </div>
             <div class="header-controls">
@@ -1151,6 +1223,17 @@
                     <label for="deformScaleInput" style="font-size:10.5px; color:#94a3b8;">Escala Deformada:</label>
                     <input type="range" id="deformScaleInput" min="1" max="200" value="1" style="width:90px;">
                     <span id="deformScaleValue" style="font-family:var(--font-mono); font-size:10.5px; color:#38bdf8;">1x</span>
+                </div>
+            </div>
+
+            <!-- ══ TARJETAS VISUALES: SEPARACIÓN DE CARGAS EQUIVALENTES EN TRAMOS (FEM) ══ -->
+            <div class="equivalent-loads-section" style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
+                <div class="mini-card-head" style="color: var(--accent-sky); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px;">⚡ Separación de Cargas Equivalentes por Tramo con Carga Distribuida (FEM)</span>
+                    <span id="formulaFemTitle" style="font-size: 11px; color: var(--text-muted);">{Q_{equiv}} = { \frac{q \cdot a}{2}, \; \frac{q \cdot a^2}{12} }</span>
+                </div>
+                <div id="frameEquivalentCardsContainer" class="equivalent-cards-grid">
+                    <!-- Se llena reactivamente con JS -->
                 </div>
             </div>
         </div>

@@ -1,5 +1,5 @@
 /**
- * frame-app.js — CEREBRO ESTRUCTURAL v4.2 (Plantilla Ulianov - Pórticos 2D)
+ * frame-app.js — CEREBRO ESTRUCTURAL v7.1 (Plantilla Ulianov - Pórticos 2D)
  * Controlador Principal de la Interfaz Web Reactiva de Pórticos Planos
  * Cátedra: Análisis Estructural II — Ing. Ulianov Cuba Valencia
  */
@@ -133,6 +133,19 @@
     function getSupportSpanish(sup){
         if(!sup) return 'LIBRE';
         return SUPPORT_NAMES_ES[sup] || SUPPORT_NAMES_ES[sup.toLowerCase()] || String(sup).toUpperCase();
+    }
+
+    
+    // ── HELPER DE RENDERIZADO LATEX CON KATEX OFICIAL ───────────
+    function renderLatex(tex, isDisplay = true) {
+        if (window.katex && typeof window.katex.renderToString === 'function') {
+            try {
+                return window.katex.renderToString(tex, { displayMode: isDisplay, throwOnError: false });
+            } catch(e) {
+                console.warn('Error en KaTeX render:', e);
+            }
+        }
+        return `<div style="font-family: 'Times New Roman', serif; font-style: italic; text-align: center; margin: 4px 0; color: #f8fafc;">${tex}</div>`;
     }
 
     function fmt(val, dec = 4){
@@ -574,6 +587,7 @@ I_z &= ${p.I.toFixed(4)} \\text{ cm}^4
             drawCanvas();
             drawDiagrams();
             renderSelectedMatrix();
+            renderEquivalentLoadCards(currentResult);
         } catch(err){
             currentResult = null;
             $('topStatusText').textContent = `⚠ ${err.message}`;
@@ -584,6 +598,181 @@ I_z &= ${p.I.toFixed(4)} \\text{ cm}^4
     }
 
     // ── RENDERIZADO DE TABLAS DE RESULTADOS (IDÉNTICO A VIGAS) ─────
+    
+    // ── TARJETAS VISUALES DE SEPARACIÓN DE CARGAS EQUIVALENTES (FEM 3 NIVELES) ────
+    function renderEquivalentLoadCards(sol){
+        const container = $('frameEquivalentCardsContainer');
+        if(!container) return;
+
+        const fFem = $('formulaFemTitle');
+        if(fFem && typeof renderLatex === 'function'){
+            fFem.innerHTML = renderLatex('\\{Q_{\\text{equiv}}\\} = \\left\\{ \\frac{q \\cdot a}{2}, \\; \\frac{q \\cdot a^2}{12} \\right\\}', false);
+        }
+
+        if(!sol || !sol.bars){
+            container.innerHTML = '<div style="grid-column: 1 / -1; color:#64748b; font-size:12px; padding:12px; text-align:center;">Esperando cómputo...</div>';
+            return;
+        }
+
+        // Filtrar barras que tengan carga distribuida (q0 o q1 distinto de cero)
+        const loadedBars = sol.bars.filter(b => Math.abs(b.q0 || 0) > 1e-6 || Math.abs(b.q1 || 0) > 1e-6);
+
+        if(loadedBars.length === 0){
+            container.innerHTML = `
+                <div style="grid-column: 1 / -1; color: #94a3b8; font-size: 12px; padding: 14px; text-align: center; background: #090e1a; border-radius: 8px; border: 1px dashed #1e293b;">
+                    ℹ️ No hay cargas distribuidas asignadas en los tramos actuales (Cargas nodales puras).
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        loadedBars.forEach(b => {
+            const nI = b.n1;
+            const nF = b.n2;
+            const qVal = b.q0 !== undefined ? b.q0 : 0;
+            const q1Val = b.q1 !== undefined ? b.q1 : qVal;
+            const isUniform = Math.abs(qVal - q1Val) < 1e-5;
+            const qDisp = `${qVal.toFixed(2)} kgf/cm (${(qVal * 100).toFixed(0)} kgf/m)`;
+            const L_m = (b.L / 100).toFixed(2);
+            const L_cm = b.L.toFixed(0);
+
+            // Valores de cargas equivalentes locales de fijación
+            let ViVal = 0, VjVal = 0, MiVal = 0, MjVal = 0;
+            if(isUniform){
+                ViVal = Math.abs((qVal * b.L) / 2);
+                VjVal = ViVal;
+                MiVal = Math.abs((qVal * b.L * b.L) / 12);
+                MjVal = MiVal;
+            } else {
+                ViVal = Math.abs((b.L * (7 * qVal + 3 * q1Val)) / 20);
+                VjVal = Math.abs((b.L * (3 * qVal + 7 * q1Val)) / 20);
+                MiVal = Math.abs((b.L * b.L * (3 * qVal + 2 * q1Val)) / 60);
+                MjVal = Math.abs((b.L * b.L * (2 * qVal + 3 * q1Val)) / 60);
+            }
+
+            // Parámetros SVG
+            const svgW = 520;
+            const svgH = 265;
+            const x1 = 70;
+            const x2 = 450;
+            const spanPx = x2 - x1;
+
+            const numArrows = 8;
+            let arrowsSvg = '';
+            for(let k = 0; k < numArrows; k++){
+                const arrX = x1 + (spanPx / (numArrows + 1)) * (k + 1);
+                arrowsSvg += `
+                    <line x1="${arrX.toFixed(1)}" y1="36" x2="${arrX.toFixed(1)}" y2="52" stroke="#fbbf24" stroke-width="1.6" marker-end="url(#arrow-amber-down-f${b.id})" />
+                `;
+            }
+
+            const qStr = qVal.toFixed(4);
+            const aStr = L_cm;
+
+            let texVi = `P_i = \\frac{q \\cdot a}{2} = \\frac{${qStr} \\times ${aStr}}{2} = \\mathbf{${ViVal.toFixed(2)} \\text{ kgf}} \\quad (\\downarrow)`;
+            let texMi = `M_i = \\frac{q \\cdot a^2}{12} = \\frac{${qStr} \\times ${aStr}^2}{12} = \\mathbf{${MiVal.toFixed(2)} \\text{ kgf}\\cdot\\text{cm}} \\quad (\\curvearrowleft)`;
+            let texVj = `P_j = \\frac{q \\cdot a}{2} = \\frac{${qStr} \\times ${aStr}}{2} = \\mathbf{${VjVal.toFixed(2)} \\text{ kgf}} \\quad (\\downarrow)`;
+            let texMj = `M_j = \\frac{q \\cdot a^2}{12} = \\frac{${qStr} \\times ${aStr}^2}{12} = \\mathbf{${MjVal.toFixed(2)} \\text{ kgf}\\cdot\\text{cm}} \\quad (\\curvearrowright)`;
+
+            const htmlVi = renderLatex(texVi, true);
+            const htmlMi = renderLatex(texMi, true);
+            const htmlVj = renderLatex(texVj, true);
+            const htmlMj = renderLatex(texMj, true);
+
+            const svgElement = `
+                <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%; height:auto; background: #070d18; border-radius: 10px; border: 1px solid #1e293b; margin: 8px 0; overflow: visible;">
+                    <defs>
+                        <marker id="arrow-cyan-down-f${b.id}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#00f0ff" />
+                        </marker>
+                        <marker id="arrow-amber-down-f${b.id}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24" />
+                        </marker>
+                        <marker id="arrow-green-inward-f${b.id}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+                        </marker>
+                        <marker id="arrow-amber-inward-f${b.id}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b" />
+                        </marker>
+                    </defs>
+
+                    <!-- NIVEL 1: CARGA DISTRIBUIDA EN TRAMO -->
+                    <text x="14" y="20" fill="#38bdf8" font-size="10.5" font-weight="800" font-family="sans-serif">1. Carga Distribuida en Tramo:</text>
+                    <rect x="${x1 + 10}" y="32" width="${(spanPx - 20).toFixed(1)}" height="24" fill="rgba(251, 191, 36, 0.15)" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="4,2" rx="2" />
+                    ${arrowsSvg}
+                    <text x="${((x1 + x2) / 2).toFixed(1)}" y="27" fill="#fbbf24" font-size="11" font-weight="bold" font-family="monospace" text-anchor="middle">q = ${qDisp}</text>
+                    <line x1="${x1 + 10}" y1="56" x2="${x2 - 10}" y2="56" stroke="#38bdf8" stroke-width="4.5" stroke-linecap="round" />
+                    <circle cx="${x1}" cy="56" r="10.5" fill="#7f1d1d" stroke="#ef4444" stroke-width="2.2" />
+                    <text x="${x1}" y="60" fill="#ffffff" font-size="10.5" font-weight="900" font-family="sans-serif" text-anchor="middle">${nI}</text>
+                    <circle cx="${x2}" cy="56" r="10.5" fill="#7f1d1d" stroke="#ef4444" stroke-width="2.2" />
+                    <text x="${x2}" y="60" fill="#ffffff" font-size="10.5" font-weight="900" font-family="sans-serif" text-anchor="middle">${nF}</text>
+                    <line x1="${x1}" y1="72" x2="${x2}" y2="72" stroke="#475569" stroke-width="1" stroke-dasharray="2,2" />
+                    <line x1="${x1}" y1="68" x2="${x1}" y2="76" stroke="#475569" stroke-width="1.2" />
+                    <line x1="${x2}" y1="68" x2="${x2}" y2="76" stroke="#475569" stroke-width="1.2" />
+                    <text x="${((x1 + x2) / 2).toFixed(1)}" y="83" fill="#94a3b8" font-size="10" font-family="monospace" text-anchor="middle">a = ${L_m} m (${L_cm} cm)</text>
+
+                    <!-- NIVEL 2: CARGAS PUNTUALES EXTREMAS -->
+                    <text x="14" y="104" fill="#00f0ff" font-size="10.5" font-weight="800" font-family="sans-serif">2. Cargas Puntuales Extremas (P = q·a / 2 ↓):</text>
+                    <line x1="${x1}" y1="138" x2="${x2}" y2="138" stroke="#334155" stroke-width="3.5" stroke-linecap="round" />
+                    <circle cx="${x1}" cy="138" r="4.5" fill="#00f0ff" />
+                    <circle cx="${x2}" cy="138" r="4.5" fill="#00f0ff" />
+                    <line x1="${x1}" y1="116" x2="${x1}" y2="158" stroke="#00f0ff" stroke-width="2.8" marker-end="url(#arrow-cyan-down-f${b.id})" />
+                    <text x="${x1 + 10}" y="152" fill="#00f0ff" font-size="10" font-weight="bold" font-family="monospace">P_i = ${ViVal.toFixed(2)} kgf (↓)</text>
+                    <line x1="${x2}" y1="116" x2="${x2}" y2="158" stroke="#00f0ff" stroke-width="2.8" marker-end="url(#arrow-cyan-down-f${b.id})" />
+                    <text x="${x2 - 10}" y="152" fill="#00f0ff" font-size="10" font-weight="bold" font-family="monospace" text-anchor="end">P_j = ${VjVal.toFixed(2)} kgf (↓)</text>
+
+                    <!-- NIVEL 3: MOMENTOS DE FIJACIÓN HACIA ADENTRO -->
+                    <text x="14" y="188" fill="#10b981" font-size="10.5" font-weight="800" font-family="sans-serif">3. Momentos de Fijación Hacia Adentro (M = q·a² / 12 ↺ ↻):</text>
+                    <line x1="${x1}" y1="228" x2="${x2}" y2="228" stroke="#334155" stroke-width="3.5" stroke-linecap="round" />
+                    <circle cx="${x1}" cy="228" r="4.5" fill="#10b981" />
+                    <circle cx="${x2}" cy="228" r="4.5" fill="#f59e0b" />
+                    <path d="M ${x1 - 18} 240 A 22 22 0 0 1 ${x1 + 18} 218" fill="none" stroke="#10b981" stroke-width="2.8" marker-end="url(#arrow-green-inward-f${b.id})" />
+                    <text x="${x1 + 22}" y="214" fill="#10b981" font-size="10" font-weight="bold" font-family="monospace">M_i = ${MiVal.toFixed(2)} kgf·cm (↺)</text>
+                    <path d="M ${x2 + 18} 240 A 22 22 0 0 0 ${x2 - 18} 218" fill="none" stroke="#f59e0b" stroke-width="2.8" marker-end="url(#arrow-amber-inward-f${b.id})" />
+                    <text x="${x2 - 22}" y="214" fill="#f59e0b" font-size="10" font-weight="bold" font-family="monospace" text-anchor="end">M_j = ${MjVal.toFixed(2)} kgf·cm (↻)</text>
+                </svg>
+            `;
+
+            html += `
+                <div class="eq-card">
+                    <div class="eq-card-header">
+                        <span class="eq-card-title">Tramo [${b.id}]: Nudo (${nI}) → Nudo (${nF})</span>
+                        <span class="eq-badge">L = a = ${L_m} m (${L_cm} cm)</span>
+                    </div>
+
+                    ${svgElement}
+
+                    <div class="eq-card-loads">
+                        <div class="eq-load-node" style="border-left: 3px solid #00f0ff;">
+                            <div class="eq-node-title" style="color: #38bdf8; display: flex; justify-content: space-between;">
+                                <span>Extremo Inicial — Nudo (${nI})</span>
+                                <span style="font-size: 10px; color: #94a3b8;">x = 0</span>
+                            </div>
+                            <div style="font-size: 11px; color: #94a3b8; margin: 4px 0 2px;">Carga Puntual Equivalente:</div>
+                            <div class="latex-eq-container">${htmlVi}</div>
+                            <div style="font-size: 11px; color: #94a3b8; margin: 6px 0 2px;">Momento de Fijación Equivalente:</div>
+                            <div class="latex-eq-container">${htmlMi}</div>
+                        </div>
+
+                        <div class="eq-load-node node-j" style="border-left: 3px solid #f59e0b;">
+                            <div class="eq-node-title" style="color: #fbbf24; display: flex; justify-content: space-between;">
+                                <span>Extremo Final — Nudo (${nF})</span>
+                                <span style="font-size: 10px; color: #94a3b8;">x = a = ${L_cm} cm</span>
+                            </div>
+                            <div style="font-size: 11px; color: #94a3b8; margin: 4px 0 2px;">Carga Puntual Equivalente:</div>
+                            <div class="latex-eq-container">${htmlVj}</div>
+                            <div style="font-size: 11px; color: #94a3b8; margin: 6px 0 2px;">Momento de Fijación Equivalente:</div>
+                            <div class="latex-eq-container">${htmlMj}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
     function updateResultsTables(){
         if(!currentResult) return;
         renderSummaryTab();
@@ -1498,6 +1687,7 @@ I_z &= ${p.I.toFixed(4)} \\text{ cm}^4
             drawCanvas();
             drawDiagrams();
             renderSelectedMatrix();
+            renderEquivalentLoadCards(currentResult);
         });
 
         if($('matrixBarSelect')){
