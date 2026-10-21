@@ -1,5 +1,5 @@
 /**
- * frame-app.js — CEREBRO ESTRUCTURAL v3.5 (Plantilla Ulianov - Pórticos 2D)
+ * frame-app.js — CEREBRO ESTRUCTURAL v4.1 (Plantilla Ulianov - Pórticos 2D)
  * Controlador Principal de la Interfaz Web Reactiva de Pórticos Planos
  * Cátedra: Análisis Estructural II — Ing. Ulianov Cuba Valencia
  */
@@ -130,71 +130,280 @@
         }[ch]));
     }
 
-    // ── GESTIÓN DE LA SECCIÓN TRANSVERSAL ─────────────────────────
+    // ── GESTIÓN DE LA SECCIÓN TRANSVERSAL, STEINER Y MÓDULO E ──
+    function updateSecLabelsAndVisibility(){
+        const secType = $('inpSecType') ? $('inpSecType').value : 'RECTANGULAR';
+        const lblB = $('lblParamB');
+        const lblH = $('lblParamH');
+        const lblP3 = $('lblParamP3');
+        const lblP4 = $('lblParamP4');
+        const steinerWrap = $('steinerWrap');
+
+        if (secType === 'T_SECTION' || secType === 'SECCION_T') {
+            if (lblB) lblB.textContent = 'b_alma:';
+            if (lblH) lblH.textContent = 'h_alma:';
+            if (lblP3) lblP3.textContent = 'b_ala:';
+            if (lblP4) lblP4.textContent = 't_ala:';
+        } else if (secType === 'I_SECTION' || secType === 'DOBLE_T') {
+            if (lblB) lblB.textContent = 'b_ala:';
+            if (lblH) lblH.textContent = 'H_tot:';
+            if (lblP3) lblP3.textContent = 't_ala:';
+            if (lblP4) lblP4.textContent = 't_alma:';
+        } else if (secType === 'CIRCULAR') {
+            if (lblB) lblB.textContent = 'Diám. D:';
+            if (lblH) lblH.textContent = '—:';
+            if (lblP3) lblP3.textContent = '—:';
+            if (lblP4) lblP4.textContent = '—:';
+        } else if (secType === 'CAJON_HUECO') {
+            if (lblB) lblB.textContent = 'B_ext:';
+            if (lblH) lblH.textContent = 'H_ext:';
+            if (lblP3) lblP3.textContent = 'b_int:';
+            if (lblP4) lblP4.textContent = 'h_int:';
+        } else if (secType === 'STEINER_COMPUESTA') {
+            if (lblB) lblB.textContent = 'b:';
+            if (lblH) lblH.textContent = 'h:';
+            if (lblP3) lblP3.textContent = '—:';
+            if (lblP4) lblP4.textContent = '—:';
+        } else {
+            if (lblB) lblB.textContent = 'b (cm):';
+            if (lblH) lblH.textContent = 'h (cm):';
+            if (lblP3) lblP3.textContent = '—:';
+            if (lblP4) lblP4.textContent = '—:';
+        }
+
+        if (steinerWrap && secType === 'STEINER_COMPUESTA') {
+            steinerWrap.style.display = 'block';
+        }
+    }
+
+    function renderSteinerTable() {
+        const tbody = $('tbodySteiner');
+        if (!tbody) return;
+
+        if (!Array.isArray(activeModel.steiner_rows)) {
+            activeModel.steiner_rows = [];
+        }
+
+        let html = '';
+        for (let i = 0; i < 7; i++) {
+            const row = activeModel.steiner_rows[i] || {
+                tipo: 'RECTANGULO',
+                b: 0.0,
+                b_sup: 0.0,
+                h: 0.0,
+                y_base: 0.0,
+                x_c: 0.0
+            };
+
+            html += `
+                <tr data-st-idx="${i}">
+                    <td><strong>Pieza ${i + 1}</strong></td>
+                    <td class="cell-input">
+                        <select class="st-inp cell-select" data-field="tipo" style="padding:2px 4px; font-size:10px;">
+                            <option value="RECTANGULO" ${row.tipo === 'RECTANGULO' ? 'selected' : ''}>RECTÁNGULO</option>
+                            <option value="TRIANGULO" ${row.tipo === 'TRIANGULO' ? 'selected' : ''}>TRIÁNGULO</option>
+                            <option value="CIRCULO" ${row.tipo === 'CIRCULO' ? 'selected' : ''}>CÍRCULO</option>
+                            <option value="SEMICIRCULO" ${row.tipo === 'SEMICIRCULO' ? 'selected' : ''}>SEMICÍRCULO</option>
+                            <option value="HUECO_RECT" ${row.tipo === 'HUECO_RECT' ? 'selected' : ''}>HUECO RECT.</option>
+                            <option value="HUECO_CIRC" ${row.tipo === 'HUECO_CIRC' ? 'selected' : ''}>HUECO CIRC.</option>
+                        </select>
+                    </td>
+                    <td class="cell-input"><input type="number" step="any" class="st-inp cell-input" data-field="b" value="${row.b || 0}" style="width:48px;"></td>
+                    <td class="cell-input"><input type="number" step="any" class="st-inp cell-input" data-field="b_sup" value="${row.b_sup || 0}" style="width:48px;"></td>
+                    <td class="cell-input"><input type="number" step="any" class="st-inp cell-input" data-field="h" value="${row.h || 0}" style="width:48px;"></td>
+                    <td class="cell-input"><input type="number" step="any" class="st-inp cell-input" data-field="y_base" value="${row.y_base || 0}" style="width:48px;"></td>
+                    <td class="cell-input"><input type="number" step="any" class="st-inp cell-input" data-field="x_c" value="${row.x_c || 0}" style="width:48px;"></td>
+                    <td class="cell-auto-green st-out-a">0.00</td>
+                    <td class="st-out-y">0.00</td>
+                    <td class="st-out-ay">0.00</td>
+                    <td class="st-out-i0">0.00</td>
+                    <td class="st-out-dy">0.00</td>
+                    <td class="st-out-ad2">0.00</td>
+                    <td class="cell-auto-green st-out-iz">0.00</td>
+                </tr>
+            `;
+        }
+        tbody.innerHTML = html;
+
+        tbody.querySelectorAll('.st-inp').forEach(inp => {
+            inp.addEventListener('input', readSteinerInputs);
+            inp.addEventListener('change', readSteinerInputs);
+        });
+    }
+
+    function readSteinerInputs() {
+        const rows = [];
+        const tbody = $('tbodySteiner');
+        if (!tbody) return;
+
+        tbody.querySelectorAll('tr').forEach((tr, i) => {
+            const tipo = tr.querySelector('[data-field="tipo"]').value;
+            const b = parseFloat(tr.querySelector('[data-field="b"]').value) || 0;
+            const b_sup = parseFloat(tr.querySelector('[data-field="b_sup"]').value) || 0;
+            const h = parseFloat(tr.querySelector('[data-field="h"]').value) || 0;
+            const y_base = parseFloat(tr.querySelector('[data-field="y_base"]').value) || 0;
+            const x_c = parseFloat(tr.querySelector('[data-field="x_c"]').value) || 0;
+            if (b > 0 || h > 0) {
+                rows.push({ tipo, b, b_sup, h, y_base, x_c });
+            }
+        });
+
+        activeModel.steiner_rows = rows;
+        updateSectionUI();
+        recompute();
+    }
+
+    function buildSectionLatex(secType, p, secData){
+        if(secType === 'RECTANGULAR' || secType === 'RECT'){
+            return `\\begin{aligned}
+A &= b \\cdot h = ${secData.b} \\cdot ${secData.h} = ${p.A.toFixed(2)} \\text{ cm}^2 \\\\[4pt]
+I_z &= \\frac{b \\cdot h^3}{12} = \\frac{${secData.b} \\cdot ${secData.h}^3}{12} = ${p.I.toFixed(4)} \\text{ cm}^4 \\\\[4pt]
+\\bar{Y} &= \\frac{h}{2} = \\frac{${secData.h}}{2} = ${p.ycg.toFixed(2)} \\text{ cm}
+\\end{aligned}`;
+        } else if(secType === 'T_SECTION' || secType === 'SECCION_T' || secType === 'T'){
+            const d = p.details;
+            return `\\begin{aligned}
+A &= A_{ala} + A_{alma} = (${(d.a1||0).toFixed(1)}) + (${(d.a2||0).toFixed(1)}) = ${p.A.toFixed(2)} \\text{ cm}^2 \\\\[4pt]
+\\bar{Y} &= \\frac{A_1 y_1 + A_2 y_2}{A_1 + A_2} = ${p.ycg.toFixed(3)} \\text{ cm} \\\\[4pt]
+I_{Steiner} &= \\sum (I_{0i} + A_i d_i^2) = ${p.I.toFixed(4)} \\text{ cm}^4
+\\end{aligned}`;
+        } else if(secType === 'I_SECTION' || secType === 'DOBLE_T'){
+            return `\\begin{aligned}
+A &= 2 A_{ala} + A_{alma} = 2(${secData.b} \\cdot ${secData.p3}) + (${secData.p4} \\cdot ${secData.h - 2*secData.p3}) = ${p.A.toFixed(2)} \\text{ cm}^2 \\\\[4pt]
+\\bar{Y} &= \\frac{H_{tot}}{2} = \\frac{${secData.h}}{2} = ${p.ycg.toFixed(2)} \\text{ cm} \\\\[4pt]
+I_z &= 2 (I_{0,ala} + A_{ala} d_{ala}^2) + I_{0,alma} = ${p.I.toFixed(4)} \\text{ cm}^4
+\\end{aligned}`;
+        } else if(secType === 'CAJON_HUECO' || secType === 'BOX'){
+            return `\\begin{aligned}
+A &= (B_{ext} \\cdot H_{ext}) - (b_{int} \\cdot h_{int}) = (${secData.b} \\cdot ${secData.h}) - (${secData.p3} \\cdot ${secData.p4}) = ${p.A.toFixed(2)} \\text{ cm}^2 \\\\[4pt]
+\\bar{Y} &= \\frac{H_{ext}}{2} = ${p.ycg.toFixed(2)} \\text{ cm} \\\\[4pt]
+I_z &= \\frac{B_{ext} H_{ext}^3 - b_{int} h_{int}^3}{12} = ${p.I.toFixed(4)} \\text{ cm}^4
+\\end{aligned}`;
+        } else if(secType === 'CIRCULAR' || secType === 'CIRCLE'){
+            return `\\begin{aligned}
+A &= \\frac{\\pi D^2}{4} = \\frac{\\pi (${secData.b})^2}{4} = ${p.A.toFixed(2)} \\text{ cm}^2 \\\\[4pt]
+I_z &= \\frac{\\pi D^4}{64} = \\frac{\\pi (${secData.b})^4}{64} = ${p.I.toFixed(4)} \\text{ cm}^4 \\\\[4pt]
+\\bar{Y} &= \\frac{D}{2} = ${p.ycg.toFixed(2)} \\text{ cm}
+\\end{aligned}`;
+        } else if(secType === 'STEINER_COMPUESTA' || secType === 'STEINER_CUSTOM'){
+            return `\\begin{aligned}
+A_{total} &= \\sum_{i=1}^{n} A_i = ${p.A.toFixed(2)} \\text{ cm}^2 \\\\[4pt]
+\\bar{Y} &= \\frac{\\sum A_i y_i}{\\sum A_i} = ${p.ycg.toFixed(3)} \\text{ cm} \\\\[4pt]
+I_{z,total} &= \\sum_{i=1}^{n} (I_{0i} + A_i d_i^2) = ${p.I.toFixed(4)} \\text{ cm}^4
+\\end{aligned}`;
+        }
+        return `\\begin{aligned}
+A &= ${p.A.toFixed(2)} \\text{ cm}^2 \\\\[4pt]
+I_z &= ${p.I.toFixed(4)} \\text{ cm}^4
+\\end{aligned}`;
+    }
+
     function updateSectionUI(){
-        const shape = $('shapeSelect').value;
-        $('secFieldsRect').style.display = shape === 'rect' ? 'grid' : 'none';
-        $('secFieldsCircle').style.display = shape === 'circle' ? 'grid' : 'none';
-        $('secFieldsT').style.display = shape === 'T' ? 'grid' : 'none';
+        updateSecLabelsAndVisibility();
 
         try {
             const secData = getSectionDataFromUI();
             const p = FrameSolver.properties(secData);
             activeModel.section = secData;
 
-            // Renderizar KaTeX explicativo
-            if(typeof katex !== 'undefined'){
-                let latexHtml = '';
-                if(shape === 'rect'){
-                    latexHtml = `\\[ A = b \\cdot h = ${secData.b} \\cdot ${secData.h} = ${p.A.toFixed(2)} \\text{ cm}^2 \\]
-                                 \\[ I = \\frac{b \\cdot h^3}{12} = \\frac{${secData.b} \\cdot ${secData.h}^3}{12} = ${p.I.toFixed(4)} \\text{ cm}^4 \\]`;
-                } else if(shape === 'circle'){
-                    latexHtml = `\\[ A = \\frac{\\pi d^2}{4} = ${p.A.toFixed(2)} \\text{ cm}^2 \\quad I = \\frac{\\pi d^4}{64} = ${p.I.toFixed(4)} \\text{ cm}^4 \\]`;
-                } else if(shape === 'T'){
-                    const d = p.details;
-                    latexHtml = `\\[ y_{cg} = \\frac{A_1 y_1 + A_2 y_2}{A_1 + A_2} = ${d.ycg.toFixed(3)} \\text{ cm} \\]
-                                 \\[ I_{Steiner} = \\sum (I_{0i} + A_i d_i^2) = ${d.I.toFixed(4)} \\text{ cm}^4 \\]`;
+            // 1. Actualizar números en tarjetas
+            if($('outGlobalA')) $('outGlobalA').textContent = p.A.toFixed(4);
+            if($('outGlobalIz')) $('outGlobalIz').textContent = p.I.toFixed(4);
+            if($('outGlobalYcg')) $('outGlobalYcg').textContent = (p.ycg || 0).toFixed(4);
+
+            // 2. Renderizar Canvas de Vista Previa de Sección Transversal
+            const cvSec = $('canvasSectionPreview');
+            if (cvSec && window.FrameCanvas && typeof FrameCanvas.renderCrossSectionPreview === 'function') {
+                FrameCanvas.renderCrossSectionPreview(cvSec, p);
+            }
+
+            // 3. Actualizar tabla de Steiner si aplica
+            if (p.steiner && p.steiner.rows) {
+                const tbodySt = $('tbodySteiner');
+                const tfootSt = $('tfootSteiner');
+                if (tbodySt) {
+                    p.steiner.rows.forEach((r, idx) => {
+                        const tr = tbodySt.children[idx];
+                        if (tr) {
+                            tr.querySelector('.st-out-a').textContent = r.A.toFixed(2);
+                            tr.querySelector('.st-out-y').textContent = r.y_i.toFixed(2);
+                            tr.querySelector('.st-out-ay').textContent = r.Ay.toFixed(2);
+                            tr.querySelector('.st-out-i0').textContent = r.I0.toFixed(2);
+                            const dyVal = r.y_i - p.steiner.Y_CG;
+                            tr.querySelector('.st-out-dy').textContent = dyVal.toFixed(2);
+                            tr.querySelector('.st-out-ad2').textContent = r.Ad2.toFixed(2);
+                            tr.querySelector('.st-out-iz').textContent = r.Itot.toFixed(2);
+                        }
+                    });
                 }
-                katex.render(latexHtml, $('sectionKaTeXContainer'), { displayMode: true });
+                if (tfootSt) {
+                    tfootSt.innerHTML = `
+                        <tr style="background: rgba(254, 240, 138, 0.2); font-weight: 900;">
+                            <td colspan="7" style="text-align: right; color:#fef08a;">TOTALES STEINER:</td>
+                            <td class="cell-auto-green">${p.steiner.A_total.toFixed(2)}</td>
+                            <td style="color:#f59e0b;">Ȳ = ${p.steiner.Y_CG.toFixed(3)}</td>
+                            <td>${p.steiner.Ay_total.toFixed(2)}</td>
+                            <td>—</td>
+                            <td>—</td>
+                            <td>${p.steiner.Ad2_total.toFixed(2)}</td>
+                            <td class="cell-auto-green">${p.steiner.I_total.toFixed(2)} cm⁴</td>
+                        </tr>
+                    `;
+                }
+            }
+
+            // 4. Renderizar KaTeX explicativo sin delimitadores externos
+            if(typeof katex !== 'undefined' && $('sectionKaTeXContainer')){
+                const latexMath = buildSectionLatex(secData.sec_type, p, secData);
+                katex.render(latexMath, $('sectionKaTeXContainer'), { displayMode: true, throwOnError: false });
             }
         } catch(err){
-            $('sectionKaTeXContainer').innerHTML = `<span style="color:#f87171;">${err.message}</span>`;
+            if($('sectionKaTeXContainer')){
+                $('sectionKaTeXContainer').innerHTML = `<span style="color:#f87171;">${err.message}</span>`;
+            }
         }
     }
 
     function getSectionDataFromUI(){
-        const shape = $('shapeSelect').value;
-        if(shape === 'rect'){
-            return { shape: 'rect', b: Number($('secB').value), h: Number($('secH').value) };
-        } else if(shape === 'circle'){
-            return { shape: 'circle', d: Number($('secD').value) };
-        } else if(shape === 'T'){
-            return {
-                shape: 'T',
-                bf: Number($('secBF').value),
-                tf: Number($('secTF').value),
-                tw: Number($('secTW').value),
-                hw: Number($('secHW').value)
-            };
-        }
-        return { shape: 'rect', b: 5, h: 5 };
+        const secType = $('inpSecType') ? $('inpSecType').value : ($('shapeSelect') ? $('shapeSelect').value : 'RECTANGULAR');
+        const b = Number($('inpSecB') ? $('inpSecB').value : ($('secB') ? $('secB').value : 5));
+        const h = Number($('inpSecH') ? $('inpSecH').value : ($('secH') ? $('secH').value : 5));
+        const p3 = Number($('inpSecP3') ? $('inpSecP3').value : 0);
+        const p4 = Number($('inpSecP4') ? $('inpSecP4').value : 0);
+        const propMode = $('inpPropMode') ? $('inpPropMode').value : 'CONSTANTE';
+
+        return {
+            sec_type: secType,
+            shape: secType.toLowerCase(),
+            b, h, p3, p4,
+            bf: p3 || b,
+            tf: p4 || 8,
+            tw: b,
+            hw: h,
+            d: b,
+            prop_mode: propMode,
+            steiner_rows: activeModel.steiner_rows || []
+        };
     }
 
     // ── POBLAR TABLAS DESDE EL MODELO ─────────────────────────────
     function populateTablesFromModel(m){
-        $('matE').value = m.E || 2100000;
-        $('shapeSelect').value = m.section?.shape || 'rect';
-        if(m.section?.shape === 'rect'){
-            $('secB').value = m.section.b || 5;
-            $('secH').value = m.section.h || 5;
-        } else if(m.section?.shape === 'circle'){
-            $('secD').value = m.section.d || 20;
-        } else if(m.section?.shape === 'T'){
-            $('secBF').value = m.section.bf || 30;
-            $('secTF').value = m.section.tf || 8;
-            $('secTW').value = m.section.tw || 10;
-            $('secHW').value = m.section.hw || 40;
-        }
+        const sec = m.section || { b: 5, h: 5 };
+        const secType = (sec.sec_type || (sec.shape === 'rect' ? 'RECTANGULAR' : (sec.shape === 'circle' ? 'CIRCULAR' : (sec.shape === 'T' ? 'T_SECTION' : 'RECTANGULAR'))));
+        
+        if($('inpSecType')) $('inpSecType').value = secType;
+        if($('shapeSelect')) $('shapeSelect').value = sec.shape || 'rect';
+        if($('inpSecB')) $('inpSecB').value = sec.b || (sec.shape === 'circle' ? sec.d : 5);
+        if($('secB')) $('secB').value = sec.b || 5;
+        if($('inpSecH')) $('inpSecH').value = sec.h || (sec.shape === 'circle' ? sec.d : 5);
+        if($('secH')) $('secH').value = sec.h || 5;
+        if($('inpSecP3')) $('inpSecP3').value = sec.p3 || sec.bf || 0;
+        if($('inpSecP4')) $('inpSecP4').value = sec.p4 || sec.tf || 0;
+        if($('inpGlobalE')) $('inpGlobalE').value = m.E || 2100000;
+        if($('matE')) $('matE').value = m.E || 2100000;
+
+        renderSteinerTable();
+        updateSecLabelsAndVisibility();
         updateSectionUI();
 
         // 1. Tabla de Nudos
@@ -286,7 +495,8 @@
 
     // ── LEER MODELO DESDE LA INTERFAZ ─────────────────────────────
     function readModelFromUI(){
-        const E = Number($('matE').value) || 2100000;
+        const E = Number($('inpGlobalE')?.value || $('matE')?.value) || 2100000;
+        if($('matE')) $('matE').value = E;
         const section = getSectionDataFromUI();
 
         const nodeRows = Array.from($('nodesTableBody').querySelectorAll('tr'));
@@ -747,8 +957,45 @@
         setupCanvasInteractions();
         FrameDiagrams.initDiagramInteractions(drawDiagrams);
 
-        // Eventos de entradas
-        $('shapeSelect').addEventListener('change', () => { updateSectionUI(); recompute(); });
+        // Eventos de sección transversal y material
+        const updateSec = () => {
+            if($('matE') && $('inpGlobalE')) $('matE').value = $('inpGlobalE').value;
+            updateSecLabelsAndVisibility();
+            updateSectionUI();
+            recompute();
+        };
+
+        if($('inpMaterial')){
+            $('inpMaterial').addEventListener('change', () => {
+                const mat = $('inpMaterial').value;
+                if (mat === 'ACERO_A36') $('inpGlobalE').value = '2000000';
+                else if (mat === 'ACERO_A992') $('inpGlobalE').value = '2040000';
+                else if (mat === 'CONCRETO_210') $('inpGlobalE').value = '217370';
+                else if (mat === 'CONCRETO_280') $('inpGlobalE').value = '250998';
+                else if (mat === 'MADERA') $('inpGlobalE').value = '100000';
+                updateSec();
+            });
+        }
+        if($('inpGlobalE')){
+            $('inpGlobalE').addEventListener('input', () => {
+                if($('inpMaterial') && $('inpMaterial').value !== 'CUSTOM') $('inpMaterial').value = 'CUSTOM';
+                updateSec();
+            });
+        }
+
+        ['inpSecType', 'inpPropMode', 'inpSecB', 'inpSecH', 'inpSecP3', 'inpSecP4'].forEach(id => {
+            const el = $(id);
+            if(el) {
+                el.addEventListener('input', updateSec);
+                el.addEventListener('change', updateSec);
+            }
+        });
+
+        if($('btnToggleSteiner') && $('steinerWrap')){
+            $('btnToggleSteiner').addEventListener('click', () => {
+                $('steinerWrap').style.display = $('steinerWrap').style.display === 'none' ? 'block' : 'none';
+            });
+        }
         ['matE', 'secB', 'secH', 'secD', 'secBF', 'secTF', 'secTW', 'secHW'].forEach(id => {
             const el = $(id);
             if(el) el.addEventListener('input', () => { updateSectionUI(); recompute(); });

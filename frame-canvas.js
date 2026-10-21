@@ -567,10 +567,248 @@
         link.click();
     }
 
+    /**
+     * Dibuja la vista previa de la Sección Transversal y el Eje Neutro Y_CG (incluyendo Steiner)
+     */
+    function renderCrossSectionPreview(canvas, secProps) {
+        if (!canvas || !secProps) return;
+        const dpr = window.devicePixelRatio || 2;
+        const W = 280;
+        const H = 180;
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.width = W + 'px';
+        canvas.style.height = H + 'px';
+
+        const ctx = canvas.getContext('2d');
+        ctx.save();
+        ctx.scale(dpr, dpr);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, W, H);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+
+        const st = String(secProps.sec_type || secProps.shape || 'RECTANGULAR').toUpperCase().trim();
+        const pad = 24;
+        const drawW = W - pad * 2;
+        const drawH = H - pad * 2 - 12;
+
+        ctx.fillStyle = '#bae6fd';
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 2.0;
+
+        let maxH = Math.max(1, secProps.h || secProps.b || 50);
+        let maxB = Math.max(1, secProps.b || 30);
+
+        if (st === 'T_SECTION' || st === 'SECCION_T' || st === 'T') {
+            const b_web = Math.max(1, secProps.b || 15);
+            const h_web = Math.max(1, secProps.h || 30);
+            const b_flange = Math.max(1, secProps.p3 || secProps.bf || 50);
+            const t_flange = Math.max(1, secProps.p4 || secProps.tf || 10);
+            const H_tot = h_web + t_flange;
+            const maxW = Math.max(b_flange, b_web);
+            const scale = Math.min(drawW / maxW, drawH / H_tot) * 0.85;
+
+            const baseY = H - pad - 6;
+            const cx = W / 2.0;
+
+            const wFlange = b_flange * scale;
+            const hFlange = t_flange * scale;
+            const wWeb = b_web * scale;
+            const hWeb = h_web * scale;
+
+            // Alma (Web)
+            const rxWeb = cx - wWeb / 2.0;
+            const ryWeb = baseY - hWeb;
+            ctx.fillStyle = '#bae6fd';
+            ctx.fillRect(rxWeb, ryWeb, wWeb, hWeb);
+            ctx.strokeRect(rxWeb, ryWeb, wWeb, hWeb);
+
+            // Ala Superior (Top Flange)
+            const rxFlange = cx - wFlange / 2.0;
+            const ryFlange = ryWeb - hFlange;
+            ctx.fillRect(rxFlange, ryFlange, wFlange, hFlange);
+            ctx.strokeRect(rxFlange, ryFlange, wFlange, hFlange);
+
+            // Eje Neutro Y_CG
+            const ycgVal = secProps.ycg != null ? secProps.ycg : (secProps.Y_CG || (h_web * 0.6));
+            const yCgScreen = baseY - ycgVal * scale;
+            ctx.strokeStyle = '#dc2626';
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath();
+            ctx.moveTo(20, yCgScreen);
+            ctx.lineTo(W - 20, yCgScreen);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#dc2626';
+            ctx.font = 'bold 10.5px "Segoe UI", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Ȳ = ${fmtClean(ycgVal, 2)} cm`, 22, Math.max(14, yCgScreen - 4));
+        } else if (st === 'I_SECTION' || st === 'DOBLE_T' || st === 'I') {
+            const b_flange = Math.max(1, secProps.b || 30);
+            const H_tot = Math.max(1, secProps.h || 50);
+            const t_flange = Math.max(1, secProps.p3 || 10);
+            const t_web = Math.max(1, secProps.p4 || 8);
+            const h_web = Math.max(1, H_tot - 2 * t_flange);
+            const scale = Math.min(drawW / b_flange, drawH / H_tot) * 0.85;
+
+            const baseY = H - pad - 6;
+            const cx = W / 2.0;
+
+            const wFlange = b_flange * scale;
+            const hFlange = t_flange * scale;
+            const wWeb = t_web * scale;
+            const hWeb = h_web * scale;
+
+            // Ala inferior
+            ctx.fillStyle = '#bae6fd';
+            ctx.fillRect(cx - wFlange / 2.0, baseY - hFlange, wFlange, hFlange);
+            ctx.strokeRect(cx - wFlange / 2.0, baseY - hFlange, wFlange, hFlange);
+
+            // Alma
+            ctx.fillRect(cx - wWeb / 2.0, baseY - hFlange - hWeb, wWeb, hWeb);
+            ctx.strokeRect(cx - wWeb / 2.0, baseY - hFlange - hWeb, wWeb, hWeb);
+
+            // Ala superior
+            ctx.fillRect(cx - wFlange / 2.0, baseY - H_tot * scale, wFlange, hFlange);
+            ctx.strokeRect(cx - wFlange / 2.0, baseY - H_tot * scale, wFlange, hFlange);
+
+            // Eje Neutro Y_CG
+            const ycgVal = secProps.ycg != null ? secProps.ycg : (secProps.Y_CG || (H_tot / 2.0));
+            const yCgScreen = baseY - ycgVal * scale;
+            ctx.strokeStyle = '#dc2626';
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath();
+            ctx.moveTo(20, yCgScreen);
+            ctx.lineTo(W - 20, yCgScreen);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#dc2626';
+            ctx.font = 'bold 10.5px "Segoe UI", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Ȳ = ${fmtClean(ycgVal, 2)} cm`, 22, Math.max(14, yCgScreen - 4));
+        } else if (st === 'STEINER_COMPUESTA' || st === 'STEINER_CUSTOM') {
+            const activeRows = (secProps.steiner && secProps.steiner.rows || []).filter(r => r.active);
+            if (activeRows.length > 0) {
+                maxH = Math.max(1, ...activeRows.map(r => r.y_base + (r.tipo.includes('CIRC') ? r.b : r.h)));
+                maxB = Math.max(1, ...activeRows.map(r => Math.max(r.b, r.b_sup || 0)));
+            }
+            const scale = Math.min(drawW / maxB, drawH / maxH) * 0.85;
+            const baseX = W / 2.0;
+            const baseY = H - pad - 6;
+
+            activeRows.forEach(r => {
+                const isHole = r.tipo.startsWith('HUECO');
+                ctx.fillStyle = isHole ? '#ffffff' : '#93c5fd';
+                ctx.strokeStyle = isHole ? '#ef4444' : '#1d4ed8';
+                const rw = r.b * scale;
+                const rh = (r.tipo.includes('CIRC') ? r.b : r.h) * scale;
+                const ry = baseY - (r.y_base * scale) - rh;
+                const rx = baseX - rw / 2.0;
+
+                if (r.tipo.includes('CIRC')) {
+                    ctx.beginPath();
+                    ctx.arc(baseX, ry + rh / 2, rw / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                } else {
+                    ctx.fillRect(rx, ry, rw, rh);
+                    ctx.strokeRect(rx, ry, rw, rh);
+                }
+            });
+
+            // Eje Neutro Y_CG
+            const ycgVal = secProps.ycg != null ? secProps.ycg : (secProps.Y_CG || 0);
+            const yCgScreen = baseY - ycgVal * scale;
+            ctx.strokeStyle = '#dc2626';
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath();
+            ctx.moveTo(20, yCgScreen);
+            ctx.lineTo(W - 20, yCgScreen);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#dc2626';
+            ctx.font = 'bold 10.5px "Segoe UI", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Ȳ = ${fmtClean(ycgVal, 2)} cm`, 22, Math.max(14, yCgScreen - 4));
+        } else if (st === 'CIRCULAR' || st === 'TUBULAR_CIRCULAR' || st === 'CIRCLE') {
+            const R = Math.min(drawW, drawH) * 0.40;
+            const cx = W / 2;
+            const cy = H / 2 - 4;
+            ctx.beginPath();
+            ctx.arc(cx, cy, R, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            if (st === 'TUBULAR_CIRCULAR' && secProps.b > 0) {
+                const rInt = R * Math.min(0.9, (secProps.h || 0) / secProps.b);
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(cx, cy, rInt, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+            const ycgVal = secProps.ycg != null ? secProps.ycg : (secProps.Y_CG || (secProps.b / 2));
+            ctx.strokeStyle = '#dc2626';
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath();
+            ctx.moveTo(cx - R - 12, cy);
+            ctx.lineTo(cx + R + 12, cy);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#dc2626';
+            ctx.font = 'bold 10.5px "Segoe UI", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Ȳ = ${fmtClean(ycgVal, 2)} cm`, 22, cy - 4);
+        } else {
+            // RECTANGULAR / CAJON_HUECO / BOX / DIRECTO_A_I
+            const bVal = Math.max(1, secProps.b || 25);
+            const hVal = Math.max(1, secProps.h || 45);
+            const scale = Math.min(drawW / bVal, drawH / hVal) * 0.82;
+            const rw = bVal * scale;
+            const rh = hVal * scale;
+            const rx = (W - rw) / 2;
+            const ry = (H - 12 - rh) / 2;
+            ctx.fillRect(rx, ry, rw, rh);
+            ctx.strokeRect(rx, ry, rw, rh);
+
+            if ((st === 'CAJON_HUECO' || st === 'BOX') && secProps.p3 > 0 && secProps.p4 > 0) {
+                const iw = Math.min(rw - 6, secProps.p3 * scale);
+                const ih = Math.min(rh - 6, secProps.p4 * scale);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect((W - iw) / 2, (H - 12 - ih) / 2, iw, ih);
+                ctx.strokeRect((W - iw) / 2, (H - 12 - ih) / 2, iw, ih);
+            }
+
+            // Línea de eje neutro
+            const yMid = ry + rh / 2;
+            ctx.strokeStyle = '#dc2626';
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath();
+            ctx.moveTo(rx - 14, yMid);
+            ctx.lineTo(rx + rw + 14, yMid);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            const ycgVal = secProps.ycg != null ? secProps.ycg : (secProps.Y_CG || (hVal / 2));
+            ctx.fillStyle = '#dc2626';
+            ctx.font = 'bold 10.5px "Segoe UI", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Ȳ = ${fmtClean(ycgVal, 2)} cm`, 22, yMid - 4);
+        }
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 11px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        const displayIz = secProps.Iz != null ? secProps.Iz : (secProps.I != null ? secProps.I : 0);
+        ctx.fillText(`${st}: A=${fmtClean(secProps.A, 1)} cm² | Iz=${fmtClean(displayIz, 1)} cm⁴`, W / 2, H - 7);
+        ctx.restore();
+    }
+
     return {
         renderFrame,
         drawSupportSymbol,
         drawLineArrow,
-        downloadFramePNG
+        downloadFramePNG,
+        renderCrossSectionPreview
     };
 }));

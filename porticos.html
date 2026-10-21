@@ -573,6 +573,34 @@
             outline: none;
         }
 
+        
+        /* Form inline controls */
+        .form-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .cell-auto-green {
+            color: #34d399 !important;
+            font-weight: 700;
+            font-family: var(--font-mono);
+        }
+
         .btn-add-row {
             background: transparent;
             border: 1px dashed var(--border-muted);
@@ -759,8 +787,8 @@
             <div class="brand-box">
                 <div class="brand-logo">🏢</div>
                 <div class="brand-title-wrap">
-                    <h1>CEREBRO ESTRUCTURAL <span class="brand-badge">PÓRTICOS v4.0</span></h1>
-                    <div class="brand-subtitle">Análisis Matricial de Rigidez Directa • Plantilla Ulianov • 3 GDL por Nudo</div>
+                    <h1>CEREBRO ESTRUCTURAL <span class="brand-badge">PÓRTICOS v4.1</span></h1>
+                    <div class="brand-subtitle">Análisis Matricial de Rigidez Directo · Plantilla Ulianov · 3 GDL por Nudo · Parche v4.1 Sección Transversal & Steiner</div>
                 </div>
             </div>
             <div class="header-controls">
@@ -856,56 +884,101 @@
         <!-- COLUMNA DERECHA: ENTRADAS REACTIVAS -->
         <div class="inputs-column">
             
-            <!-- 1. SECCIÓN TRANSVERSAL Y STEINER -->
-            <div class="input-card">
+            <!-- 1. SECCIÓN TRANSVERSAL, STEINER Y MÓDULO E -->
+            <div class="input-card" id="cardSection">
                 <div class="input-card-head">
-                    <div class="input-card-title">1. Sección Transversal, Steiner y Módulo E</div>
-                    <span class="input-card-units">cm | cm⁴ | kgf/cm²</span>
+                    <div class="input-card-title">
+                        <span>1. Sección Transversal, Steiner y Módulo E</span>
+                    </div>
+                    <div class="input-card-units">cm | cm⁴ | Kgf/cm²</div>
                 </div>
-                <div style="padding:12px; display:flex; flex-direction:column; gap:8px;">
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                        <div>
-                            <label style="font-size:10px; color:#94a3b8;">Módulo de Elasticidad E:</label>
-                            <input type="number" id="matE" class="cell-input" style="width:100%; text-align:left;" value="2100000">
-                        </div>
-                        <div>
-                            <label style="font-size:10px; color:#94a3b8;">Tipo de Sección:</label>
-                            <select id="shapeSelect" class="cell-select" style="width:100%;">
-                                <option value="rect">Rectangular (b × h)</option>
-                                <option value="circle">Circular (Diámetro d)</option>
-                                <option value="T">Sección T (Teorema de Steiner)</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <!-- Campos dinámicos de dimensiones -->
-                    <div id="secFieldsRect" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                        <div>
-                            <label style="font-size:10px; color:#94a3b8;">Base b (cm):</label>
-                            <input type="number" id="secB" class="cell-input" style="width:100%;" value="5" step="any">
-                        </div>
-                        <div>
-                            <label style="font-size:10px; color:#94a3b8;">Altura h (cm):</label>
-                            <input type="number" id="secH" class="cell-input" style="width:100%;" value="5" step="any">
-                        </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Tipo Sección:</label>
+                        <select id="inpSecType" class="cell-select" style="width: 140px;">
+                            <option value="RECTANGULAR">Rectangular (b × h)</option>
+                            <option value="T_SECTION">Sección T (Alas y Alma)</option>
+                            <option value="I_SECTION">Sección I / Doble T</option>
+                            <option value="CAJON_HUECO">Cajón Hueco / Tubular</option>
+                            <option value="CIRCULAR">Circular (D)</option>
+                            <option value="STEINER_COMPUESTA">Compuesta Steiner</option>
+                        </select>
                     </div>
-
-                    <div id="secFieldsCircle" style="display:none; grid-template-columns: 1fr; gap:10px;">
-                        <div>
-                            <label style="font-size:10px; color:#94a3b8;">Diámetro d (cm):</label>
-                            <input type="number" id="secD" class="cell-input" style="width:100%;" value="20" step="any">
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Régimen:</label>
+                        <select id="inpPropMode" class="cell-select" style="width: 120px;">
+                            <option value="CONSTANTE">E, A, I Constantes</option>
+                            <option value="VARIABLE">Por Barra</option>
+                        </select>
                     </div>
-
-                    <div id="secFieldsT" style="display:none; grid-template-columns: repeat(4, 1fr); gap:6px;">
-                        <div><label style="font-size:9.5px; color:#94a3b8;">bf:</label><input type="number" id="secBF" class="cell-input" style="width:100%;" value="30"></div>
-                        <div><label style="font-size:9.5px; color:#94a3b8;">tf:</label><input type="number" id="secTF" class="cell-input" style="width:100%;" value="8"></div>
-                        <div><label style="font-size:9.5px; color:#94a3b8;">tw:</label><input type="number" id="secTW" class="cell-input" style="width:100%;" value="10"></div>
-                        <div><label style="font-size:9.5px; color:#94a3b8;">hw:</label><input type="number" id="secHW" class="cell-input" style="width:100%;" value="40"></div>
+                    <div class="form-group">
+                        <label class="form-label">Material:</label>
+                        <select id="inpMaterial" class="cell-select" style="width: 150px;">
+                            <option value="ACERO_A36" selected>Acero A36 (2,000,000 kgf/cm²)</option>
+                            <option value="ACERO_A992">Acero A992 (2,040,000 kgf/cm²)</option>
+                            <option value="CONCRETO_210">Concreto f'c=210 (217,370 kgf/cm²)</option>
+                            <option value="CONCRETO_280">Concreto f'c=280 (250,998 kgf/cm²)</option>
+                            <option value="MADERA">Madera (100,000 kgf/cm²)</option>
+                            <option value="CUSTOM">Personalizado / Manual</option>
+                        </select>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">E (Kgf/cm²):</label>
+                        <input type="number" step="any" id="inpGlobalE" class="cell-input" value="2100000" style="width: 90px;">
+                        <input type="hidden" id="matE" value="2100000">
+                    </div>
+                </div>
 
-                    <!-- KaTeX Fórmulas en vivo -->
-                    <div id="sectionKaTeXContainer" class="latex-eq-container"></div>
+                <div class="form-row" id="sectionParamRow" style="padding-top: 0;">
+                    <div class="form-group">
+                        <label class="form-label" id="lblParamB">b (cm):</label>
+                        <input type="number" step="any" id="inpSecB" class="cell-input" value="5" style="width: 55px;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" id="lblParamH">h (cm):</label>
+                        <input type="number" step="any" id="inpSecH" class="cell-input" value="5" style="width: 55px;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" id="lblParamP3">—:</label>
+                        <input type="number" step="any" id="inpSecP3" class="cell-input" value="0" style="width: 55px;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" id="lblParamP4">—:</label>
+                        <input type="number" step="any" id="inpSecP4" class="cell-input" value="0" style="width: 55px;">
+                    </div>
+                    <button type="button" id="btnToggleSteiner" class="tool-btn" style="margin-left: auto;">
+                        📊 Tabla Steiner
+                    </button>
+                </div>
+
+                <!-- Preview de la sección transversal y cálculo automático -->
+                <div style="display: flex; gap: 14px; align-items: center; padding: 6px 12px 10px 12px; border-top: 1px solid var(--border-subtle); flex-wrap: wrap;">
+                    <canvas id="canvasSectionPreview" width="280" height="180" style="border: 1px solid var(--border-muted); border-radius: 6px; background: #ffffff; max-width: 100%;"></canvas>
+                    <div style="font-size: 11px; line-height: 1.8; min-width: 140px;">
+                        <div>Área A = <strong id="outGlobalA" style="color: #38bdf8;">25.0000</strong> cm²</div>
+                        <div>Inercia Iz = <strong id="outGlobalIz" style="color: #34d399;">52.0833</strong> cm⁴</div>
+                        <div>Centroide Ȳ = <strong id="outGlobalYcg" style="color: #f59e0b;">2.5000</strong> cm</div>
+                    </div>
+                </div>
+
+                <!-- KaTeX Fórmulas en vivo -->
+                <div id="sectionKaTeXContainer" class="latex-eq-container" style="padding: 6px 12px 10px 12px; border-top: 1px solid var(--border-subtle); overflow-x: auto; background: rgba(0,0,0,0.2); border-radius: 4px;"></div>
+
+                <!-- Tabla Steiner Desplegable -->
+                <div id="steinerWrap" style="display: none; padding: 8px 12px; border-top: 1px solid var(--border-subtle);">
+                    <div style="font-weight: 800; font-size: 11px; color: #38bdf8; margin-bottom: 6px;">📐 Teorema de Ejes Paralelos (Steiner) — Hasta 7 Piezas</div>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Pieza</th><th>Tipo</th><th>b</th><th>b_sup</th><th>h</th><th>y_base</th><th>x_c</th><th>Ai (cm²)</th><th>Yi (cm)</th><th>Ai·Yi</th><th>I0i (cm⁴)</th><th>di (cm)</th><th>Ai·di²</th><th>IT (cm⁴)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodySteiner"></tbody>
+                            <tfoot id="tfootSteiner"></tfoot>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -1230,10 +1303,10 @@
     <script src="assets/exceljs.min.js"></script>
     <script src="assets/xlsx-populate.min.js"></script>
     <script src="auth.js?v=8.1"></script>
-    <script src="frame-solver.js?v=3.5"></script>
-    <script src="frame-canvas.js?v=3.5"></script>
-    <script src="frame-diagrams.js?v=3.5"></script>
-    <script src="frame-excel-generator.js?v=3.5"></script>
-    <script src="frame-app.js?v=3.5"></script>
+    <script src="frame-solver.js?v=4.1"></script>
+    <script src="frame-canvas.js?v=4.1"></script>
+    <script src="frame-diagrams.js?v=4.1"></script>
+    <script src="frame-excel-generator.js?v=4.1"></script>
+    <script src="frame-app.js?v=4.1"></script>
 </body>
 </html>

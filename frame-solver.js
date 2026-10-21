@@ -123,41 +123,152 @@
     return x;
   }
 
+  function computeSteinerTable(steinerRows) {
+    const rowsOut = [];
+    let sumA = 0;
+    let sumAy = 0;
+
+    for (let i = 0; i < 7; i++) {
+      const r = (steinerRows && steinerRows[i]) ? steinerRows[i] : { tipo: 'NINGUNO', b: 0, b_sup: 0, h: 0, y_base: 0, x_c: 0 };
+      const tipo = String(r.tipo || 'NINGUNO').toUpperCase().trim();
+      const b = parseFloat(r.b) || 0;
+      const b_sup = parseFloat(r.b_sup) || 0;
+      const h = parseFloat(r.h) || 0;
+      const y_base = parseFloat(r.y_base) || 0;
+      const x_c = parseFloat(r.x_c) || 0;
+
+      if (tipo === 'NINGUNO' || tipo === '' || (b <= 0 && h <= 0)) {
+        rowsOut.push({
+          idx: i + 1, tipo: 'NINGUNO', b: 0, b_sup: 0, h: 0, y_base: 0, x_c: 0,
+          active: false, A: 0, y_i: 0, Ay: 0, I0: 0, Ad2: 0, Itot: 0
+        });
+        continue;
+      }
+
+      let A = 0;
+      let dy_local = 0;
+      let I0 = 0;
+
+      if (tipo === 'RECTANGULO') {
+        A = b * h;
+        dy_local = h / 2.0;
+        I0 = (b * Math.pow(h, 3)) / 12.0;
+      } else if (tipo === 'TRIANGULO') {
+        A = (b * h) / 2.0;
+        dy_local = h / 3.0;
+        I0 = (b * Math.pow(h, 3)) / 36.0;
+      } else if (tipo === 'TRAPECIO') {
+        A = ((b + b_sup) / 2.0) * h;
+        dy_local = (b + b_sup) > 0 ? (h * (b + 2.0 * b_sup)) / (3.0 * (b + b_sup)) : 0;
+        I0 = (b + b_sup) > 0 ? (Math.pow(h, 3) * (b * b + 4.0 * b * b_sup + b_sup * b_sup)) / (36.0 * (b + b_sup)) : 0;
+      } else if (tipo === 'CIRCULO') {
+        A = (Math.PI * b * b) / 4.0;
+        dy_local = b / 2.0;
+        I0 = (Math.PI * Math.pow(b, 4)) / 64.0;
+      } else if (tipo === 'SEMICIRCULO') {
+        const rad = b / 2.0;
+        A = (Math.PI * rad * rad) / 2.0;
+        dy_local = (4.0 * rad) / (3.0 * Math.PI);
+        I0 = ((Math.PI / 8.0) - (8.0 / (9.0 * Math.PI))) * Math.pow(rad, 4);
+      } else if (tipo === 'HUECO_RECT') {
+        A = -(b * h);
+        dy_local = h / 2.0;
+        I0 = -(b * Math.pow(h, 3)) / 12.0;
+      } else if (tipo === 'HUECO_CIRC') {
+        A = -(Math.PI * b * b) / 4.0;
+        dy_local = b / 2.0;
+        I0 = -(Math.PI * Math.pow(b, 4)) / 64.0;
+      }
+
+      const y_i = y_base + dy_local;
+      const Ay = A * y_i;
+      sumA += A;
+      sumAy += Ay;
+
+      rowsOut.push({
+        idx: i + 1, tipo, b, b_sup, h, y_base, x_c,
+        active: true, A, y_i, Ay, I0, Ad2: 0, Itot: 0
+      });
+    }
+
+    const Y_CG = Math.abs(sumA) > 1e-12 ? (sumAy / sumA) : 0;
+    let sumI0 = 0;
+    let sumAd2 = 0;
+    let sumItot = 0;
+
+    for (const row of rowsOut) {
+      if (row.active) {
+        row.Ad2 = row.A * Math.pow(row.y_i - Y_CG, 2);
+        row.Itot = row.I0 + row.Ad2;
+        sumI0 += row.I0;
+        sumAd2 += row.Ad2;
+        sumItot += row.Itot;
+      }
+    }
+
+    return {
+      rows: rowsOut,
+      A_total: sumA,
+      Y_CG: Y_CG,
+      Ay_total: sumAy,
+      I0_total: sumI0,
+      Ad2_total: sumAd2,
+      I_total: sumItot
+    };
+  }
+
   function properties(p){
-    const shape = p.shape || 'rect';
+    if(!p) p = { shape: 'rect', b: 5, h: 5 };
+    const secType = String(p.sec_type || p.shape || 'rect').toUpperCase().trim();
     let A = 0, I = 0, ycg = 0;
     let details = {};
+    let steinerResult = null;
 
-    if(shape === 'rect'){
-      const b = Number(p.b), h = Number(p.h);
+    if(secType === 'RECT' || secType === 'RECTANGULAR'){
+      const b = Number(p.b || 5), h = Number(p.h || 5);
       if(!(b > 0 && h > 0)) throw new Error("Base b y altura h deben ser mayores a cero");
       A = b * h;
       I = (b * Math.pow(h, 3)) / 12;
       ycg = h / 2;
       details = {
-        shape: 'rect', b, h, A, I, ycg,
-        formulaA: 'b \\cdot h',
-        formulaI: '\\frac{b \\cdot h^3}{12}',
-        subsA: `${b} \\cdot ${h} = ${A.toFixed(2)}\\text{ cm}^2`,
-        subsI: `\\frac{${b} \\cdot ${h}^3}{12} = ${I.toFixed(4)}\\text{ cm}^4`
+        shape: 'rect', sec_type: 'RECTANGULAR', b, h, A, I, ycg,
+        formulaA: 'b \cdot h',
+        formulaI: '\frac{b \cdot h^3}{12}',
+        subsA: `${b} \cdot ${h} = ${A.toFixed(2)}\text{ cm}^2`,
+        subsI: `\frac{${b} \cdot ${h}^3}{12} = ${I.toFixed(4)}\text{ cm}^4`
       };
-    } else if(shape === 'circle'){
-      const d = Number(p.d);
+    } else if(secType === 'CIRCLE' || secType === 'CIRCULAR'){
+      const d = Number(p.d || p.b || 20);
       if(!(d > 0)) throw new Error("Diámetro d debe ser mayor a cero");
       A = Math.PI * d * d / 4;
       I = Math.PI * Math.pow(d, 4) / 64;
       ycg = d / 2;
       details = {
-        shape: 'circle', d, A, I, ycg,
-        formulaA: '\\frac{\\pi d^2}{4}',
-        formulaI: '\\frac{\\pi d^4}{64}',
-        subsA: `\\frac{\\pi (${d})^2}{4} = ${A.toFixed(2)}\\text{ cm}^2`,
-        subsI: `\\frac{\\pi (${d})^4}{64} = ${I.toFixed(4)}\\text{ cm}^4`
+        shape: 'circle', sec_type: 'CIRCULAR', d, b: d, h: d, A, I, ycg,
+        formulaA: '\frac{\pi d^2}{4}',
+        formulaI: '\frac{\pi d^4}{64}',
+        subsA: `\frac{\pi (${d})^2}{4} = ${A.toFixed(2)}\text{ cm}^2`,
+        subsI: `\frac{\pi (${d})^4}{64} = ${I.toFixed(4)}\text{ cm}^4`
       };
-    } else if(shape === 'T'){
-      const bf = Number(p.bf), tf = Number(p.tf), tw = Number(p.tw), hw = Number(p.hw);
-      if(!(bf > 0 && tf > 0 && tw > 0 && hw > 0 && tw <= bf)){
-        throw new Error("Dimensiones de la sección T inválidas o tw > bf");
+    } else if(secType === 'TUBULAR_CIRCULAR'){
+      const D = Number(p.b || 20), d = Number(p.h || 16);
+      if(!(D > d && d > 0)) throw new Error("Diámetro exterior debe ser mayor al interior");
+      A = Math.PI * (D * D - d * d) / 4;
+      I = Math.PI * (Math.pow(D, 4) - Math.pow(d, 4)) / 64;
+      ycg = D / 2;
+      details = {
+        shape: 'tubular_circular', sec_type: 'TUBULAR_CIRCULAR', D, d, b: D, h: d, A, I, ycg
+      };
+    } else if(secType === 'T' || secType === 'T_SECTION' || secType === 'SECCION_T'){
+      let bf = Number(p.bf), tf = Number(p.tf), tw = Number(p.tw), hw = Number(p.hw);
+      if(!(bf > 0 && tf > 0 && tw > 0 && hw > 0)){
+        tw = Number(p.b || 10);
+        hw = Number(p.h || 40);
+        bf = Number(p.p3 || 30);
+        tf = Number(p.p4 || 8);
+      }
+      if(!(bf > 0 && tf > 0 && tw > 0 && hw > 0)){
+        throw new Error("Dimensiones de la sección T inválidas");
       }
       const a1 = bf * tf;
       const a2 = tw * hw;
@@ -173,16 +284,76 @@
       const st2 = a2 * d2 * d2;
       I = I1_0 + st1 + I2_0 + st2;
       details = {
-        shape: 'T', bf, tf, tw, hw, a1, a2, y1, y2, A, ycg, d1, d2, I1_0, I2_0, st1, st2, I,
-        formulaYcg: 'y_{cg} = \\frac{A_1 y_1 + A_2 y_2}{A_1 + A_2}',
-        formulaSteiner: 'I = \\sum (I_{0i} + A_i d_i^2)',
-        subsYcg: `\\frac{(${a1.toFixed(1)})(${y1.toFixed(1)}) + (${a2.toFixed(1)})(${y2.toFixed(1)})}{${A.toFixed(1)}} = ${ycg.toFixed(3)}\\text{ cm}`,
-        subsSteiner: `(${I1_0.toFixed(2)} + ${st1.toFixed(2)}) + (${I2_0.toFixed(2)} + ${st2.toFixed(2)}) = ${I.toFixed(4)}\\text{ cm}^4`
+        shape: 'T', sec_type: 'T_SECTION', bf, tf, tw, hw, b: tw, h: hw, p3: bf, p4: tf, a1, a2, y1, y2, A, ycg, d1, d2, I1_0, I2_0, st1, st2, I,
+        formulaYcg: 'y_{cg} = \frac{A_1 y_1 + A_2 y_2}{A_1 + A_2}',
+        formulaSteiner: 'I = \sum (I_{0i} + A_i d_i^2)',
+        subsYcg: `\frac{(${a1.toFixed(1)})(${y1.toFixed(1)}) + (${a2.toFixed(1)})(${y2.toFixed(1)})}{${A.toFixed(1)}} = ${ycg.toFixed(3)}\text{ cm}`,
+        subsSteiner: `(${I1_0.toFixed(2)} + ${st1.toFixed(2)}) + (${I2_0.toFixed(2)} + ${st2.toFixed(2)}) = ${I.toFixed(4)}\text{ cm}^4`
       };
+    } else if(secType === 'I_SECTION' || secType === 'DOBLE_T'){
+      const b_ala = Number(p.b || 30);
+      const H_tot = Number(p.h || 50);
+      const t_ala = Number(p.p3 || 10);
+      const t_alma = Number(p.p4 || 8);
+      const h_web = Math.max(0.1, H_tot - 2 * t_ala);
+      const a_flange = b_ala * t_ala;
+      const a_web = t_alma * h_web;
+      A = 2 * a_flange + a_web;
+      ycg = H_tot / 2;
+      const d_flange = H_tot / 2 - t_ala / 2;
+      const I0_flange = (b_ala * Math.pow(t_ala, 3)) / 12;
+      const I0_web = (t_alma * Math.pow(h_web, 3)) / 12;
+      I = 2 * (I0_flange + a_flange * d_flange * d_flange) + I0_web;
+      details = {
+        shape: 'I', sec_type: 'I_SECTION', b: b_ala, h: H_tot, p3: t_ala, p4: t_alma, A, I, ycg
+      };
+    } else if(secType === 'CAJON_HUECO' || secType === 'BOX' || secType === 'TUBULAR'){
+      const B_ext = Number(p.b || 25);
+      const H_ext = Number(p.h || 45);
+      const b_int = Number(p.p3 || 15);
+      const h_int = Number(p.p4 || 35);
+      A = (B_ext * H_ext) - (b_int * h_int);
+      I = ((B_ext * Math.pow(H_ext, 3)) - (b_int * Math.pow(h_int, 3))) / 12;
+      ycg = H_ext / 2;
+      details = {
+        shape: 'cajon_hueco', sec_type: 'CAJON_HUECO', b: B_ext, h: H_ext, p3: b_int, p4: h_int, A, I, ycg
+      };
+    } else if(secType === 'STEINER_COMPUESTA' || secType === 'STEINER_CUSTOM'){
+      steinerResult = computeSteinerTable(p.steiner_rows || (p.steiner && p.steiner.rows) || []);
+      A = steinerResult.A_total > 0 ? steinerResult.A_total : (Number(p.b || 20) * Number(p.h || 50));
+      ycg = steinerResult.Y_CG > 0 ? steinerResult.Y_CG : (Number(p.h || 50) / 2);
+      I = steinerResult.I_total > 0 ? steinerResult.I_total : ((Number(p.b || 20) * Math.pow(Number(p.h || 50), 3)) / 12);
+      details = {
+        shape: 'steiner_compuesta', sec_type: 'STEINER_COMPUESTA', b: Number(p.b || 20), h: Number(p.h || 50), A, I, ycg, steiner: steinerResult
+      };
+    } else if(secType === 'DIRECTO_A_I'){
+      A = Number(p.b || 25);
+      I = Number(p.h || 52.0833);
+      ycg = 0;
+      details = { shape: 'directo_a_i', sec_type: 'DIRECTO_A_I', b: A, h: I, A, I, ycg };
     } else {
-      throw new Error("Tipo de sección desconocida: " + shape);
+      const b = Number(p.b || 5), h = Number(p.h || 5);
+      A = b * h;
+      I = (b * Math.pow(h, 3)) / 12;
+      ycg = h / 2;
+      details = { shape: 'rect', sec_type: 'RECTANGULAR', b, h, A, I, ycg };
     }
-    return { A, I, ycg, details };
+
+    return {
+      A,
+      I,
+      Iz: I,
+      ycg,
+      Y_CG: ycg,
+      b: Number(p.b || 5),
+      h: Number(p.h || 5),
+      p3: Number(p.p3 || 0),
+      p4: Number(p.p4 || 0),
+      sec_type: secType,
+      shape: p.shape || secType.toLowerCase(),
+      steiner: steinerResult,
+      details
+    };
   }
 
   function element(n1, n2, E, A, I, id, q0, q1, dir){
