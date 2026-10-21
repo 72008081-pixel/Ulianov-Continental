@@ -3,56 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Plantilla Ulianov — Tablas Matriciales de Pórticos 2D (Cátedra Oficial)</title>
-  <!-- KaTeX Oficial para renderizado matemático LaTeX de alta precisión -->
-  <link rel="stylesheet" href="assets/katex.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-  <script src="assets/katex.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <title>Matrices Académicas Oficiales — Pórticos 2D | Cátedra Ing. Ulianov Cuba Valencia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <style>
     :root {
-      --bg-body: #090d16;
-      --bg-card: #111827;
-      --bg-panel: #1a2333;
-      --border-subtle: #1e293b;
-      --border-muted: #334155;
+      --bg-base: #060913;
+      --bg-card: rgba(15, 23, 42, 0.85);
+      --bg-card-subtle: rgba(30, 41, 59, 0.6);
+      --border-subtle: rgba(56, 189, 248, 0.2);
+      --border-muted: rgba(255, 255, 255, 0.08);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --accent-sky: #38bdf8;
-      --accent-emerald: #10b981;
-      --accent-amber: #fbbf24;
-      --pastel-mint: #a7f3d0;
-      --pastel-lavender: #ddd6fe;
-      --pastel-sky: #bae6fd;
-      --pastel-butter: #fff2cc;
-      --pastel-green: #c6efce;
-      --pastel-blue: #b4c6e7;
-      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      --font-mono: "Consolas", "Courier New", monospace;
+      --primary: #00f0ff;
+      --accent-green: #10b981;
+      --accent-yellow: #fde047;
+      --accent-rose: #f43f5e;
+      --pastel-sky: #e0f2fe;
+      --pastel-mint: #dcfce7;
+      --pastel-butter: #fef9c3;
+      --font-mono: 'Fira Code', monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background-color: var(--bg-body);
+      background-color: var(--bg-base);
       color: var(--text-main);
-      font-family: var(--font-sans);
-      font-size: 13px;
-      line-height: 1.5;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
       padding-bottom: 60px;
     }
 
     header {
-      background: rgba(17, 24, 39, 0.95);
+      background: rgba(10, 15, 30, 0.95);
       border-bottom: 1px solid var(--border-subtle);
       padding: 16px 28px;
       position: sticky;
       top: 0;
       z-index: 50;
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
     }
 
     .header-content {
-      max-width: 1440px;
+      max-width: 1560px;
       margin: 0 auto;
       display: flex;
       justify-content: space-between;
@@ -116,11 +112,11 @@
 
     .btn:hover {
       transform: translateY(-1px);
-      filter: brightness(1.05);
+      filter: brightness(1.08);
     }
 
     main {
-      max-width: 1440px;
+      max-width: 1560px;
       margin: 24px auto;
       padding: 0 20px;
       display: flex;
@@ -134,7 +130,7 @@
       border-radius: 12px;
       padding: 20px;
       overflow-x: auto;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
 
     .card-title {
@@ -144,9 +140,15 @@
       margin-bottom: 12px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: space-between;
       border-bottom: 1px solid var(--border-subtle);
       padding-bottom: 8px;
+    }
+
+    .card-title-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     table.excel-table {
@@ -181,6 +183,9 @@
     .cell-left { text-align: left !important; }
     .cell-diag { background: rgba(0, 255, 136, 0.15) !important; color: #00ff88 !important; font-weight: 800; }
     .cell-header-gdl { background: #0f1c34 !important; color: #00f0ff !important; font-weight: 800; text-align: center; }
+    .cell-zero { color: #475569 !important; }
+    .cell-restr { background: rgba(244, 63, 94, 0.12) !important; color: #f43f5e !important; text-decoration: line-through; }
+    .cell-highlight { background: rgba(254, 240, 138, 0.15) !important; color: #fde047 !important; font-weight: 800; }
 
     .tag-badge {
       padding: 2px 8px;
@@ -193,17 +198,66 @@
     .tag-free { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid #94a3b8; }
     .tag-pin { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid #10b981; }
 
+    .selector-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .pill-btn {
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid var(--border-muted);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .pill-btn.active, .pill-btn:hover {
+      background: var(--primary);
+      color: #04101e;
+      border-color: var(--primary);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+    }
+
+    .cuadros-grid {
+      display: grid;
+      grid-template-columns: 240px 1fr 240px;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 1200px) {
+      .cuadros-grid { grid-template-columns: 1fr; }
+    }
+
+    .cuadro-box {
+      background: rgba(10, 20, 38, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 14px;
+      overflow-x: auto;
+    }
+    .cuadro-title {
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
     .status-ok {
       background: rgba(16, 185, 129, 0.15);
       border: 1px solid #10b981;
       color: #34d399;
-      padding: 10px 14px;
+      padding: 12px 16px;
       border-radius: 8px;
       font-weight: 800;
       font-size: 13px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       margin-top: 10px;
     }
 
@@ -220,27 +274,25 @@
   <header>
     <div class="header-content">
       <div class="header-title">
-        <h1>🏢 Tablas Matriciales de Pórticos 2D <span style="background:var(--pastel-mint); color:#000; font-size:10.5px; padding:2px 7px; border-radius:99px;">PLANTILLA ULIANOV v3.5</span></h1>
-        <p>Análisis Estructural II • Universidad Continental • Cátedra Ing. Ulianov Cuba Valencia</p>
+        <h1><i class="fa-solid fa-calculator" style="color:var(--primary);"></i> Matrices Académicas de Rigidez — Pórticos 2D (v4.0)</h1>
+        <p>Cátedra Análisis Estructural II · Universidad Continental · Ing. Ulianov Cuba Valencia · Sistema de 33 GDL</p>
       </div>
       <div class="header-actions">
-        <a href="porticos.html" class="btn btn-portal">🏢 Volver al Simulador</a>
-        <button id="btnDownloadExcel" class="btn btn-excel">📗 Descargar Excel (5 Pestañas)</button>
-        <button onclick="window.print()" class="btn btn-print">🖨 Imprimir / Guardar en PDF</button>
+        <a href="porticos.html" class="btn btn-portal"><i class="fa-solid fa-arrow-left"></i> Volver al Solucionador</a>
+        <button id="btnDownloadExcel" class="btn btn-excel"><i class="fa-solid fa-file-excel"></i> Descargar Excel Oficial (3.1 MIXTAS + PLANTILLA ULIANOV)</button>
+        <button onclick="window.print()" class="btn btn-print"><i class="fa-solid fa-print"></i> Imprimir Memoria</button>
       </div>
     </div>
   </header>
 
   <main id="mainContainer">
-    <div style="text-align:center; padding: 40px; color:#94a3b8;">
-      Cargando matrices del pórtico...
-    </div>
+    <!-- Contenido generado dinámicamente -->
   </main>
 
   <script src="assets/exceljs.min.js"></script>
-  <script src="assets/xlsx-populate.min.js"></script>
-  <script src="frame-solver.js?v=3.5"></script>
-  <script src="frame-excel-generator.js?v=3.5"></script>
+  <script src="frame-solver.js"></script>
+  <script src="frame-excel-generator.js"></script>
+
   <script>
     (function(){
       'use strict';
@@ -277,7 +329,7 @@
       try {
         result = FrameSolver.compute(model);
       } catch(err){
-        $('mainContainer').innerHTML = `<div style="color:#f87171; padding:20px;">Error resolviendo pórtico: ${err.message}</div>`;
+        $('mainContainer').innerHTML = `<div style="color:#f87171; padding:20px; font-weight:bold;">Error resolviendo pórtico: ${err.message}</div>`;
         return;
       }
 
@@ -286,6 +338,8 @@
         return val.toLocaleString('es-PE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
       }
 
+      let selectedExpandedBar = 1;
+
       function renderTables(){
         let html = '';
 
@@ -293,7 +347,9 @@
         const p = result.props;
         html += `
         <div class="card">
-          <div class="card-title">1. Propiedades del Material y Sección Transversal</div>
+          <div class="card-title">
+            <div class="card-title-left"><i class="fa-solid fa-shapes"></i> 1. Propiedades del Material y Sección Transversal (10 Tramos)</div>
+          </div>
           <table class="excel-table">
             <thead>
               <tr>
@@ -301,7 +357,7 @@
                 <th class="cell-center">Símbolo</th>
                 <th class="cell-center">Valor</th>
                 <th class="cell-center">Unidades</th>
-                <th class="cell-left">Fórmula Aplicada</th>
+                <th class="cell-left">Fórmula Oficial de Cátedra</th>
               </tr>
             </thead>
             <tbody>
@@ -320,14 +376,16 @@
         // TABLA 2: GEOMETRÍA DE TRAMOS
         html += `
         <div class="card">
-          <div class="card-title">2. Geometría de Tramos y Orientación de Barras</div>
+          <div class="card-title">
+            <div class="card-title-left"><i class="fa-solid fa-ruler-combined"></i> 2. Geometría de Tramos y Orientación de Barras</div>
+          </div>
           <table class="excel-table">
             <thead>
               <tr>
                 <th class="cell-center">Barra</th>
-                <th class="cell-center">Nudo i</th>
-                <th class="cell-center">Nudo j</th>
-                <th>Xi (cm)</th><th>Yi (cm)</th><th>Xj (cm)</th><th>Yj (cm)</th>
+                <th class="cell-center">Ni</th>
+                <th class="cell-center">Nj</th>
+                <th>Xi (cm)</th><th>Yi (cm)</th><th>Xf (cm)</th><th>Yf (cm)</th>
                 <th>L (cm)</th><th>L (m)</th><th>Ángulo θ (°)</th><th>cos θ</th><th>sen θ</th>
               </tr>
             </thead>
@@ -358,7 +416,9 @@
         // TABLA 3: EVALUACIÓN NODAL
         html += `
         <div class="card">
-          <div class="card-title">3. Tabla de Evaluación Nodal, Grados de Libertad y Cargas</div>
+          <div class="card-title">
+            <div class="card-title-left"><i class="fa-solid fa-list-check"></i> 3. Tabla de Evaluación Nodal, Grados de Libertad y Cargas</div>
+          </div>
           <table class="excel-table">
             <thead>
               <tr>
@@ -375,9 +435,9 @@
                   <td class="cell-center" style="font-weight:bold; color:#10b981;">(${n.id})</td>
                   <td>${fmt(n.x, 1)}</td><td>${fmt(n.y, 1)}</td>
                   <td class="cell-center"><span class="tag-badge ${n.support==='fixed'?'tag-fixed':n.support==='free'?'tag-free':'tag-pin'}">${n.support.toUpperCase()}</span></td>
-                  <td class="cell-center">${n.support==='fixed'||n.support==='pin'||n.support==='rollerX'?'RESTRINGIDO':'LIBRE'}</td>
-                  <td class="cell-center">${n.support==='fixed'||n.support==='pin'||n.support==='rollerY'?'RESTRINGIDO':'LIBRE'}</td>
-                  <td class="cell-center">${n.support==='fixed'?'RESTRINGIDO':'LIBRE'}</td>
+                  <td class="cell-center" style="color:${(n.support==='fixed'||n.support==='pin'||n.support==='rollerX')?'#f43f5e':'#34d399'}; font-weight:bold;">${(n.support==='fixed'||n.support==='pin'||n.support==='rollerX')?'RESTRINGIDO':'LIBRE'}</td>
+                  <td class="cell-center" style="color:${(n.support==='fixed'||n.support==='pin'||n.support==='rollerY')?'#f43f5e':'#34d399'}; font-weight:bold;">${(n.support==='fixed'||n.support==='pin'||n.support==='rollerY')?'RESTRINGIDO':'LIBRE'}</td>
+                  <td class="cell-center" style="color:${(n.support==='fixed')?'#f43f5e':'#34d399'}; font-weight:bold;">${(n.support==='fixed')?'RESTRINGIDO':'LIBRE'}</td>
                   <td style="color:#fde047;">${fmt(n.fx, 2)}</td>
                   <td style="color:#fde047;">${fmt(n.fy, 2)}</td>
                   <td style="color:#f43f5e;">${fmt(n.mz, 2)}</td>
@@ -388,42 +448,324 @@
         </div>
         `;
 
-        // TABLA 4 & 5: MATRICES LOCALES Y GLOBALES POR BARRA
-        result.bars.forEach(b => {
-          html += `
-          <div class="card">
-            <div class="card-title">Matrices de Rigidez de la Barra [${b.id}] (Nudo ${b.n1} → Nudo ${b.n2})</div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
-              <div>
-                <p style="color:#38bdf8; font-weight:bold; margin-bottom:6px;">Matriz Local [k] (6x6) [kgf, cm]:</p>
-                <table class="excel-table">
-                  <tbody>
-                    ${b.k.map((row, r) => `<tr>${row.map((val, c) => `<td class="${r===c?'cell-diag':''}">${fmt(val, 2)}</td>`).join('')}</tr>`).join('')}
-                  </tbody>
-                </table>
+        // TABLA 4: MATRICES LOCALES Y GLOBALES 6x6 POR BARRA
+        html += `
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-left"><i class="fa-solid fa-cube"></i> 4. Matrices Elementales 6x6 (Local [k] y Transformada [kt] = [T]^T [k] [T])</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:20px;">
+            ${result.bars.map(b => `
+              <div style="border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:12px; background:rgba(0,0,0,0.2);">
+                <div style="color:#00f0ff; font-weight:bold; margin-bottom:10px;">Barra [${b.id}]: Nudo (${b.n1}) → Nudo (${b.n2}) · L = ${fmt(b.L, 1)} cm · θ = ${fmt(b.angleDeg, 1)}°</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                  <div>
+                    <p style="color:#38bdf8; font-size:11px; font-weight:bold; margin-bottom:6px;">Matriz Local [k] (6x6) [kgf, cm]:</p>
+                    <table class="excel-table">
+                      <tbody>
+                        ${b.k.map((row, r) => `<tr>${row.map((val, c) => `<td class="${r===c?'cell-diag':(Math.abs(val)<1e-6?'cell-zero':'')}">${fmt(val, 2)}</td>`).join('')}</tr>`).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div>
+                    <p style="color:#34d399; font-size:11px; font-weight:bold; margin-bottom:6px;">Matriz Global [kt] = [T]^T [k] [T] (6x6):</p>
+                    <table class="excel-table">
+                      <tbody>
+                        ${b.kt.map((row, r) => `<tr>${row.map((val, c) => `<td class="${r===c?'cell-diag':(Math.abs(val)<1e-6?'cell-zero':'')}">${fmt(val, 2)}</td>`).join('')}</tr>`).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p style="color:#34d399; font-weight:bold; margin-bottom:6px;">Matriz Global [kt] = [T]^T [k] [T] (6x6):</p>
+            `).join('')}
+          </div>
+        </div>
+        `;
+
+        // TABLA 5: MATRICES EXPANDIDAS 33x33 (Satisface exigencia de considerar todas las variables horizontal y verticalmente)
+        html += `
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-left"><i class="fa-solid fa-table-cells-large"></i> 5. Matriz Expandida 33 x 33 de la Barra (Consideración Completa Horizontal y Vertical)</div>
+            <div class="selector-pills">
+              ${result.bars.map(b => `<button class="pill-btn ${b.id === selectedExpandedBar ? 'active' : ''}" onclick="window.setExpBar(${b.id})">Barra [${b.id}]</button>`).join('')}
+            </div>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin-bottom:10px;">
+            Muestra la matriz elemental de 6x6 mapeada dentro del espacio vectorial total de 33 Grados de Libertad (11 Nudos x 3 GDL).
+          </p>
+          <div style="max-height: 480px; overflow: auto; border: 1px solid var(--border-muted); border-radius: 6px;">
+            <table class="excel-table">
+              <thead>
+                <tr>
+                  <th class="cell-center" style="position:sticky; left:0; z-index:2; background:#0f172a;">GDL</th>
+                  ${result.dofLabels33.map(l => `<th>${l}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${(()=>{
+                  const curExp = result.expandedBars33.find(eb => eb.barId === selectedExpandedBar) || result.expandedBars33[0];
+                  return curExp.matrix.map((row, r) => `
+                    <tr>
+                      <td class="cell-center cell-header-gdl" style="position:sticky; left:0; background:#0f172a;">${result.dofLabels33[r]}</td>
+                      ${row.map((val, c) => {
+                        const isNonZero = Math.abs(val) > 1e-4;
+                        const isDiag = (r === c && isNonZero);
+                        return `<td class="${isDiag?'cell-diag':(isNonZero?'cell-highlight':'cell-zero')}">${isNonZero ? fmt(val, 2) : '0'}</td>`;
+                      }).join('')}
+                    </tr>
+                  `).join('');
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        `;
+
+        // TABLA 6: MATRIZ DE RIGIDEZ GLOBAL DE LA ESTRUCTURA [K] (ENSAMBLE COMPLETO 33x33)
+        html += `
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-left"><i class="fa-solid fa-network-wired"></i> 6. Matriz de Rigidez Global de la Estructura [K] (Ensamble Total 33 x 33 GDL)</div>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin-bottom:10px;">
+            Suma directa en la misma posición de todas las matrices globales expandidas: [K] = Σ [K_expandida_i].
+          </p>
+          <div style="max-height: 480px; overflow: auto; border: 1px solid var(--border-muted); border-radius: 6px;">
+            <table class="excel-table">
+              <thead>
+                <tr>
+                  <th class="cell-center" style="position:sticky; left:0; z-index:2; background:#0f172a;">GDL</th>
+                  ${result.dofLabels33.map(l => `<th>${l}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${result.K_global_33.map((row, r) => `
+                  <tr>
+                    <td class="cell-center cell-header-gdl" style="position:sticky; left:0; background:#0f172a;">${result.dofLabels33[r]}</td>
+                    ${row.map((val, c) => {
+                      const isNonZero = Math.abs(val) > 1e-4;
+                      const isDiag = (r === c);
+                      return `<td class="${isDiag?'cell-diag':(isNonZero?'':'cell-zero')}">${isNonZero ? fmt(val, 2) : '0'}</td>`;
+                    }).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        `;
+
+        // TABLA 7: PARTICIÓN MATRICIAL (ELIMINACIÓN DE APOYOS) Y SUBMATRIZ LIBRE [K_LL]
+        const freeCount = result.free.length;
+        html += `
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-left"><i class="fa-solid fa-scissors"></i> 7. Partición Matricial: Submatriz Reducida de Grados Libres [K_LL] (${freeCount} x ${freeCount})</div>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin-bottom:10px;">
+            Eliminación de las filas y columnas restringidas por empotramientos/apoyos fijos (desplazamientos nulos D=0). Se obtiene el bloque central activo.
+          </p>
+          <div style="overflow-x: auto;">
+            <table class="excel-table">
+              <thead>
+                <tr>
+                  <th class="cell-center">GDL Libre</th>
+                  ${result.free.map(dIdx => `<th>${result.dofLabels33[dIdx]}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${result.Kff.map((row, r) => `
+                  <tr>
+                    <td class="cell-center cell-header-gdl">${result.dofLabels33[result.free[r]]}</td>
+                    ${row.map((val, c) => `<td class="${r===c?'cell-diag':''}">${fmt(val, 2)}</td>`).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        `;
+
+        // TABLA 8: MATRIZ INVERSA [K_LL]^-1
+        html += `
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-left"><i class="fa-solid fa-arrows-spin"></i> 8. Matriz Inversa [K_LL]^-1 (Inversión Matricial con =MINVERSA, ${freeCount} x ${freeCount})</div>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin-bottom:10px;">
+            Cálculo numérico de alta precisión mediante eliminación de Gauss-Jordan con pivoteo parcial / Excel MINVERSA.
+          </p>
+          <div style="overflow-x: auto;">
+            <table class="excel-table">
+              <thead>
+                <tr>
+                  <th class="cell-center">GDL</th>
+                  ${result.free.map(dIdx => `<th>${result.dofLabels33[dIdx]}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${result.Kff_inv.map((row, r) => `
+                  <tr>
+                    <td class="cell-center cell-header-gdl">${result.dofLabels33[result.free[r]]}</td>
+                    ${row.map(val => `<td style="color:#fde047;">${val.toExponential(6)}</td>`).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        `;
+
+        // TABLA 9: LOS 3 CUADROS CLÁSICOS DE RESOLUCIÓN MATRICIAL: {D_L} = [K_LL]^-1 * {F_L}
+        html += `
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-left"><i class="fa-solid fa-equals"></i> 9. Ecuación Matricial Fundamental: {D_libres} = [K_LL]^-1 · {F_libres} (Los 3 Cuadros Clásicos)</div>
+          </div>
+          <div class="cuadros-grid">
+            <!-- Cuadro 1: Desplazamientos -->
+            <div class="cuadro-box" style="border-color:#10b981;">
+              <div class="cuadro-title" style="color:#34d399;"><i class="fa-solid fa-arrow-up-right-dots"></i> CUADRO 1: {D_libres}</div>
+              <table class="excel-table">
+                <thead><tr><th class="cell-center">GDL</th><th>Valor</th><th>Unidad</th></tr></thead>
+                <tbody>
+                  ${result.Df_inv.map((val, i) => `
+                    <tr>
+                      <td class="cell-center cell-header-gdl">${result.dofLabels33[result.free[i]]}</td>
+                      <td style="color:#34d399; font-weight:bold;">${fmt(val, 6)}</td>
+                      <td class="cell-center" style="color:#94a3b8;">${result.free[i]%3===2?'rad':'cm'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Cuadro 2: Matriz Inversa resumida -->
+            <div class="cuadro-box" style="border-color:#fde047;">
+              <div class="cuadro-title" style="color:#fde047;"><i class="fa-solid fa-table"></i> CUADRO 2: [K_LL]^-1 (${freeCount}x${freeCount})</div>
+              <div style="overflow-x:auto;">
                 <table class="excel-table">
+                  <thead>
+                    <tr>
+                      ${result.free.map(dIdx => `<th>${result.dofLabels33[dIdx]}</th>`).join('')}
+                    </tr>
+                  </thead>
                   <tbody>
-                    ${b.kt.map((row, r) => `<tr>${row.map((val, c) => `<td class="${r===c?'cell-diag':''}">${fmt(val, 2)}</td>`).join('')}</tr>`).join('')}
+                    ${result.Kff_inv.map((row, r) => `
+                      <tr>
+                        ${row.map(val => `<td style="font-size:10px;">${val.toExponential(4)}</td>`).join('')}
+                      </tr>
+                    `).join('')}
                   </tbody>
                 </table>
               </div>
             </div>
-          </div>
-          `;
-        });
 
-        // TABLA RESUMEN DE DESPLAZAMIENTOS Y REACCIONES
+            <!-- Cuadro 3: Cargas libres -->
+            <div class="cuadro-box" style="border-color:#38bdf8;">
+              <div class="cuadro-title" style="color:#38bdf8;"><i class="fa-solid fa-weight-hanging"></i> CUADRO 3: {F_libres}</div>
+              <table class="excel-table">
+                <thead><tr><th class="cell-center">GDL</th><th>Fuerza</th><th>Unidad</th></tr></thead>
+                <tbody>
+                  ${result.Ff.map((val, i) => `
+                    <tr>
+                      <td class="cell-center cell-header-gdl">${result.dofLabels33[result.free[i]]}</td>
+                      <td style="color:#38bdf8; font-weight:bold;">${fmt(val, 2)}</td>
+                      <td class="cell-center" style="color:#94a3b8;">${result.free[i]%3===2?'kgf·cm':'kgf'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        `;
+
+        // TABLA 10: CÁLCULO DE REACCIONES MEDIANTE FILAS RESTRINGIDAS [K_RL]
         html += `
         <div class="card">
-          <div class="card-title">Resumen de Desplazamientos y Reacciones en Apoyos</div>
+          <div class="card-title">
+            <div class="card-title-left"><i class="fa-solid fa-anchor"></i> 10. Cálculo de Reacciones: {R} = [K_RL] · {D_libres} - {F_restringidos}</div>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin-bottom:10px;">
+            Multiplicación de las filas retenidas de la matriz de rigidez donde D=0 por el vector de desplazamientos libres resuelto.
+          </p>
+          <table class="excel-table">
+            <thead>
+              <tr>
+                <th class="cell-center">GDL Reacción</th>
+                <th class="cell-center">Símbolo</th>
+                <th class="cell-left">Fórmula Aplicada</th>
+                <th>Valor Numérico</th>
+                <th class="cell-center">Unidad</th>
+                <th class="cell-center">Condición</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${result.restrained.map((dIdx, r) => {
+                const nIdx = Math.floor(dIdx / 3) + 1;
+                const dofType = ['X', 'Y', 'θ'][dIdx % 3];
+                const rVal = result.R_partition[r];
+                return `
+                <tr>
+                  <td class="cell-center cell-header-gdl">${result.dofLabels33[dIdx]}</td>
+                  <td class="cell-center" style="font-weight:bold; color:#00f0ff;">R${nIdx}${dofType}</td>
+                  <td class="cell-left" style="color:#94a3b8;">K_RL(${r+1}, :) · {D_L} - F_R(${r+1})</td>
+                  <td style="font-weight:bold; color:#bae6fd;">${fmt(rVal, 2)}</td>
+                  <td class="cell-center">${dofType==='θ'?'kgf·cm':'kgf'}</td>
+                  <td class="cell-center"><span class="tag-badge tag-fixed">RESTRINGIDO</span></td>
+                </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        `;
+
+        // TABLA 11: TABLA DE DATOS PARA GRAFICAR LA CURVA ELÁSTICA (2 COLUMNAS EXACTAS)
+        html += `
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-left"><i class="fa-solid fa-chart-line"></i> 11. Datos para Graficar la Curva Elástica (Tabla de 2 Columnas Solicitada)</div>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin-bottom:10px;">
+            Tabla compacta de 2 columnas para generación directa y manual del gráfico de elástica (Coordenada X vs Deflexión Vertical DY).
+          </p>
+          <div style="max-width: 420px;">
+            <table class="excel-table">
+              <thead>
+                <tr>
+                  <th class="cell-center">Nudo</th>
+                  <th class="cell-center" style="background:#0284c7; color:#fff;">X (cm)</th>
+                  <th class="cell-center" style="background:#10b981; color:#fff;">DY (cm)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${result.elastic_curve_2col.map(pt => `
+                  <tr>
+                    <td class="cell-center" style="font-weight:bold; color:#00f0ff;">(${pt.nodeId})</td>
+                    <td style="font-weight:bold;">${fmt(pt.x, 2)}</td>
+                    <td style="font-weight:bold; color:#34d399;">${fmt(pt.dy, 6)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        `;
+
+        // TABLA 12: RESUMEN EJECUTIVO Y COMPROBACIÓN ESTÁTICA GLOBAL
+        html += `
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-left"><i class="fa-solid fa-scale-balanced"></i> 12. Resumen Ejecutivo de Reacciones y Comprobación Estática Global</div>
+          </div>
           <table class="excel-table">
             <thead>
               <tr>
                 <th class="cell-center">Nudo</th>
-                <th class="cell-center">Condición</th>
+                <th class="cell-center">Apoyo</th>
                 <th>Ux (cm)</th><th>Uy (cm)</th><th>Giro θz (rad)</th>
                 <th>Rx (kgf)</th><th>Ry (kgf)</th><th>RM (kgf·cm)</th>
               </tr>
@@ -436,16 +778,19 @@
                   <td style="font-weight:bold; color:#a7f3d0;">${fmt(n.ux, 6)}</td>
                   <td style="font-weight:bold; color:#bae6fd;">${fmt(n.uy, 6)}</td>
                   <td style="color:#fde047;">${fmt(n.theta, 8)}</td>
-                  <td style="color:${Math.abs(n.rx)>1e-4?'#38bdf8':'#64748b'};">${fmt(n.rx, 2)}</td>
-                  <td style="color:${Math.abs(n.ry)>1e-4?'#38bdf8':'#64748b'};">${fmt(n.ry, 2)}</td>
-                  <td style="color:${Math.abs(n.rm)>1e-4?'#f43f5e':'#64748b'};">${fmt(n.rm, 2)}</td>
+                  <td style="color:${Math.abs(n.rx)>1e-4?'#38bdf8':'#64748b'}; font-weight:bold;">${fmt(n.rx, 2)}</td>
+                  <td style="color:${Math.abs(n.ry)>1e-4?'#38bdf8':'#64748b'}; font-weight:bold;">${fmt(n.ry, 2)}</td>
+                  <td style="color:${Math.abs(n.rm)>1e-4?'#f43f5e':'#64748b'}; font-weight:bold;">${fmt(n.rm, 2)}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
 
           <div class="status-ok">
-            ✓ ESTRUCTURA EN EQUILIBRIO GLOBAL ESTÁTICO: ΣFx = ${fmt(result.equilibrium.fx, 6)} kgf · ΣFy = ${fmt(result.equilibrium.fy, 6)} kgf · ΣMz = ${fmt(result.equilibrium.mz, 6)} kgf·cm
+            <i class="fa-solid fa-circle-check"></i> ESTRUCTURA EN EQUILIBRIO GLOBAL ESTÁTICO: 
+            ΣFx = ${fmt(result.equilibrium.fx, 8)} kgf · 
+            ΣFy = ${fmt(result.equilibrium.fy, 8)} kgf · 
+            ΣMz = ${fmt(result.equilibrium.mz, 6)} kgf·cm
           </div>
         </div>
         `;
@@ -453,13 +798,26 @@
         $('mainContainer').innerHTML = html;
       }
 
+      window.setExpBar = function(barId){
+        selectedExpandedBar = barId;
+        renderTables();
+      };
+
       renderTables();
 
       $('btnDownloadExcel').addEventListener('click', async () => {
-        $('btnDownloadExcel').textContent = 'Generando...';
-        await FrameExcelGenerator.downloadFrameExcel(model, result);
-        $('btnDownloadExcel').textContent = '📗 Descargar Excel (5 Pestañas)';
+        const btn = $('btnDownloadExcel');
+        const origText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando Excel Oficial...';
+        try {
+          await FrameExcelGenerator.downloadFrameExcel(model, result, 'PLANTILLA_ULIANOV_PORTICOS_2D_OFICIAL.xlsx');
+        } catch(err){
+          alert('Error generando Excel: ' + err.message);
+        } finally {
+          btn.innerHTML = origText;
+        }
       });
+
     })();
   </script>
 </body>

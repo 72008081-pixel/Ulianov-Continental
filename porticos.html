@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEREBRO ESTRUCTURAL v3.5 | Pórticos 2D & Exportador de Excel Nativo (Plantilla Ulianov)</title>
+    <title>CEREBRO ESTRUCTURAL v4.0 | Pórticos 2D & Plantillas Oficiales Ulianov (3.1 MIXTAS + PLANTILLA ULIANOV) Nativo (Plantilla Ulianov)</title>
     <!-- Google Identity Services (GIS) Oficial -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- KaTeX Oficial para renderizado matemático LaTeX de alta precisión -->
@@ -12,7 +12,7 @@
     <script src="assets/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <style>
-        /* ── VARIABLES & DESIGN SYSTEM v3.5 (PÓRTICOS 2D - PLANTILLA ULIANOV) ────── */
+        /* ── VARIABLES & DESIGN SYSTEM v4.0 (PÓRTICOS 2D - PLANTILLAS OFICIALES ULIANOV 33 GDL) ────── */
         :root {
             --bg-body:       #090d16;
             --bg-card:       #111827;
@@ -759,7 +759,7 @@
             <div class="brand-box">
                 <div class="brand-logo">🏢</div>
                 <div class="brand-title-wrap">
-                    <h1>CEREBRO ESTRUCTURAL <span class="brand-badge">PÓRTICOS v3.5</span></h1>
+                    <h1>CEREBRO ESTRUCTURAL <span class="brand-badge">PÓRTICOS v4.0</span></h1>
                     <div class="brand-subtitle">Análisis Matricial de Rigidez Directa • Plantilla Ulianov • 3 GDL por Nudo</div>
                 </div>
             </div>
@@ -1006,7 +1006,7 @@
                 <span style="font-size:11px; color:#94a3b8;">Método de Rigidez Directa (K · D = F)</span>
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+            <div style="display:grid; grid-template-columns: 1.1fr 1.1fr 0.8fr; gap:16px;">
                 <!-- Reacciones -->
                 <div>
                     <h3 style="font-size:12px; color:#38bdf8; margin-bottom:8px;">Reacciones en Apoyos:</h3>
@@ -1032,6 +1032,27 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- Tabla de Curva Elástica (2 Columnas Exactas Solicitada) -->
+                <div>
+                    <h3 style="font-size:12px; color:#fde047; margin-bottom:8px;"><i class="fa-solid fa-chart-line"></i> Curva Elástica (2 Columnas):</h3>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>Nudo</th><th style="color:#38bdf8;">X (cm)</th><th style="color:#34d399;">DY (cm)</th></tr>
+                            </thead>
+                            <tbody id="elasticCurve2ColTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Los 3 Cuadros Clásicos de Resolución Matricial -->
+            <div style="margin-top:24px; border-top:1px solid var(--border-subtle); padding-top:16px;">
+                <div style="font-weight:bold; color:#00f0ff; margin-bottom:12px; font-size:13px; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-equals"></i> Ecuación Matricial Fundamental: {D_libres} = [K_LL]⁻¹ · {F_libres} (3 Cuadros Clásicos de Cátedra)
+                </div>
+                <div id="tresCuadrosContainerArea"></div>
             </div>
 
             <!-- Visualizador Interactivo de Matrices -->
@@ -1045,8 +1066,12 @@
                             <option value="T">Matriz de Transformación [T] (6x6)</option>
                             <option value="kt">Matriz de Rigidez Global [kt] (6x6)</option>
                             <option value="fem">Vector de Cargas Fijas [Fe] (6x1)</option>
+                            <option value="K_exp">Matriz Expandida de la Barra (33x33)</option>
                             <option value="K">Matriz Global Ensamblada [K]</option>
-                            <option value="Kff">Submatriz Reducida [Kff]</option>
+                            <option value="K_global_33">Matriz Global Ensamblada 33x33 [Kviga]</option>
+                            <option value="Kff">Submatriz Reducida Libre [Kff] = [K_LL]</option>
+                            <option value="Kff_inv">Matriz Inversa [K_LL]⁻¹ (=MINVERSA)</option>
+                            <option value="K_RL">Submatriz de Filas Restringidas [K_RL]</option>
                             <option value="F">Vector Global {F}</option>
                             <option value="D">Vector Desplazamientos {D}</option>
                         </select>

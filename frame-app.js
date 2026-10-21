@@ -383,6 +383,53 @@
             </tr>
             `;
         }).join('');
+
+        // Tabla de Curva Elástica (2 Columnas Exactas Solicitadas)
+        if($('elasticCurve2ColTableBody') && currentResult.elastic_curve_2col){
+            $('elasticCurve2ColTableBody').innerHTML = currentResult.elastic_curve_2col.map(pt => `
+                <tr>
+                    <td style="font-weight:bold; color:#00f0ff;">(${pt.nodeId})</td>
+                    <td style="font-weight:bold;">${fmt(pt.x, 2)}</td>
+                    <td style="font-weight:bold; color:#34d399;">${fmt(pt.dy, 6)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Los 3 Cuadros Clásicos de Resolución Matricial
+        if($('tresCuadrosContainerArea') && currentResult.Df_inv){
+            const freeCount = currentResult.free.length;
+            $('tresCuadrosContainerArea').innerHTML = `
+                <div class="cuadros-grid" style="display:grid; grid-template-columns: 240px 1fr 240px; gap:14px; align-items:start;">
+                    <div style="background:rgba(10,20,38,0.8); border:1px solid #10b981; border-radius:8px; padding:10px;">
+                        <div style="color:#34d399; font-weight:bold; font-size:11px; margin-bottom:6px;">CUADRO 1: {D_libres} (${freeCount})</div>
+                        <table class="excel-table">
+                            <thead><tr><th>GDL</th><th>Desplazamiento</th></tr></thead>
+                            <tbody>
+                                ${currentResult.Df_inv.map((v, i) => `<tr><td style="color:#00f0ff; font-weight:bold;">${currentResult.dofLabels33[currentResult.free[i]]}</td><td style="color:#34d399; font-weight:bold;">${fmt(v, 6)}</td></tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="background:rgba(10,20,38,0.8); border:1px solid #fde047; border-radius:8px; padding:10px; overflow-x:auto;">
+                        <div style="color:#fde047; font-weight:bold; font-size:11px; margin-bottom:6px;">CUADRO 2: [K_LL]⁻¹ (${freeCount}×${freeCount})</div>
+                        <table class="excel-table">
+                            <thead><tr>${currentResult.free.map(d => `<th>${currentResult.dofLabels33[d]}</th>`).join('')}</tr></thead>
+                            <tbody>
+                                ${currentResult.Kff_inv.map(row => `<tr>${row.map(v => `<td style="font-size:10px;">${v.toExponential(4)}</td>`).join('')}</tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="background:rgba(10,20,38,0.8); border:1px solid #38bdf8; border-radius:8px; padding:10px;">
+                        <div style="color:#38bdf8; font-weight:bold; font-size:11px; margin-bottom:6px;">CUADRO 3: {F_libres} (${freeCount})</div>
+                        <table class="excel-table">
+                            <thead><tr><th>GDL</th><th>Fuerza</th></tr></thead>
+                            <tbody>
+                                ${currentResult.Ff.map((v, i) => `<tr><td style="color:#00f0ff; font-weight:bold;">${currentResult.dofLabels33[currentResult.free[i]]}</td><td style="color:#38bdf8; font-weight:bold;">${fmt(v, 2)}</td></tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
     }
 
     // ── CONTROL DE EQUILIBRIO GLOBAL ──────────────────────────────
@@ -475,6 +522,19 @@
         } else if(mode === 'D'){
             M = currentResult.disp.map(v => [v]);
             title = `Vector Global de Desplazamientos {D} (${M.length}×1)`;
+        } else if(mode === 'Kff_inv'){
+            M = currentResult.Kff_inv;
+            title = `Matriz Inversa [K_LL]⁻¹ (${M.length}×${M.length})`;
+        } else if(mode === 'K_RL'){
+            M = currentResult.K_RL;
+            title = `Submatriz de Filas Restringidas [K_RL] (${M.length}×${M[0].length})`;
+        } else if(mode === 'K_global_33'){
+            M = currentResult.K_global_33;
+            title = `Matriz de Rigidez Global Ensamblada 33×33 [Kviga]`;
+        } else if(mode === 'K_exp'){
+            const expBar = currentResult.expandedBars33.find(eb => eb.barId === selectedBar) || currentResult.expandedBars33[0];
+            M = expBar.matrix;
+            title = `Matriz Expandida 33×33 — Barra [${selectedBar}]`;
         }
 
         $('matrixDimBadge').textContent = `Dimensión: ${M.length} × ${M[0].length}`;

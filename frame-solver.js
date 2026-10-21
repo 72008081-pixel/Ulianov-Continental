@@ -43,6 +43,36 @@
     return A[0].map((_, j) => A.map(row => row[j]));
   }
 
+  function invertMatrix(M){
+    const n = M.length;
+    const A = M.map((row, i) => [...row, ...Array(n).fill(0).map((_, j) => i === j ? 1 : 0)]);
+    for(let i = 0; i < n; i++){
+      let maxRow = i;
+      for(let k = i + 1; k < n; k++){
+        if(Math.abs(A[k][i]) > Math.abs(A[maxRow][i])) maxRow = k;
+      }
+      if(Math.abs(A[maxRow][i]) < 1e-15){
+        throw new Error("Matriz singular no invertible en inversión de Gauss-Jordan");
+      }
+      if(maxRow !== i){
+        const tmp = A[i];
+        A[i] = A[maxRow];
+        A[maxRow] = tmp;
+      }
+      const pivot = A[i][i];
+      for(let j = 0; j < 2 * n; j++) A[i][j] /= pivot;
+      for(let k = 0; k < n; k++){
+        if(k !== i){
+          const factor = A[k][i];
+          if(factor !== 0){
+            for(let j = 0; j < 2 * n; j++) A[k][j] -= factor * A[i][j];
+          }
+        }
+      }
+    }
+    return A.map(row => row.slice(n));
+  }
+
   function solveLinearSystem(A, b){
     const n = b.length;
     const M = A.map((r, i) => r.slice().concat(b[i]));
@@ -376,10 +406,97 @@
     const Kfr = free.map(i => restrained.map(j => K[i][j]));
 
     const Df = solveLinearSystem(Kff, Ff);
+    const Kff_inv = invertMatrix(Kff);
+    const Df_inv = mv(Kff_inv, Ff);
+
     const D_total = Array(ndof).fill(0);
     free.forEach((dofIdx, i) => {
       D_total[dofIdx] = Df[i];
     });
+
+    // Submatriz de filas restringidas [K_RL] y cálculo de reacciones por partición
+    const K_RL = restrained.map(r => free.map(c => K[r][c]));
+    const Fr = restrained.map(r => F_applied[r]);
+    const R_partition = mv(K_RL, Df_inv).map((v, i) => v - Fr[i]);
+
+    // ENSAMBLE EXPANDIDO 33x33 (HASTA 10 TRAMOS Y 11 NODOS / 33 GDL)
+    // Cumple con la exigencia académica de dimensionar horizontal y verticalmente las 33 variables
+    const maxNodes33 = 11;
+    const maxDofs33 = 33;
+    const dofLabels33 = [];
+    for(let n = 1; n <= maxNodes33; n++){
+      dofLabels33.push(`U${n}X`, `U${n}Y`, `U${n}θ`);
+    }
+
+    const expandedBars33 = [];
+    const K_global_33 = zeros(maxDofs33, maxDofs33);
+
+    elements.forEach((el, bIdx) => {
+      const expMat = zeros(maxDofs33, maxDofs33);
+      const ni = el.n1.id - 1;
+      const nj = el.n2.id - 1;
+      if(ni < maxNodes33 && nj < maxNodes33){
+        const elDofs = [
+          3 * ni,     3 * ni + 1, 3 * ni + 2,
+          3 * nj,     3 * nj + 1, 3 * nj + 2
+        ];
+        for(let a = 0; a < 6; a++){
+          for(let b = 0; b < 6; b++){
+            const val = el.kt[a][b];
+            expMat[elDofs[a]][elDofs[b]] = val;
+            K_global_33[elDofs[a]][elDofs[b]] += val;
+          }
+        }
+      }
+      expandedBars33.push({
+        barId: el.id,
+        n1: el.n1.id,
+        n2: el.n2.id,
+        matrix: expMat
+      });
+    });
+
+    // Rellenar barras vacías hasta 10 tramos
+    for(let bIdx = elements.length + 1; bIdx <= 10; bIdx++){
+      expandedBars33.push({
+        barId: bIdx,
+        n1: bIdx,
+        n2: bIdx + 1,
+        matrix: zeros(maxDofs33, maxDofs33)
+      });
+    }
+
+    // Vectores expandidos de 33 componentes
+    const F_applied_33 = Array(maxDofs33).fill(0);
+    const D_total_33 = Array(maxDofs33).fill(0);
+    const reactions_33 = Array(maxDofs33).fill(0);
+    const dofConditions_33 = Array(maxDofs33).fill('LIBRE');
+
+    nodes.forEach(n => {
+      const nIdx = n.id - 1;
+      if(nIdx < maxNodes33){
+        for(let j = 0; j < 3; j++){
+          const dIdx = 3 * nIdx + j;
+          F_applied_33[dIdx] = F_applied[dIdx];
+          D_total_33[dIdx] = D_total[dIdx];
+        }
+      }
+    });
+
+    restrained.forEach(dIdx => {
+      if(dIdx < maxDofs33) dofConditions_33[dIdx] = 'RESTRINGIDO';
+    });
+
+    // TABLA DE 2 COLUMNAS PARA CURVA ELÁSTICA (Exacta de 2 columnas)
+    // Columna 1: X (cm) | Columna 2: DY (cm)
+    const elastic_curve_2col = nodes.map(n => ({
+      nodeId: n.id,
+      x: n.x,
+      y: n.y,
+      dy: D_total[3 * (n.id - 1) + 1],
+      dx: D_total[3 * (n.id - 1)],
+      theta: D_total[3 * (n.id - 1) + 2]
+    }));
 
     // Recuperación de reacciones completas: R = K * D - F_applied
     const KD = mv(K, D_total);
@@ -531,6 +648,17 @@
     const tolEq = 1e-4; // 0.0001 kgf o kgf·cm
     const isEquilibrium = Math.abs(totalFx) < tolEq && Math.abs(totalFy) < tolEq && Math.abs(totalM0) < tolEq;
 
+    // Sincronizar reactions_33 con las reacciones calculadas
+    nodes.forEach(n => {
+      const nIdx = n.id - 1;
+      if(nIdx < maxNodes33){
+        for(let j = 0; j < 3; j++){
+          const dIdx = 3 * nIdx + j;
+          reactions_33[dIdx] = reactions[dIdx];
+        }
+      }
+    });
+
     return {
       nodes: nodeResults,
       bars: elements,
@@ -541,12 +669,25 @@
       Kff,
       Ff,
       Kfr,
+      Kff_inv,
+      Df_inv,
+      K_RL,
+      Fr,
+      R_partition,
       free,
       restrained,
       disp: D_total,
       reactions,
       maxResidual,
       relativeResidual: relResidual,
+      expandedBars33,
+      K_global_33,
+      F_applied_33,
+      D_total_33,
+      reactions_33,
+      dofConditions_33,
+      dofLabels33,
+      elastic_curve_2col,
       equilibrium: {
         sumRx, sumRy, sumRM_origin,
         sumFx_nodes, sumFy_nodes, sumM_nodes_origin,
@@ -564,6 +705,7 @@
     compute,
     properties,
     element,
-    solveLinearSystem
+    solveLinearSystem,
+    invertMatrix
   };
 }));
