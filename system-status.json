@@ -2,6 +2,7 @@
   "active": true,
   "maintenance": false,
   "message": "Plataforma estructural operativa y en linea",
-  "updatedAt": "2026-10-21T04:15:00Z",
-  "mode": "public"
+  "updatedAt": "2026-10-21T04:20:00Z",
+  "mode": "public",
+  "reason": "Operacion normal"
 }
