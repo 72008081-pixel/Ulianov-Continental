@@ -1,8 +1,18 @@
 <!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pórticos 2D v1.0 | CEREBRO ESTRUCTURAL</title>
-<style>
-        /* ── VARIABLES & DESIGN SYSTEM v6.0 (VIGAS CONTINUAS) ────── */
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEREBRO ESTRUCTURAL v3.5 | Pórticos 2D & Exportador de Excel Nativo (Plantilla Ulianov)</title>
+    <!-- Google Identity Services (GIS) Oficial -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- KaTeX Oficial para renderizado matemático LaTeX de alta precisión -->
+    <link rel="stylesheet" href="assets/katex.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="assets/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <style>
+        /* ── VARIABLES & DESIGN SYSTEM v3.5 (PÓRTICOS 2D - PLANTILLA ULIANOV) ────── */
         :root {
             --bg-body:       #090d16;
             --bg-card:       #111827;
@@ -19,7 +29,7 @@
             --accent-rose:   #f43f5e;
             --accent-amber:  #fbbf24;
             --accent-indigo: #818cf8;
-            /* Pasteles Naturales con Letras Negras */
+            /* Pasteles Naturales con Letras Negras Oficiales */
             --pastel-mint:   #a7f3d0;
             --pastel-lavender:#ddd6fe;
             --pastel-butter: #fef08a;
@@ -68,7 +78,7 @@
         }
 
         .header-inner {
-            max-width: 1440px;
+            max-width: 1520px;
             margin: 0 auto;
             display: flex;
             align-items: center;
@@ -87,12 +97,12 @@
             width: 38px;
             height: 38px;
             border-radius: var(--radius-md);
-            background: linear-gradient(135deg, #742284 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #0d9488 0%, #2563eb 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
-            box-shadow: 0 4px 14px rgba(116, 34, 132, 0.35);
+            font-size: 20px;
+            box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
             flex-shrink: 0;
         }
 
@@ -129,7 +139,7 @@
             flex-wrap: wrap;
         }
 
-        /* ── SELECTOR DE CASOS (PASTEL CON LETRAS NEGRAS) ────────── */
+        /* ── SELECTOR DE CASOS ──────────────────────────────────── */
         .select-wrapper {
             display: flex;
             align-items: center;
@@ -162,7 +172,7 @@
             color: #000000;
         }
 
-        /* ── BOTONES EN COLORES PASTELES NATURALES CON LETRAS NEGRAS ── */
+        /* ── BOTONES EN COLORES PASTELES NATURALES ───────────────── */
         .btn {
             display: inline-flex;
             align-items: center;
@@ -215,17 +225,10 @@
             border-color: #fb923c;
         }
 
-        .btn-dev-btn {
-            background: var(--pastel-pink);
+        .btn-report {
+            background: var(--pastel-butter);
             color: #000000;
-            border-color: #f472b6;
-            font-weight: 800;
-        }
-
-        .btn-clear {
-            background: var(--pastel-slate);
-            color: #000000;
-            border-color: #cbd5e1;
+            border-color: #fde047;
         }
 
         /* ── STATUS STRIP ───────────────────────────────────────── */
@@ -236,7 +239,7 @@
         }
 
         .status-strip-inner {
-            max-width: 1440px;
+            max-width: 1520px;
             margin: 0 auto;
             display: flex;
             align-items: center;
@@ -286,24 +289,32 @@
             color: var(--text-dim);
         }
 
-        /* ── MAIN WORKSPACE (2 COLUMNAS) ────────────────────────── */
+        /* ── WORKSPACE PRINCIPAL (2 COLUMNAS) ───────────────────── */
         .workspace {
-            max-width: 1440px;
+            max-width: 1520px;
             margin: 0 auto;
             padding: 20px;
             display: grid;
-            grid-template-columns: 1fr 520px;
+            grid-template-columns: 1fr 540px;
             gap: 20px;
         }
 
-        /* ── COLUMNA IZQUIERDA: CANVAS INTERACTIVO DE LA VIGA ───── */
+        @media (max-width: 1100px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ── COLUMNA IZQUIERDA: CANVAS DEL PÓRTICO ──────────────── */
         .canvas-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: var(--radius-lg);
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
         }
 
         .card-header-bar {
@@ -312,32 +323,33 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: rgba(17, 24, 39, 0.6);
+            background: rgba(17, 24, 39, 0.7);
             flex-wrap: wrap;
             gap: 8px;
         }
 
         .card-header-title {
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 800;
-            color: var(--text-main);
+            color: #ffffff;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
 
         .canvas-toolbar {
             display: flex;
             align-items: center;
             gap: 6px;
+            flex-wrap: wrap;
         }
 
         .tool-btn {
             background: var(--pastel-slate);
             color: #000000;
             border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            padding: 3px 8px;
+            border-radius: 5px;
+            padding: 4px 9px;
             font-size: 11px;
             font-weight: 800;
             cursor: pointer;
@@ -351,14 +363,19 @@
         .canvas-stage {
             position: relative;
             width: 100%;
-            height: 480px;
+            height: 520px;
             background: #060911;
         }
 
-        canvas {
+        canvas#frameCanvas {
             width: 100%;
             height: 100%;
             display: block;
+            cursor: grab;
+        }
+
+        canvas#frameCanvas:active {
+            cursor: grabbing;
         }
 
         /* Tarjeta flotante en canvas */
@@ -366,43 +383,70 @@
             position: absolute;
             top: 12px;
             left: 12px;
-            background: rgba(13, 20, 36, 0.88);
+            background: rgba(13, 20, 36, 0.9);
             border: 1px solid var(--border-muted);
             border-radius: var(--radius-sm);
-            padding: 8px 12px;
+            padding: 10px 14px;
             font-size: 11px;
             pointer-events: none;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+            z-index: 10;
         }
 
         .floating-title {
-            font-size: 10px;
+            font-size: 10.5px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: #38bdf8;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         .floating-stat {
             display: flex;
             justify-content: space-between;
-            gap: 12px;
+            gap: 14px;
             color: var(--text-muted);
-            margin-bottom: 2px;
+            margin-bottom: 3px;
         }
 
         .floating-stat span:last-child {
-            color: var(--text-main);
+            color: #ffffff;
             font-weight: 700;
             font-family: var(--font-mono);
         }
 
+        /* Toast flotante para clic en apoyos */
+        #canvasInteractiveToast {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(16px);
+            border: 1.5px solid #00f0ff;
+            border-radius: 99px;
+            padding: 7px 18px;
+            font-size: 12px;
+            font-weight: 800;
+            color: #00f0ff;
+            box-shadow: 0 0 24px rgba(0, 240, 255, 0.4);
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            z-index: 30;
+        }
+
+        #canvasInteractiveToast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         /* Leyenda inferior del canvas */
         .canvas-legend {
-            padding: 8px 16px;
-            background: rgba(13, 20, 36, 0.5);
+            padding: 10px 16px;
+            background: rgba(13, 20, 36, 0.6);
             border-top: 1px solid var(--border-subtle);
             display: flex;
             align-items: center;
@@ -417,11 +461,12 @@
             display: flex;
             align-items: center;
             gap: 14px;
+            flex-wrap: wrap;
         }
 
         .legend-dot {
-            width: 8px;
-            height: 8px;
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
             display: inline-block;
             margin-right: 4px;
@@ -435,10 +480,12 @@
         }
 
         .input-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: var(--radius-lg);
             overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         }
 
         .input-card-head {
@@ -453,7 +500,7 @@
         .input-card-title {
             font-size: 12px;
             font-weight: 800;
-            color: var(--text-main);
+            color: #ffffff;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -467,12 +514,14 @@
 
         .table-wrap {
             overflow-x: auto;
+            max-height: 280px;
         }
 
         table.data-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 11px;
+            white-space: nowrap;
         }
 
         table.data-table th {
@@ -482,13 +531,12 @@
             padding: 6px 8px;
             text-align: center;
             border-bottom: 1px solid var(--border-subtle);
-            white-space: nowrap;
             font-size: 10px;
         }
 
         table.data-table td {
             padding: 4px 6px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
             text-align: center;
         }
 
@@ -496,385 +544,131 @@
             background: rgba(255, 255, 255, 0.02);
         }
 
-        /* Inputs dentro de tablas: celdas suaves con texto nítido */
         .cell-input {
-            width: 100%;
             background: var(--bg-input);
+            color: #ffffff;
             border: 1px solid var(--border-muted);
             border-radius: 4px;
-            color: #fff2cc;
+            padding: 4px 6px;
             font-family: var(--font-mono);
             font-size: 11px;
-            font-weight: 700;
-            padding: 4px 6px;
+            width: 72px;
             text-align: center;
             outline: none;
-            transition: all 0.15s;
+            transition: border-color 0.15s;
         }
 
         .cell-input:focus {
-            border-color: var(--accent-sky);
-            background: #111e38;
-            color: #ffffff;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 6px rgba(56, 189, 248, 0.35);
         }
 
         .cell-select {
-            width: 100%;
             background: var(--bg-input);
+            color: #ffffff;
             border: 1px solid var(--border-muted);
             border-radius: 4px;
-            color: #38bdf8;
-            font-size: 10.5px;
-            font-weight: 700;
             padding: 4px 6px;
-            cursor: pointer;
+            font-size: 11px;
             outline: none;
         }
 
-        .cell-select:focus {
-            border-color: var(--accent-sky);
-        }
-
-        .cell-select option {
-            background: var(--bg-card);
-            color: var(--text-main);
-        }
-
-        /* Form inline controls */
-        .form-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
-            flex-wrap: wrap;
-        }
-
-        .form-group {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .form-label {
+        .btn-add-row {
+            background: transparent;
+            border: 1px dashed var(--border-muted);
+            color: var(--text-muted);
+            width: 100%;
+            padding: 7px;
             font-size: 11px;
             font-weight: 700;
-            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
         }
 
-        /* ── RESULTADOS INFERIORES: PESTAÑAS ────────────────────── */
+        .btn-add-row:hover {
+            border-color: var(--border-focus);
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.05);
+        }
+
+        /* ── SECCIONES DE RESULTADOS ABAJO ──────────────────────── */
         .results-section {
-            max-width: 1440px;
-            margin: 0 auto 30px auto;
+            max-width: 1520px;
+            margin: 0 auto 24px auto;
             padding: 0 20px;
         }
 
-        .tabs-nav {
-            display: flex;
-            gap: 4px;
-            border-bottom: 1px solid var(--border-subtle);
-            margin-bottom: 16px;
-            overflow-x: auto;
+        .results-card {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
         }
 
-        .tab-btn {
-            background: transparent;
-            color: var(--text-muted);
-            border: none;
-            border-bottom: 2px solid transparent;
-            padding: 8px 16px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.15s;
-            white-space: nowrap;
-        }
-
-        .tab-btn:hover {
-            color: var(--text-main);
-        }
-
-        .tab-btn.active {
-            color: #000000;
-            background: var(--pastel-sky);
-            border-radius: 6px 6px 0 0;
-            border-bottom-color: #0284c7;
+        .section-header-title {
+            font-size: 14px;
             font-weight: 800;
+            color: #00f0ff;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 8px;
         }
 
-        .tab-content {
-            display: none;
+        /* Grillas de 4 gráficos */
+        .charts-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 14px;
         }
 
-        .tab-content.active {
+        @media (max-width: 900px) {
+            .charts-grid-4 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-box {
+            background: #060911;
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chart-box canvas {
+            width: 100%;
+            height: 250px;
             display: block;
         }
 
-        .results-grid-2col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-
-        .mini-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-md);
-            overflow: hidden;
-            padding: 12px 14px;
-        }
-
-        .mini-card-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid var(--border-subtle);
-            font-weight: 800;
-            font-size: 12px;
-        }
-
-        .mini-card-formula {
-            font-size: 10px;
-            color: var(--text-dim);
-            font-family: var(--font-mono);
-        }
-
-        table.results-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11.5px;
-        }
-
-        table.results-table th {
-            color: #94a3b8;
-            font-size: 10.5px;
-            font-weight: 700;
-            padding: 4px 6px;
-            border-bottom: 1px solid var(--border-subtle);
-            text-align: center;
-        }
-
-        table.results-table td {
-            padding: 5px 6px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-            font-family: var(--font-mono);
-        }
-
-        .force-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 99px;
-            font-size: 10px;
-            font-weight: 800;
-            text-align: center;
-        }
-
-        .force-tension {
-            background: rgba(56, 189, 248, 0.15);
-            color: #38bdf8;
-            border: 1px solid rgba(56, 189, 248, 0.3);
-        }
-
-        .force-compress {
-            background: rgba(244, 63, 94, 0.15);
-            color: #f43f5e;
-            border: 1px solid rgba(244, 63, 94, 0.3);
-        }
-
-        /* ── MATRIX VIEW ────────────────────────────────────────── */
-        .matrix-scroll-wrap {
-            overflow-x: auto;
-            max-height: 440px;
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-md);
-            background: var(--bg-card);
-        }
-
-        .matrix-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-family: var(--font-mono);
-            font-size: 9.5px;
-        }
-
-        .matrix-table th, .matrix-table td {
-            padding: 4px 5px;
-            text-align: right;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            white-space: nowrap;
-        }
-
-        .matrix-table th {
-            background: var(--bg-panel);
-            color: var(--text-dim);
-            text-align: center;
-        }
-
-        .matrix-diag {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-            font-weight: 800;
-        }
-
-        /* ── FOOTER ─────────────────────────────────────────────── */
-        .footer {
-            border-top: 1px solid var(--border-subtle);
-            padding: 16px 20px;
-            text-align: center;
-            font-size: 11px;
-            color: var(--text-dim);
-        }
-
-        .footer a {
-            color: var(--accent-sky);
-            text-decoration: none;
-        }
-
-        /* ── RESPONSIVE ─────────────────────────────────────────── */
-        @media (max-width: 1100px) {
-            .workspace {
-                grid-template-columns: 1fr;
-            }
-            .canvas-stage {
-                height: 400px;
-            }
-            .results-grid-2col {
-                grid-template-columns: 1fr;
-            }
-        }
-    
-        /* TARJETAS VISUALES DE SEPARACIÓN DE CARGAS EQUIVALENTES (2 COLUMNAS) */
-        .equivalent-cards-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
-            margin-top: 10px;
-        }
-        @media (max-width: 960px) {
-            .equivalent-cards-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        .eq-card {
-            background: #090e1a;
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-md);
-            padding: 14px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.45);
-            transition: transform 0.2s ease, border-color 0.2s ease;
-        }
-        .eq-card:hover {
-            border-color: #00f0ff;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 240, 255, 0.15);
-        }
-        .eq-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #1e293b;
-            padding-bottom: 6px;
-            margin-bottom: 8px;
-        }
-        .eq-card-title {
-            font-weight: 700;
-            font-size: 13px;
-            color: #00f0ff;
-        }
-        .eq-badge {
-            font-size: 10px;
-            font-weight: 600;
-            padding: 2px 7px;
-            border-radius: 99px;
-            background: rgba(0, 240, 255, 0.15);
-            color: #00f0ff;
-            border: 1px solid rgba(0, 240, 255, 0.3);
-        }
-        .eq-card-loads {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            font-size: 11px;
-            margin-top: 10px;
-        }
-        .eq-load-node {
-            background: #0d1527;
-            border-radius: 8px;
-            padding: 10px 14px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-left: 3.5px solid #00f0ff;
-        }
-        .eq-load-node.node-j {
-            border-left-color: #f59e0b;
-        }
+        /* KaTeX formula display containers */
         .latex-eq-container {
-            overflow-x: auto;
-            padding: 2px 4px;
-            background: rgba(3, 7, 18, 0.5);
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.03);
-            margin: 3px 0 6px;
-        }
-        .latex-eq-container .katex-display {
-            margin: 2px 0 !important;
-        }
-        .latex-eq-container .katex {
-            font-size: 1.05em !important;
-        }
-        .eq-node-title {
-            font-weight: 700;
-            font-size: 11px;
-            color: #e2e8f0;
-            margin-bottom: 4px;
-        }
-        .eq-val-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 2px;
-        }
-        .eq-val-label {
-            color: #94a3b8;
-        }
-        .eq-val-num {
-            font-family: var(--font-mono);
-            font-weight: 700;
-            color: #f8fafc;
-        }
-
-        /* ── CONTENEDOR DE FÓRMULAS LATEX KATEX OFICIAL ─────────── */
-        .latex-eq-container {
-            background: rgba(15, 23, 42, 0.75);
+            background: rgba(15, 23, 42, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 8px;
-            padding: 5px 10px;
+            padding: 6px 12px;
             margin: 4px 0 6px 0;
             overflow-x: auto;
             color: #f8fafc;
         }
-        .latex-eq-container .katex-display {
-            margin: 2px 0 !important;
-        }
-        .latex-eq-container .katex {
-            font-size: 1.08em;
-            color: #f8fafc;
-        }
 
-        /* ── PROCEDIMIENTO MATEMÁTICO PASO A PASO EN DIAGRAMAS ──── */
         .diagram-step-box {
-            margin-top: 12px;
+            margin-top: 14px;
             background: rgba(11, 20, 36, 0.9);
             border: 1px solid #1e293b;
             border-radius: 8px;
-            padding: 12px;
+            padding: 14px;
             font-size: 11.5px;
             color: #cbd5e1;
             line-height: 1.6;
         }
+
         .step-title {
             font-weight: 800;
             font-size: 12px;
@@ -885,18 +679,7 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             padding-bottom: 4px;
         }
-        .step-calc-line {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 4px 6px;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
-            font-family: var(--font-mono);
-            font-size: 11px;
-        }
-        .step-calc-line:last-child {
-            border-bottom: none;
-        }
+
         .step-badge-ok {
             display: inline-flex;
             align-items: center;
@@ -905,205 +688,13 @@
             border: 1px solid #10b981;
             color: #34d399;
             font-weight: 700;
-            padding: 5px 10px;
+            padding: 6px 12px;
             border-radius: 6px;
-            margin-top: 8px;
+            margin-top: 10px;
             font-size: 11.5px;
         }
-    
-        /* ── MODO GUIADO Y MODO EXPERTO (ESTILO NEÓN LIQUID GLASS) ──── */
-        .view-mode-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            padding: 10px 20px;
-            background: rgba(15, 23, 42, 0.82);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-bottom: 1px solid rgba(0, 240, 255, 0.22);
-            position: relative;
-            z-index: 40;
-        }
-        .view-mode-tabs {
-            display: flex;
-            gap: 6px;
-            background: rgba(3, 7, 18, 0.65);
-            padding: 4px;
-            border-radius: 99px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-        }
-        .view-mode-btn {
-            background: transparent;
-            border: none;
-            color: #94a3b8;
-            padding: 7px 16px;
-            border-radius: 99px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .view-mode-btn.active {
-            background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
-            color: #ffffff;
-            box-shadow: 0 0 16px rgba(0, 240, 255, 0.35);
-        }
-        .view-mode-btn:hover:not(.active) {
-            color: #ffffff;
-            background: rgba(255, 255, 255, 0.08);
-        }
 
-        .view-action-buttons {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .tool-btn-neon {
-            background: rgba(0, 240, 255, 0.1);
-            border: 1px solid rgba(0, 240, 255, 0.35);
-            color: #00f0ff;
-            padding: 7px 15px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s ease;
-            box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
-        }
-        .tool-btn-neon:hover {
-            background: rgba(0, 240, 255, 0.22);
-            border-color: #00f0ff;
-            box-shadow: 0 0 20px rgba(0, 240, 255, 0.45);
-            transform: translateY(-1px);
-        }
-        .tool-btn-neon-emerald {
-            background: rgba(16, 185, 129, 0.12);
-            border: 1px solid rgba(16, 185, 129, 0.4);
-            color: #34d399;
-            box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
-        }
-        .tool-btn-neon-emerald:hover {
-            background: rgba(16, 185, 129, 0.25);
-            border-color: #34d399;
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
-        }
-
-        /* WIZARD DE PASOS GUIADOS */
-        .wizard-nav {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-            margin: 12px 20px 6px 20px;
-            padding: 10px 14px;
-            background: rgba(15, 23, 42, 0.72);
-            backdrop-filter: blur(20px);
-            border-radius: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-        }
-        .wizard-step {
-            flex: 1;
-            min-width: 140px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 14px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            color: #94a3b8;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .wizard-step .step-num {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            color: #cbd5e1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 11px;
-        }
-        .wizard-step.active {
-            background: rgba(0, 240, 255, 0.12);
-            border-color: #00f0ff;
-            color: #ffffff;
-            box-shadow: 0 0 16px rgba(0, 240, 255, 0.25);
-        }
-        .wizard-step.active .step-num {
-            background: #00f0ff;
-            color: #030712;
-            box-shadow: 0 0 8px #00f0ff;
-        }
-        .wizard-step:hover:not(.active) {
-            background: rgba(255, 255, 255, 0.08);
-            color: #ffffff;
-        }
-
-        .guided-hidden {
-            display: none !important;
-        }
-
-        /* REALCE NEÓN FLUORESCENTE EN TEXTOS Y TARJETAS */
-        .input-card, .canvas-card, .diagram-card {
-            background: rgba(17, 24, 39, 0.8) !important;
-            backdrop-filter: blur(28px) !important;
-            -webkit-backdrop-filter: blur(28px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.14) !important;
-            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
-        }
-        .input-card-title span {
-            color: #ffffff !important;
-            text-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
-        }
-        .neon-green-glow {
-            color: #00ff88 !important;
-            text-shadow: 0 0 8px rgba(0, 255, 136, 0.45);
-        }
-        .neon-cyan-glow {
-            color: #00f0ff !important;
-            text-shadow: 0 0 8px rgba(0, 240, 255, 0.45);
-        }
-        .neon-amber-glow {
-            color: #fbbf24 !important;
-            text-shadow: 0 0 8px rgba(251, 191, 36, 0.45);
-        }
-
-        /* TOAST FLOTANTE EN CANVAS PARA CLIC INTERACTIVO EN APOYOS */
-        #canvasInteractiveToast {
-            position: absolute;
-            top: 14px;
-            right: 14px;
-            background: rgba(15, 23, 42, 0.92);
-            backdrop-filter: blur(16px);
-            border: 1.5px solid #00f0ff;
-            border-radius: 99px;
-            padding: 7px 18px;
-            font-size: 12px;
-            font-weight: 800;
-            color: #00f0ff;
-            box-shadow: 0 0 24px rgba(0, 240, 255, 0.4);
-            pointer-events: none;
-            opacity: 0;
-            transform: translateY(-8px);
-            transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-            z-index: 30;
-        }
-        #canvasInteractiveToast.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* MODALES LIQUID GLASS (GALERÍA Y MEMORIA) */
+        /* ── MODALES (GALERÍA Y REPORTE) ────────────────────────── */
         .cb-modal-overlay {
             position: fixed;
             inset: 0;
@@ -1114,35 +705,35 @@
             align-items: center;
             justify-content: center;
             padding: 16px;
-            opacity: 1;
             transition: opacity 0.25s ease;
         }
+
         .cb-modal-overlay.cb-hidden {
             display: none !important;
-            opacity: 0;
-            pointer-events: none;
         }
+
         .cb-modal-container {
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(36px) saturate(190%);
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(36px);
             border: 1.5px solid rgba(255, 255, 255, 0.18);
-            border-top: 1.5px solid rgba(0, 240, 255, 0.5);
+            border-top: 1.5px solid #00f0ff;
             border-radius: 20px;
-            max-width: 920px;
+            max-width: 940px;
             width: 100%;
             max-height: 90vh;
             overflow-y: auto;
             padding: 24px;
             box-shadow: 0 35px 90px rgba(0, 0, 0, 0.85);
             color: #f8fafc;
-            animation: cbGlassPop 0.28s cubic-bezier(0.16, 1, 0.3, 1);
         }
+
         .gallery-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
             gap: 16px;
             margin-top: 16px;
         }
+
         .gallery-card {
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1151,299 +742,472 @@
             cursor: pointer;
             transition: all 0.22s ease;
         }
+
         .gallery-card:hover {
             background: rgba(0, 240, 255, 0.08);
             border-color: #00f0ff;
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(0, 240, 255, 0.2);
         }
+    </style>
+</head>
+<body>
 
-        /* ── INTERACCIÓN PAN & ZOOM EN DIAGRAMAS Y CURVAS ELÁSTICAS ──── */
-        .diagram-panzoom-tools {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            user-select: none;
-        }
-        .btn-pz {
-            background: rgba(30, 41, 59, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            color: #f8fafc;
-            border-radius: 5px;
-            padding: 3px 8px;
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-            line-height: 1.2;
-            transition: all 0.15s ease;
-        }
-        .btn-pz:hover {
-            background: rgba(0, 240, 255, 0.2);
-            border-color: #00f0ff;
-            color: #00f0ff;
-            transform: scale(1.05);
-        }
-        .btn-pz:active {
-            transform: scale(0.95);
-        }
-        .pz-hint-badge {
-            font-size: 10px;
-            color: #94a3b8;
-            background: rgba(15, 23, 42, 0.7);
-            padding: 3px 7px;
-            border-radius: 5px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            font-family: var(--font-mono, monospace);
-            white-space: nowrap;
-        }
-        .elastic-table-wrap {
-            margin-top: 14px;
-            background: rgba(11, 20, 36, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 8px;
-            padding: 12px;
-            overflow-x: auto;
-        }
-        .elastic-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-            font-family: var(--font-mono, monospace);
-            text-align: right;
-        }
-        .elastic-table th {
-            background: rgba(30, 41, 59, 0.9);
-            color: #38bdf8;
-            padding: 6px 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            font-weight: 700;
-        }
-        .elastic-table td {
-            padding: 5px 10px;
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            color: #cbd5e1;
-        }
-        .elastic-table tr:hover {
-            background: rgba(56, 189, 248, 0.08);
-        }
-        .interactive-svg-wrap {
-            position: relative;
-            overflow: hidden;
-            border-radius: 10px;
-            user-select: none;
-        }
+    <!-- ══ HEADER SUPERIOR ════════════════════════════════════════════ -->
+    <header class="header-nav">
+        <div class="header-inner">
+            <div class="brand-box">
+                <div class="brand-logo">🏢</div>
+                <div class="brand-title-wrap">
+                    <h1>CEREBRO ESTRUCTURAL <span class="brand-badge">PÓRTICOS v3.5</span></h1>
+                    <div class="brand-subtitle">Análisis Matricial de Rigidez Directa • Plantilla Ulianov • 3 GDL por Nudo</div>
+                </div>
+            </div>
+            <div class="header-controls">
+                <div class="select-wrapper">
+                    <span class="select-label">📚 EJEMPLOS:</span>
+                    <select id="presetSelect" class="preset-select">
+                        <option value="master">Cátedra Continental (6 Nudos, 5 Tramos)</option>
+                        <option value="portal">Pórtico Portal Simétrico (2 Empotramientos)</option>
+                        <option value="lateral">Pórtico con Carga Lateral (Sismo/Viento)</option>
+                        <option value="cantilever">Columna en Voladizo (Ménsula 2D)</option>
+                        <option value="gable">Pórtico a Dos Aguas (Barras Inclinadas)</option>
+                        <option value="twoSpan">Pórtico Continuo de 2 Vanos</option>
+                    </select>
+                </div>
+                <a href="index.html" class="btn btn-home">⌂ Inicio</a>
+                <a href="vigas.html" class="btn btn-nav-module">📐 Vigas (v8.1)</a>
+                <a href="porticos-tablas.html" class="btn btn-tables">📊 Ver Tablas de Pórticos</a>
+                <button type="button" id="btnDownloadExcel" class="btn btn-excel">📗 Plantilla Ulianov (.xlsx)</button>
+                <button type="button" id="btnExportFramePNG" class="btn btn-png">📸 PNG Pórtico</button>
+                <button type="button" id="btnOpenReport" class="btn btn-report">📄 Memoria de Cálculo</button>
+            </div>
+        </div>
+    </header>
 
-        /* ── ESTILOS MATRICIALES NEÓN DE ALTO CONTRASTE (WCAG AAA) ──── */
-        .neon-matrix-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-family: var(--font-mono, monospace);
-            font-size: 11px;
-            text-align: right;
-            background: #090e1a;
-        }
-        .neon-matrix-table th {
-            background: #0f1c34;
-            color: #00f0ff;
-            padding: 7px 10px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            font-weight: 700;
-            white-space: nowrap;
-        }
-        .neon-matrix-table td {
-            padding: 6px 10px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            color: #f8fafc;
-        }
-        .cell-gdl-header {
-            background: #0d182e !important;
-            color: #00f0ff !important;
-            font-weight: 800;
-            text-align: center;
-            border-right: 2px solid rgba(0, 240, 255, 0.3) !important;
-        }
-        .cell-diag-active {
-            background: rgba(0, 255, 136, 0.18) !important;
-            color: #00ff88 !important;
-            font-weight: 900;
-            text-shadow: 0 0 6px rgba(0, 255, 136, 0.35);
-        }
-        .cell-val-active {
-            color: #f8fafc;
-            font-weight: 600;
-        }
-        .cell-val-zero {
-            color: #475569 !important;
-        }
-        .sticky-col {
-            position: sticky;
-            left: 0;
-            background: #0d182e !important;
-            z-index: 3;
-            box-shadow: 2px 0 6px rgba(0,0,0,0.4);
-        }
-        .matrix-card-neon {
-            margin-bottom: 20px;
-            background: #091224;
-            border: 1px solid rgba(0, 240, 255, 0.22);
-            border-radius: 10px;
-            padding: 14px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-        }
-        .matrix-card-title {
-            font-size: 13.5px;
-            font-weight: 800;
-            color: #00f0ff;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .matrix-subhead {
-            font-weight: 700;
-            font-size: 12px;
-            margin-bottom: 6px;
-        }
-        .row-restricted-neon {
-            background: rgba(245, 158, 11, 0.15) !important;
-            border-left: 4px solid #fbbf24 !important;
-        }
-        .row-restricted-neon td {
-            color: #f8fafc !important;
-        }
-        .row-restricted-neon .cell-gdl-header {
-            color: #fbbf24 !important;
-        }
-        .row-restricted-neon .cell-c-expr {
-            color: #ffd700 !important;
-            font-weight: 800;
-        }
-        .row-free-neon {
-            background: rgba(15, 23, 42, 0.5);
-        }
-        .row-free-neon td {
-            color: #f8fafc;
-        }
-        .tool-btn-neon-amber {
-            background: rgba(251, 191, 36, 0.15);
-            border: 1px solid #fbbf24;
-            color: #fbbf24;
-        }
-        .tool-btn-neon-amber:hover {
-            background: rgba(251, 191, 36, 0.28);
-            box-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
-            color: #fff;
-        }
+    <!-- ══ STRIP DE ESTADO EN VIVO ════════════════════════════════════ -->
+    <div class="status-strip">
+        <div class="status-strip-inner">
+            <div class="status-badges-group">
+                <span class="badge badge-green">● Pórticos Planos 2D</span>
+                <span class="badge badge-blue">Euler-Bernoulli (3 GDL/Nudo)</span>
+                <span class="badge badge-amber">Unidades: cm · kgf · kgf·cm</span>
+                <span id="topEquilibriumBadge" class="badge badge-green">✓ ESTRUCTURA EN EQUILIBRIO</span>
+            </div>
+            <span id="topStatusText" class="status-info-text">Modelo cargado con éxito · 6 nudos y 5 tramos</span>
+        </div>
+    </div>
 
- /* Pórticos v1.0 — interfaz derivada del diseño de Vigas, con lógica totalmente independiente */
- .frame-shell{max-width:1510px;margin:auto;padding:16px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(390px,1fr);gap:16px}
- .frame-canvas{width:100%;height:470px;border-radius:9px;background:#060911;display:block}
- .frame-card{background:#111827;border:1px solid #263349;border-radius:12px;padding:14px;margin-bottom:14px;min-width:0}
- .frame-card h2{font-size:15px;color:#e8f4ff;margin-bottom:10px}
- .frame-card h3{font-size:13px;color:#bae6fd;margin:8px 0}
- .frame-tip{font-size:11px;color:#9caec8;line-height:1.6}
- .frame-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
- .frame-control{border:1px solid #475569;background:#0d1424;color:#e2e8f0;border-radius:7px;padding:7px;min-width:0}
- .frame-btn{border:1px solid #6ee7b7;background:#a7f3d0;color:#071b18;font-weight:800;border-radius:8px;padding:9px 13px;cursor:pointer}
- .frame-btn.secondary{background:#bae6fd;border-color:#7dd3fc}
- .frame-btn.amber{background:#fef08a;border-color:#eab308}
- .frame-scroll{max-width:100%;overflow:auto}
- table.frame-table{border-collapse:collapse;width:100%;font-size:11px;white-space:nowrap}
- .frame-table th{background:#1e293b;padding:7px;color:#cbd5e1;border:1px solid #334155}
- .frame-table td{padding:4px;border:1px solid #263349;text-align:center}
- .frame-table input,.frame-table select{background:#0d1424;color:#e2e8f0;border:1px solid #334155;border-radius:5px;padding:5px;width:76px;max-width:100%;font:inherit}
- .frame-table select{width:115px}
- .frame-table input:focus,.frame-control:focus{outline:2px solid #38bdf8}
- .frame-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
- .frame-stat{background:#0d1424;border:1px solid #334155;border-radius:9px;padding:11px;min-width:0}
- .frame-stat small{display:block;color:#94a3b8;font-size:10px}
- .frame-stat strong{display:block;color:#a7f3d0;font-size:15px;word-break:break-word}
- .frame-charts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
- .frame-chart{width:100%;height:230px;background:#060911;border:1px solid #263349;border-radius:9px}
- .frame-note{background:#17233a;border-left:3px solid #38bdf8;padding:9px 12px;color:#a8c5d6;font-size:11px;line-height:1.55}
- .frame-warning{color:#fecaca}
- .frame-grid{display:grid;grid-template-columns:repeat(4,minmax(95px,1fr));gap:8px;margin-bottom:8px}
- .frame-grid label{font-size:10px;color:#9bb3c9;display:flex;flex-direction:column;gap:4px}
- .frame-grid input,.frame-grid select{width:100%}
- .frame-matrix td{font:10px Consolas,monospace;padding:5px 7px;text-align:right}
- .frame-selected{border-color:#34d399!important;background:#0f302b!important}
- @media(max-width:1040px){.frame-shell{display:block}.frame-canvas{height:370px}}
- @media(max-width:650px){.frame-charts,.frame-stats{grid-template-columns:1fr 1fr}.frame-grid{grid-template-columns:1fr 1fr}.frame-canvas{height:300px}.frame-shell{padding:8px}}
- @media print{.header-nav,.frame-btn,.frame-controls{display:none!important}.frame-shell{display:block}}
-</style></head><body>
-<header class="header-nav"><div class="header-inner">
-<div class="brand-box"><div class="brand-logo">🏢</div><div class="brand-title-wrap">
-<h1>CEREBRO ESTRUCTURAL <span class="brand-badge">PÓRTICOS v1.0</span></h1>
-<div class="brand-subtitle">Método matricial de rigidez · Pórticos planos · 3 GDL por nudo</div></div></div>
-<div class="header-controls">
-<a class="btn btn-home" href="index.html">⌂ Inicio</a>
-<a class="btn btn-nav-module" href="vigas.html">📐 Vigas (sin cambios)</a>
-<button id="exportExcel" class="btn btn-excel" type="button">📗 Excel de resolución</button>
-<button id="exportPNG" class="btn btn-png" type="button">📸 PNG</button>
-</div></div></header>
-<div class="status-strip"><div class="status-strip-inner"><div class="status-badges-group">
-<span class="badge badge-green">● Euler-Bernoulli 2D</span><span class="badge badge-blue">cm · kgf · kgf·cm</span>
-<span class="badge badge-amber">Análisis lineal estático</span></div><span id="topStatus" class="status-info-text">Introduce datos y resuelve</span></div></div>
-<div class="frame-shell">
-<main>
-<section class="frame-card">
-<div class="frame-controls">
-<h2 style="flex:1;margin:0">01 · Estructura y diagramas colocados sobre cada barra</h2>
-<label class="frame-tip" for="viewMode">Mostrar</label>
-<select class="frame-control" id="viewMode"><option value="deformed">Curva elástica</option><option value="V">Cortante V</option><option value="M">Momento M</option><option value="N">Axial N</option><option value="all">Vista combinada</option></select>
-<label class="frame-tip" for="deformScale">Escala deformación</label>
-<input class="frame-control" id="deformScale" type="number" min="0.1" step="1" value="0" style="width:70px" title="0 = escala automática">
-</div>
-<canvas class="frame-canvas" id="frameCanvas" width="1120" height="760"></canvas>
-<div class="frame-tip">Azul: barras originales · Verde: deformada (amplificada) · Amarillo: cortante · Rosa: momento · Violeta: axial. Los diagramas se orientan respecto al eje local de cada barra. Hacer clic en una barra para seleccionarla.</div>
-</section>
-<section class="frame-card"><h2>02 · Resumen de cálculo</h2><div id="stats" class="frame-stats"></div><p id="errors" class="frame-tip frame-warning" role="status"></p></section>
-<section class="frame-card"><h2>03 · Diagramas de la barra seleccionada</h2>
-<div class="frame-controls"><label class="frame-tip">Barra:</label><select id="selectedBar" class="frame-control"></select>
-<span id="barInfo" class="frame-tip"></span></div>
-<div class="frame-charts"><canvas id="chartN" class="frame-chart" width="550" height="250"></canvas><canvas id="chartV" class="frame-chart" width="550" height="250"></canvas><canvas id="chartM" class="frame-chart" width="550" height="250"></canvas><canvas id="chartD" class="frame-chart" width="550" height="250"></canvas></div></section>
-<section class="frame-card"><h2>04 · Reacciones y desplazamientos por nudo</h2><div id="nodeResults" class="frame-scroll"></div></section>
-<section class="frame-card"><h2>05 · Esfuerzos en extremos de barras (ejes locales)</h2><div id="endResults" class="frame-scroll"></div></section>
-<section class="frame-card"><h2>06 · Matrices y sistema K·d = F</h2>
-<div class="frame-note">Para cada elemento se obtiene la matriz local 6×6, transformación y rigidez global 6×6. Se ensambla K global, se imponen restricciones y se resuelve por eliminación gaussiana con pivoteo. Las cargas distribuidas lineales se convierten en fuerzas nodales consistentes.</div>
-<div class="frame-controls" style="margin-top:8px"><label>Visualizar matriz</label>
-<select class="frame-control" id="matrixMode"><option value="k">Rigidez local de barra</option><option value="kt">Rigidez global de barra</option><option value="T">Transformación de barra</option><option value="K">K ensamblada</option><option value="Kff">K reducida</option><option value="F">Vector F</option><option value="disp">Desplazamientos d</option></select></div>
-<div class="frame-scroll" id="matrixResults"></div></section>
-<section class="frame-card"><h2>07 · Comprobación del equilibrio</h2><div id="checkResults"></div></section>
-</main>
-<aside>
-<section class="frame-card"><h2>Datos del modelo · ejemplos</h2>
-<div class="frame-controls"><select class="frame-control" id="preset"><option value="portal">Pórtico de una crujía</option><option value="lateral">Pórtico con carga lateral</option><option value="cantilever">Columna en voladizo</option><option value="twoSpan">Pórtico de dos vanos</option></select>
-<button class="frame-btn secondary" id="loadPreset">Cargar ejemplo</button></div>
-<div class="frame-note">Puedes cambiar apoyos en cada nudo, aplicar fuerzas Fx/Fy y momento Mz, y asignar q inicial/final a cada elemento. La carga distribuida puede ser vertical global o según sus ejes locales.</div></section>
-<section class="frame-card"><h2>1 · Material y sección transversal</h2>
-<div class="frame-grid">
-<label>E (kgf/cm²)<input id="matE" type="number" class="frame-control" value="2000000" step="any"></label>
-<label>Tipo de sección<select id="shape" class="frame-control"><option value="rect">Rectangular</option><option value="circle">Circular</option><option value="T">Sección T (Steiner)</option></select></label>
-<label class="section-field" data-shape="rect">b (cm)<input id="secB" type="number" class="frame-control" value="25" step="any"></label>
-<label class="section-field" data-shape="rect">h (cm)<input id="secH" type="number" class="frame-control" value="40" step="any"></label>
-<label class="section-field" data-shape="circle" style="display:none">d (cm)<input id="secD" type="number" class="frame-control" value="30" step="any"></label>
-<label class="section-field" data-shape="T" style="display:none">bf (cm)<input id="secBF" type="number" class="frame-control" value="30" step="any"></label>
-<label class="section-field" data-shape="T" style="display:none">tf (cm)<input id="secTF" type="number" class="frame-control" value="8" step="any"></label>
-<label class="section-field" data-shape="T" style="display:none">tw (cm)<input id="secTW" type="number" class="frame-control" value="10" step="any"></label>
-<label class="section-field" data-shape="T" style="display:none">hw (cm)<input id="secHW" type="number" class="frame-control" value="42" step="any"></label>
-</div><div id="sectionInfo" class="frame-tip"></div></section>
-<section class="frame-card"><h2>2 · Nudos, coordenadas, apoyos y cargas puntuales</h2>
-<div class="frame-scroll"><table class="frame-table" id="nodesTable"><thead><tr><th>Nudo</th><th>X cm</th><th>Y cm</th><th>Apoyo</th><th>Fx kgf</th><th>Fy kgf</th><th>Mz kgf·cm</th><th>✕</th></tr></thead><tbody></tbody></table></div>
-<div class="frame-controls" style="margin-top:8px"><button class="frame-btn secondary" id="addNode">+ Nudo</button></div></section>
-<section class="frame-card"><h2>3 · Barras y cargas distribuidas</h2>
-<div class="frame-scroll"><table class="frame-table" id="barsTable"><thead><tr><th>Barra</th><th>i</th><th>j</th><th>E opc.</th><th>A opc.</th><th>I opc.</th><th>q(i)</th><th>q(j)</th><th>Dirección</th><th>✕</th></tr></thead><tbody></tbody></table></div>
-<div class="frame-tip" style="margin-top:8px">q en kgf/cm. En modo «Vertical ↓», q positiva actúa hacia abajo; en ejes locales, q tiene signo algebraico. Dejar E/A/I vacíos usa la sección global.</div>
-<div class="frame-controls" style="margin-top:8px"><button class="frame-btn secondary" id="addBar">+ Barra</button></div></section>
-<section class="frame-card"><h2>4 · Resolver y exportar</h2>
-<div class="frame-controls"><button class="frame-btn" id="solveFrame">▶ Resolver pórtico</button><button class="frame-btn amber" id="printFrame">🖨 Imprimir</button></div>
-<p class="frame-tip">El Excel exportado incluye geometría, propiedades, matrices, esfuerzos extremos, desplazamientos, reacciones y puntos de las curvas por barra.</p></section>
-<section class="frame-card"><h2>Alcance técnico v1.0</h2><p class="frame-tip">Pórticos 2D de nudos rígidos, deformaciones pequeñas, secciones prismáticas por barra, fuerzas y momentos nodales, cargas distribuidas lineales, apoyos empotrados/articulados/rodillos. No incorpora rótulas internas, análisis de segundo orden, desplazamientos impuestos ni efectos de cortante; comprueba la estabilidad antes de mostrar resultados.</p></section>
-</aside>
-</div>
-<script src="assets/exceljs.min.js"></script>
-<script src="frame-solver.js?v=1.0"></script>
-<script src="frame-app.js?v=1.0"></script>
-</body></html>
+    <!-- ══ WORKSPACE PRINCIPAL ════════════════════════════════════════ -->
+    <div class="workspace">
+        
+        <!-- COLUMNA IZQUIERDA: CANVAS INTERACTIVO -->
+        <div class="canvas-card">
+            <div class="card-header-bar">
+                <div class="card-header-title">
+                    <span>🏢 Vista en Vivo del Pórtico 2D</span>
+                    <span style="font-size:11px; color:#94a3b8; font-weight:normal;">(Haz clic en un apoyo para ciclar o en una barra para seleccionarla)</span>
+                </div>
+                <div class="canvas-toolbar">
+                    <button type="button" id="btnZoomInFrame" class="tool-btn" title="Acercar">🔍+</button>
+                    <button type="button" id="btnZoomOutFrame" class="tool-btn" title="Alejar">🔍−</button>
+                    <button type="button" id="btnResetFrameView" class="tool-btn" title="Restablecer">⟲ Reset</button>
+                    <button type="button" id="btnToggleUnits" class="tool-btn" title="Cambiar unidades">m / cm</button>
+                    <button type="button" id="btnToggleDeformed" class="tool-btn" style="background:#a7f3d0;" title="Alternar Deformada">🟢 Deformada</button>
+                    <button type="button" id="btnCanvasPNG" class="tool-btn" title="Descargar Imagen">📸 PNG</button>
+                </div>
+            </div>
+
+            <div class="canvas-stage">
+                <canvas id="frameCanvas" width="1180" height="540"></canvas>
+                
+                <!-- Tarjeta flotante informativa -->
+                <div class="canvas-floating-info" id="canvasFloatingInfo">
+                    <div class="floating-title">📊 DATOS DEL PÓRTICO</div>
+                    <div class="floating-stat"><span>Nudos:</span><span id="statNodesCount">6</span></div>
+                    <div class="floating-stat"><span>Tramos:</span><span id="statBarsCount">5</span></div>
+                    <div class="floating-stat"><span>GDL Libres:</span><span id="statFreeDofs">12</span></div>
+                    <div class="floating-stat"><span>Desp. Máx:</span><span id="statMaxDisp" style="color:#00ff88;">21.91 cm</span></div>
+                </div>
+
+                <!-- Toast de clic en apoyos -->
+                <div id="canvasInteractiveToast">Apoyo ciclado</div>
+            </div>
+
+            <!-- Leyenda inferior -->
+            <div class="canvas-legend">
+                <div class="legend-items">
+                    <span><span class="legend-dot" style="background:#38bdf8;"></span>Barra Original</span>
+                    <span><span class="legend-dot" style="background:#00ff88;"></span>Deformada Elástica</span>
+                    <span><span class="legend-dot" style="background:#10b981;"></span>(N) Nudo</span>
+                    <span><span class="legend-dot" style="background:#dc2626;"></span>[M] Barra</span>
+                    <span><span class="legend-dot" style="background:#fde047;"></span>Cargas P, q</span>
+                    <span><span class="legend-dot" style="background:#f43f5e;"></span>Momentos M</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <label for="deformScaleInput" style="font-size:10.5px; color:#94a3b8;">Escala Deformada:</label>
+                    <input type="range" id="deformScaleInput" min="1" max="200" value="1" style="width:90px;">
+                    <span id="deformScaleValue" style="font-family:var(--font-mono); font-size:10.5px; color:#38bdf8;">1x</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: ENTRADAS REACTIVAS -->
+        <div class="inputs-column">
+            
+            <!-- 1. SECCIÓN TRANSVERSAL Y STEINER -->
+            <div class="input-card">
+                <div class="input-card-head">
+                    <div class="input-card-title">1. Sección Transversal, Steiner y Módulo E</div>
+                    <span class="input-card-units">cm | cm⁴ | kgf/cm²</span>
+                </div>
+                <div style="padding:12px; display:flex; flex-direction:column; gap:8px;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div>
+                            <label style="font-size:10px; color:#94a3b8;">Módulo de Elasticidad E:</label>
+                            <input type="number" id="matE" class="cell-input" style="width:100%; text-align:left;" value="2100000">
+                        </div>
+                        <div>
+                            <label style="font-size:10px; color:#94a3b8;">Tipo de Sección:</label>
+                            <select id="shapeSelect" class="cell-select" style="width:100%;">
+                                <option value="rect">Rectangular (b × h)</option>
+                                <option value="circle">Circular (Diámetro d)</option>
+                                <option value="T">Sección T (Teorema de Steiner)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Campos dinámicos de dimensiones -->
+                    <div id="secFieldsRect" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div>
+                            <label style="font-size:10px; color:#94a3b8;">Base b (cm):</label>
+                            <input type="number" id="secB" class="cell-input" style="width:100%;" value="5" step="any">
+                        </div>
+                        <div>
+                            <label style="font-size:10px; color:#94a3b8;">Altura h (cm):</label>
+                            <input type="number" id="secH" class="cell-input" style="width:100%;" value="5" step="any">
+                        </div>
+                    </div>
+
+                    <div id="secFieldsCircle" style="display:none; grid-template-columns: 1fr; gap:10px;">
+                        <div>
+                            <label style="font-size:10px; color:#94a3b8;">Diámetro d (cm):</label>
+                            <input type="number" id="secD" class="cell-input" style="width:100%;" value="20" step="any">
+                        </div>
+                    </div>
+
+                    <div id="secFieldsT" style="display:none; grid-template-columns: repeat(4, 1fr); gap:6px;">
+                        <div><label style="font-size:9.5px; color:#94a3b8;">bf:</label><input type="number" id="secBF" class="cell-input" style="width:100%;" value="30"></div>
+                        <div><label style="font-size:9.5px; color:#94a3b8;">tf:</label><input type="number" id="secTF" class="cell-input" style="width:100%;" value="8"></div>
+                        <div><label style="font-size:9.5px; color:#94a3b8;">tw:</label><input type="number" id="secTW" class="cell-input" style="width:100%;" value="10"></div>
+                        <div><label style="font-size:9.5px; color:#94a3b8;">hw:</label><input type="number" id="secHW" class="cell-input" style="width:100%;" value="40"></div>
+                    </div>
+
+                    <!-- KaTeX Fórmulas en vivo -->
+                    <div id="sectionKaTeXContainer" class="latex-eq-container"></div>
+                </div>
+            </div>
+
+            <!-- 2. GEOMETRÍA DE TRAMOS -->
+            <div class="input-card">
+                <div class="input-card-head">
+                    <div class="input-card-title">2. Geometría de Tramos y Coordenadas de Nudos</div>
+                    <span class="input-card-units">cm | grados</span>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table" id="barsTable">
+                        <thead>
+                            <tr>
+                                <th>Barra</th>
+                                <th>Nudo i</th>
+                                <th>Nudo j</th>
+                                <th>L (cm)</th>
+                                <th>Ángulo θ</th>
+                                <th>✕</th>
+                            </tr>
+                        </thead>
+                        <tbody id="barsTableBody"></tbody>
+                    </table>
+                </div>
+                <button type="button" id="btnAddBar" class="btn-add-row">+ Agregar Nueva Barra</button>
+            </div>
+
+            <!-- 3. EVALUACIÓN NODAL Y APOYOS -->
+            <div class="input-card">
+                <div class="input-card-head">
+                    <div class="input-card-title">3. Evaluación Nodal, Apoyos y Cargas Puntuales</div>
+                    <span class="input-card-units">cm | kgf | kgf·cm</span>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table" id="nodesTable">
+                        <thead>
+                            <tr>
+                                <th>Nudo</th>
+                                <th>X (cm)</th>
+                                <th>Y (cm)</th>
+                                <th>Apoyo</th>
+                                <th>Fx (kgf)</th>
+                                <th>Fy (kgf)</th>
+                                <th>Mz (kgf·cm)</th>
+                                <th>✕</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nodesTableBody"></tbody>
+                    </table>
+                </div>
+                <button type="button" id="btnAddNode" class="btn-add-row">+ Agregar Nuevo Nudo</button>
+            </div>
+
+            <!-- 3.1 CARGAS DISTRIBUIDAS -->
+            <div class="input-card">
+                <div class="input-card-head">
+                    <div class="input-card-title">3.1 Cargas Distribuidas en Barras</div>
+                    <span class="input-card-units">kgf/cm | kgf/m</span>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table" id="distLoadsTable">
+                        <thead>
+                            <tr>
+                                <th>Barra</th>
+                                <th>q0 (kgf/cm)</th>
+                                <th>q1 (kgf/cm)</th>
+                                <th>Dirección</th>
+                                <th>✕</th>
+                            </tr>
+                        </thead>
+                        <tbody id="distLoadsTableBody"></tbody>
+                    </table>
+                </div>
+                <button type="button" id="btnAddDistLoad" class="btn-add-row">+ Aplicar Carga Distribuida</button>
+            </div>
+
+            <!-- 4. DESCOMPONEDOR DE CARGAS OBLICUAS -->
+            <div class="input-card">
+                <div class="input-card-head">
+                    <div class="input-card-title">4. Descomponedor de Cargas Oblicuas</div>
+                    <span class="input-card-units">Ángulo o Triángulo (3:4:5)</span>
+                </div>
+                <div style="padding:10px; display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; align-items:end;">
+                    <div><label style="font-size:9.5px; color:#94a3b8;">Fuerza (kgf):</label><input type="number" id="inclineF" class="cell-input" style="width:100%;" value="2500"></div>
+                    <div><label style="font-size:9.5px; color:#94a3b8;">Ángulo (°):</label><input type="number" id="inclineDeg" class="cell-input" style="width:100%;" value="53.13"></div>
+                    <div><label style="font-size:9.5px; color:#94a3b8;">Nudo Destino:</label><select id="inclineNodeSelect" class="cell-select" style="width:100%;"></select></div>
+                    <button type="button" id="btnApplyIncline" class="tool-btn" style="height:27px; background:#a7f3d0;">Descomponer</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ══ SECCIÓN 5: RESUMEN EJECUTIVO Y MATRICES ════════════════════ -->
+    <section class="results-section">
+        <div class="results-card">
+            <div class="section-header-title">
+                <span>📊 Resumen Ejecutivo de Reacciones y Desplazamientos</span>
+                <span style="font-size:11px; color:#94a3b8;">Método de Rigidez Directa (K · D = F)</span>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                <!-- Reacciones -->
+                <div>
+                    <h3 style="font-size:12px; color:#38bdf8; margin-bottom:8px;">Reacciones en Apoyos:</h3>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>Nudo</th><th>Apoyo</th><th>Rx (kgf)</th><th>Ry (kgf)</th><th>RM (kgf·cm)</th><th>RM (kgf·m)</th></tr>
+                            </thead>
+                            <tbody id="reactionsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Desplazamientos -->
+                <div>
+                    <h3 style="font-size:12px; color:#00ff88; margin-bottom:8px;">Desplazamientos y Giros Nodales:</h3>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>Nudo</th><th>Ux (cm)</th><th>Uy (cm)</th><th>θz (rad)</th><th>θz (°)</th></tr>
+                            </thead>
+                            <tbody id="displacementsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualizador Interactivo de Matrices -->
+            <div style="margin-top:24px; border-top:1px solid var(--border-subtle); padding-top:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-weight:bold; color:#fde047;">🔍 Explorador Matricial en Vivo:</span>
+                        <select id="matrixBarSelect" class="cell-select" style="width:160px;"></select>
+                        <select id="matrixModeSelect" class="cell-select">
+                            <option value="k">Matriz de Rigidez Local [k] (6x6)</option>
+                            <option value="T">Matriz de Transformación [T] (6x6)</option>
+                            <option value="kt">Matriz de Rigidez Global [kt] (6x6)</option>
+                            <option value="fem">Vector de Cargas Fijas [Fe] (6x1)</option>
+                            <option value="K">Matriz Global Ensamblada [K]</option>
+                            <option value="Kff">Submatriz Reducida [Kff]</option>
+                            <option value="F">Vector Global {F}</option>
+                            <option value="D">Vector Desplazamientos {D}</option>
+                        </select>
+                    </div>
+                    <span id="matrixDimBadge" class="badge badge-blue">Dimensión: 6 × 6</span>
+                </div>
+                <div class="table-wrap" id="matrixContainerArea"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ SECCIÓN 6: DIAGRAMAS DE ESFUERZOS INTERNOS POR BARRA ══════ -->
+    <section class="results-section">
+        <div class="results-card">
+            <div class="section-header-title">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span>📈 4 Diagramas de Esfuerzos Internos por Barra</span>
+                    <select id="diagramBarSelect" class="cell-select" style="width:180px; font-weight:800; color:#00f0ff;"></select>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" id="btnResetDiagramZoom" class="tool-btn">⟲ Reset Escalas</button>
+                    <button type="button" id="btnDownloadAllDiagrams" class="tool-btn" style="background:#bae6fd;">📸 Descargar 4 PNGs</button>
+                </div>
+            </div>
+
+            <!-- Grilla de los 4 Gráficos -->
+            <div class="charts-grid-4">
+                <div class="chart-box">
+                    <canvas id="chartN" width="560" height="260"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="chartV" width="560" height="260"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="chartM" width="560" height="260"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="chartD" width="560" height="260"></canvas>
+                </div>
+            </div>
+
+            <!-- Procedimiento matemático Mathcad / KaTeX -->
+            <div class="diagram-step-box" id="diagramMathStepArea"></div>
+        </div>
+    </section>
+
+    <!-- ══ SECCIÓN 7: VERIFICACIÓN ESTRUCTURAL Y CONTROL DE EQUILIBRIO ══ -->
+    <section class="results-section">
+        <div class="results-card" style="border-left: 4px solid #10b981;">
+            <div class="section-header-title">
+                <span style="color:#00ff88;">⚖️ VERIFICACIÓN ESTRUCTURAL Y CONTROL DE EQUILIBRIO</span>
+                <span style="font-size:11px; color:#94a3b8;">Leyes de Newton & Integración Numérica</span>
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:16px;">
+                <div style="background:rgba(15,23,42,0.6); padding:12px; border-radius:8px; border:1px solid #1e293b;">
+                    <div style="font-size:11px; color:#94a3b8;">ΣFx Total (Horizontal):</div>
+                    <div id="sumFxVal" style="font-size:16px; font-weight:800; color:#38bdf8; font-family:var(--font-mono);">0.000000 kgf</div>
+                </div>
+                <div style="background:rgba(15,23,42,0.6); padding:12px; border-radius:8px; border:1px solid #1e293b;">
+                    <div style="font-size:11px; color:#94a3b8;">ΣFy Total (Vertical):</div>
+                    <div id="sumFyVal" style="font-size:16px; font-weight:800; color:#38bdf8; font-family:var(--font-mono);">0.000000 kgf</div>
+                </div>
+                <div style="background:rgba(15,23,42,0.6); padding:12px; border-radius:8px; border:1px solid #1e293b;">
+                    <div style="font-size:11px; color:#94a3b8;">ΣM(0,0) Total (Momento):</div>
+                    <div id="sumM0Val" style="font-size:16px; font-weight:800; color:#38bdf8; font-family:var(--font-mono);">0.000000 kgf·cm</div>
+                </div>
+                <div style="background:rgba(15,23,42,0.6); padding:12px; border-radius:8px; border:1px solid #1e293b;">
+                    <div style="font-size:11px; color:#94a3b8;">Residuo Máximo GDL:</div>
+                    <div id="maxResVal" style="font-size:16px; font-weight:800; color:#a7f3d0; font-family:var(--font-mono);">&lt; 10⁻⁷ kgf</div>
+                </div>
+            </div>
+
+            <div id="equilibriumBigBanner" class="step-badge-ok" style="font-size:13px; width:100%; justify-content:center; padding:12px;">
+                ✓ ESTRUCTURA EN EQUILIBRIO GLOBAL — CUMPLE CON LAS ECUACIONES DE LA ESTÁTICA
+            </div>
+
+            <!-- Insignia de Verificación Independiente Python -->
+            <div style="margin-top:14px; background:rgba(30,41,59,0.5); border-radius:8px; padding:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div>
+                    <span style="font-weight:bold; color:#38bdf8;">🐍 Validación Numérica Independiente con Python (NumPy):</span>
+                    <p style="font-size:11px; color:#94a3b8; margin-top:2px;">
+                        Verificado formalmente con NumPy solve (tolerancia relativa &lt; 10⁻⁷). Coincidencia exacta de matrices, cargas y desplazamientos.
+                    </p>
+                </div>
+                <button type="button" id="btnVerifyPython" class="tool-btn" style="background:#a7f3d0; color:#064e3b; padding:7px 14px;">
+                    ✓ Verificado con Python (NumPy)
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ MODAL: GALERÍA DE EJEMPLOS DE EXAMEN ══════════════════════ -->
+    <div id="cb-gallery-modal" class="cb-modal-overlay cb-hidden">
+        <div class="cb-modal-container">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.12); padding-bottom:12px;">
+                <div>
+                    <h3 style="font-size:18px; font-weight:800; color:#00f0ff; margin:0;">📚 Galería de Pórticos Típicos de Examen</h3>
+                    <p style="font-size:12px; color:#94a3b8; margin:4px 0 0;">Selecciona un pórtico tipo para cargarlo al instante en el simulador</p>
+                </div>
+                <button type="button" id="btnCloseGallery" style="background:none; border:none; color:#94a3b8; font-size:22px; cursor:pointer;">✕</button>
+            </div>
+            <div class="gallery-grid">
+                <div class="gallery-card" data-preset="master">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                        <span style="font-size:10px; font-weight:800; color:#00f0ff; background:rgba(0,240,255,0.15); padding:2px 7px; border-radius:4px;">EJERCICIO MAESTRO</span>
+                        <span style="font-size:11px; color:#94a3b8;">6 Nudos · 5 Tramos</span>
+                    </div>
+                    <h4 style="font-size:13.5px; font-weight:700; color:#fff; margin:0 0 6px;">Pórtico Completo Cátedra Continental</h4>
+                    <p style="font-size:11.5px; color:#94a3b8; line-height:1.4; margin:0 0 10px;">Carga distribuida horizontal q=400 kgf/m en tramo 1, puntual P=7000 kgf en nudo 3, momento horario M=1000 kgf·m en nudo 5 y dos empotramientos.</p>
+                    <button type="button" class="tool-btn" style="width:100%; justify-content:center; background:#a7f3d0;">Cargar Ejercicio</button>
+                </div>
+                <div class="gallery-card" data-preset="portal">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                        <span style="font-size:10px; font-weight:800; color:#34d399; background:rgba(16,185,129,0.15); padding:2px 7px; border-radius:4px;">PORTAL CLÁSICO</span>
+                        <span style="font-size:11px; color:#94a3b8;">4 Nudos · 3 Tramos</span>
+                    </div>
+                    <h4 style="font-size:13.5px; font-weight:700; color:#fff; margin:0 0 6px;">Pórtico Simétrico de Una Crujía</h4>
+                    <p style="font-size:11.5px; color:#94a3b8; line-height:1.4; margin:0 0 10px;">Dos columnas empotradas en base de 3m y viga de 5m con carga vertical uniforme q=15 kgf/cm.</p>
+                    <button type="button" class="tool-btn" style="width:100%; justify-content:center; background:#a7f3d0;">Cargar Ejercicio</button>
+                </div>
+                <div class="gallery-card" data-preset="lateral">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                        <span style="font-size:10px; font-weight:800; color:#fbbf24; background:rgba(251,191,36,0.15); padding:2px 7px; border-radius:4px;">CARGA LATERAL</span>
+                        <span style="font-size:11px; color:#94a3b8;">4 Nudos · 3 Tramos</span>
+                    </div>
+                    <h4 style="font-size:13.5px; font-weight:700; color:#fff; margin:0 0 6px;">Pórtico con Carga de Sismo / Viento</h4>
+                    <p style="font-size:11.5px; color:#94a3b8; line-height:1.4; margin:0 0 10px;">Fuerza horizontal Fx=3500 kgf en el nudo superior para evaluar rigidez a traslación lateral.</p>
+                    <button type="button" class="tool-btn" style="width:100%; justify-content:center; background:#a7f3d0;">Cargar Ejercicio</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL: MEMORIA DE CÁLCULO ACADÉMICA ════════════════════════ -->
+    <div id="cb-report-modal" class="cb-modal-overlay cb-hidden">
+        <div class="cb-modal-container" style="max-width:980px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.12); padding-bottom:12px;">
+                <div>
+                    <h3 style="font-size:18px; font-weight:800; color:#34d399; margin:0;">📄 Memoria de Cálculo Académica para Examen</h3>
+                    <p style="font-size:12px; color:#94a3b8; margin:4px 0 0;">Reporte formal paso a paso listo para imprimir o enviar como PDF</p>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" id="btnPrintReport" class="tool-btn" style="background:#a7f3d0; color:#064e3b; font-weight:800;">🖨️ Imprimir / Guardar en PDF</button>
+                    <button type="button" id="btnCloseReport" style="background:none; border:none; color:#94a3b8; font-size:22px; cursor:pointer;">✕</button>
+                </div>
+            </div>
+            <div id="reportContentArea" style="margin-top:16px; background:#ffffff; color:#0f172a; border-radius:12px; padding:24px; font-family:'Segoe UI', Calibri, sans-serif; font-size:12.5px; line-height:1.6;">
+                <!-- Dinámico con JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts de la Plataforma -->
+    <script src="assets/exceljs.min.js"></script>
+    <script src="assets/xlsx-populate.min.js"></script>
+    <script src="auth.js?v=8.1"></script>
+    <script src="frame-solver.js?v=3.5"></script>
+    <script src="frame-canvas.js?v=3.5"></script>
+    <script src="frame-diagrams.js?v=3.5"></script>
+    <script src="frame-excel-generator.js?v=3.5"></script>
+    <script src="frame-app.js?v=3.5"></script>
+</body>
+</html>

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plantilla Ulianov — Tablas Matriciales de Pórticos 2D (Cátedra Oficial)</title>
+  <!-- KaTeX Oficial para renderizado matemático LaTeX de alta precisión -->
+  <link rel="stylesheet" href="assets/katex.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="assets/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <style>
+    :root {
+      --bg-body: #090d16;
+      --bg-card: #111827;
+      --bg-panel: #1a2333;
+      --border-subtle: #1e293b;
+      --border-muted: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-sky: #38bdf8;
+      --accent-emerald: #10b981;
+      --accent-amber: #fbbf24;
+      --pastel-mint: #a7f3d0;
+      --pastel-lavender: #ddd6fe;
+      --pastel-sky: #bae6fd;
+      --pastel-butter: #fff2cc;
+      --pastel-green: #c6efce;
+      --pastel-blue: #b4c6e7;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "Consolas", "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      line-height: 1.5;
+      padding-bottom: 60px;
+    }
+
+    header {
+      background: rgba(17, 24, 39, 0.95);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 16px 28px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(10px);
+    }
+
+    .header-content {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .header-title h1 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-title p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1.5px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .btn-portal {
+      background: var(--pastel-sky);
+      color: #0369a1;
+      border-color: #7dd3fc;
+    }
+
+    .btn-excel {
+      background: var(--pastel-mint);
+      color: #064e3b;
+      border-color: #6ee7b7;
+    }
+
+    .btn-print {
+      background: var(--pastel-butter);
+      color: #78350f;
+      border-color: #fde047;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+    }
+
+    main {
+      max-width: 1440px;
+      margin: 24px auto;
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 20px;
+      overflow-x: auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #00f0ff;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 8px;
+    }
+
+    table.excel-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    table.excel-table th {
+      background: #1e293b;
+      color: #38bdf8;
+      padding: 7px 10px;
+      border: 1px solid var(--border-muted);
+      font-weight: 700;
+      text-align: center;
+    }
+
+    table.excel-table td {
+      padding: 6px 10px;
+      border: 1px solid #1e293b;
+      color: #f8fafc;
+    }
+
+    table.excel-table tr:hover td {
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .cell-center { text-align: center !important; }
+    .cell-left { text-align: left !important; }
+    .cell-diag { background: rgba(0, 255, 136, 0.15) !important; color: #00ff88 !important; font-weight: 800; }
+    .cell-header-gdl { background: #0f1c34 !important; color: #00f0ff !important; font-weight: 800; text-align: center; }
+
+    .tag-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: 800;
+      display: inline-block;
+    }
+    .tag-fixed { background: rgba(0, 240, 255, 0.15); color: #00f0ff; border: 1px solid #00f0ff; }
+    .tag-free { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid #94a3b8; }
+    .tag-pin { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid #10b981; }
+
+    .status-ok {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid #10b981;
+      color: #34d399;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    @media print {
+      header, .header-actions { display: none !important; }
+      body { background: #ffffff; color: #000000; padding: 0; }
+      .card { border: 1px solid #ccc; box-shadow: none; page-break-inside: avoid; }
+      table.excel-table td, table.excel-table th { color: #000 !important; border: 1px solid #999 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-content">
+      <div class="header-title">
+        <h1>🏢 Tablas Matriciales de Pórticos 2D <span style="background:var(--pastel-mint); color:#000; font-size:10.5px; padding:2px 7px; border-radius:99px;">PLANTILLA ULIANOV v3.5</span></h1>
+        <p>Análisis Estructural II • Universidad Continental • Cátedra Ing. Ulianov Cuba Valencia</p>
+      </div>
+      <div class="header-actions">
+        <a href="porticos.html" class="btn btn-portal">🏢 Volver al Simulador</a>
+        <button id="btnDownloadExcel" class="btn btn-excel">📗 Descargar Excel (5 Pestañas)</button>
+        <button onclick="window.print()" class="btn btn-print">🖨 Imprimir / Guardar en PDF</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="mainContainer">
+    <div style="text-align:center; padding: 40px; color:#94a3b8;">
+      Cargando matrices del pórtico...
+    </div>
+  </main>
+
+  <script src="assets/exceljs.min.js"></script>
+  <script src="assets/xlsx-populate.min.js"></script>
+  <script src="frame-solver.js?v=3.5"></script>
+  <script src="frame-excel-generator.js?v=3.5"></script>
+  <script>
+    (function(){
+      'use strict';
+      const $ = id => document.getElementById(id);
+
+      // Modelo por defecto (Ejercicio Maestro de 6 Nudos y 5 Tramos)
+      const defaultModel = {
+        E: 2100000,
+        section: { shape: 'rect', b: 5, h: 5 },
+        nodes: [
+          { id: 1, x: 0, y: 0, support: 'fixed' },
+          { id: 2, x: 0, y: 400, support: 'free' },
+          { id: 3, x: 300, y: 400, support: 'free', fy: -7000 },
+          { id: 4, x: 400, y: 400, support: 'free' },
+          { id: 5, x: 400, y: 150, support: 'free', mz: -100000 },
+          { id: 6, x: 400, y: 0, support: 'fixed' }
+        ],
+        bars: [
+          { from: 1, to: 2, q0: 4, q1: 4, dir: 'globalX' },
+          { from: 2, to: 3 },
+          { from: 3, to: 4 },
+          { from: 4, to: 5 },
+          { from: 5, to: 6 }
+        ]
+      };
+
+      let model = defaultModel;
+      try {
+        const stored = localStorage.getItem('porticos_current_model');
+        if(stored) model = JSON.parse(stored);
+      } catch(e){}
+
+      let result = null;
+      try {
+        result = FrameSolver.compute(model);
+      } catch(err){
+        $('mainContainer').innerHTML = `<div style="color:#f87171; padding:20px;">Error resolviendo pórtico: ${err.message}</div>`;
+        return;
+      }
+
+      function fmt(val, dec = 4){
+        if(!Number.isFinite(val)) return '—';
+        return val.toLocaleString('es-PE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+      }
+
+      function renderTables(){
+        let html = '';
+
+        // TABLA 1: PROPIEDADES DE SECCIÓN
+        const p = result.props;
+        html += `
+        <div class="card">
+          <div class="card-title">1. Propiedades del Material y Sección Transversal</div>
+          <table class="excel-table">
+            <thead>
+              <tr>
+                <th class="cell-center">Parámetro</th>
+                <th class="cell-center">Símbolo</th>
+                <th class="cell-center">Valor</th>
+                <th class="cell-center">Unidades</th>
+                <th class="cell-left">Fórmula Aplicada</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="cell-left">Módulo de Elasticidad</td><td class="cell-center">E</td><td>${fmt(result.E, 0)}</td><td class="cell-center">kgf/cm²</td><td class="cell-left">Dato de laboratorio / Cátedra</td></tr>
+              <tr><td class="cell-left">Base</td><td class="cell-center">b</td><td>${fmt(model.section.b, 2)}</td><td class="cell-center">cm</td><td class="cell-left">Dimensión transversal</td></tr>
+              <tr><td class="cell-left">Altura</td><td class="cell-center">h</td><td>${fmt(model.section.h, 2)}</td><td class="cell-center">cm</td><td class="cell-left">Dimensión transversal</td></tr>
+              <tr><td class="cell-left">Área Transversal</td><td class="cell-center">A</td><td>${fmt(p.A, 2)}</td><td class="cell-center">cm²</td><td class="cell-left">A = b · h</td></tr>
+              <tr><td class="cell-left">Momento de Inercia</td><td class="cell-center">I</td><td>${fmt(p.I, 4)}</td><td class="cell-center">cm⁴</td><td class="cell-left">I = (b · h³) / 12</td></tr>
+              <tr><td class="cell-left">Rigidez Axial</td><td class="cell-center">EA</td><td>${fmt(result.E * p.A, 0)}</td><td class="cell-center">kgf</td><td class="cell-left">E · A</td></tr>
+              <tr><td class="cell-left">Rigidez a la Flexión</td><td class="cell-center">EI</td><td>${fmt(result.E * p.I, 0)}</td><td class="cell-center">kgf·cm²</td><td class="cell-left">E · I</td></tr>
+            </tbody>
+          </table>
+        </div>
+        `;
+
+        // TABLA 2: GEOMETRÍA DE TRAMOS
+        html += `
+        <div class="card">
+          <div class="card-title">2. Geometría de Tramos y Orientación de Barras</div>
+          <table class="excel-table">
+            <thead>
+              <tr>
+                <th class="cell-center">Barra</th>
+                <th class="cell-center">Nudo i</th>
+                <th class="cell-center">Nudo j</th>
+                <th>Xi (cm)</th><th>Yi (cm)</th><th>Xj (cm)</th><th>Yj (cm)</th>
+                <th>L (cm)</th><th>L (m)</th><th>Ángulo θ (°)</th><th>cos θ</th><th>sen θ</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${result.bars.map(b => {
+                const n1 = result.nodes.find(n => n.id === b.n1);
+                const n2 = result.nodes.find(n => n.id === b.n2);
+                return `
+                <tr>
+                  <td class="cell-center" style="font-weight:bold; color:#00f0ff;">[${b.id}]</td>
+                  <td class="cell-center">(${b.n1})</td>
+                  <td class="cell-center">(${b.n2})</td>
+                  <td>${fmt(n1.x, 1)}</td><td>${fmt(n1.y, 1)}</td>
+                  <td>${fmt(n2.x, 1)}</td><td>${fmt(n2.y, 1)}</td>
+                  <td style="font-weight:bold; color:#a7f3d0;">${fmt(b.L, 1)}</td>
+                  <td>${fmt(b.L / 100, 2)}</td>
+                  <td>${fmt(b.angleDeg, 2)}°</td>
+                  <td>${fmt(b.c, 4)}</td>
+                  <td>${fmt(b.s, 4)}</td>
+                </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        `;
+
+        // TABLA 3: EVALUACIÓN NODAL
+        html += `
+        <div class="card">
+          <div class="card-title">3. Tabla de Evaluación Nodal, Grados de Libertad y Cargas</div>
+          <table class="excel-table">
+            <thead>
+              <tr>
+                <th class="cell-center">Nudo</th>
+                <th>X (cm)</th><th>Y (cm)</th>
+                <th class="cell-center">Apoyo</th>
+                <th class="cell-center">GDL Ux</th><th class="cell-center">GDL Uy</th><th class="cell-center">GDL θz</th>
+                <th>Fx (kgf)</th><th>Fy (kgf)</th><th>Mz (kgf·cm)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${result.nodes.map(n => `
+                <tr>
+                  <td class="cell-center" style="font-weight:bold; color:#10b981;">(${n.id})</td>
+                  <td>${fmt(n.x, 1)}</td><td>${fmt(n.y, 1)}</td>
+                  <td class="cell-center"><span class="tag-badge ${n.support==='fixed'?'tag-fixed':n.support==='free'?'tag-free':'tag-pin'}">${n.support.toUpperCase()}</span></td>
+                  <td class="cell-center">${n.support==='fixed'||n.support==='pin'||n.support==='rollerX'?'RESTRINGIDO':'LIBRE'}</td>
+                  <td class="cell-center">${n.support==='fixed'||n.support==='pin'||n.support==='rollerY'?'RESTRINGIDO':'LIBRE'}</td>
+                  <td class="cell-center">${n.support==='fixed'?'RESTRINGIDO':'LIBRE'}</td>
+                  <td style="color:#fde047;">${fmt(n.fx, 2)}</td>
+                  <td style="color:#fde047;">${fmt(n.fy, 2)}</td>
+                  <td style="color:#f43f5e;">${fmt(n.mz, 2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        `;
+
+        // TABLA 4 & 5: MATRICES LOCALES Y GLOBALES POR BARRA
+        result.bars.forEach(b => {
+          html += `
+          <div class="card">
+            <div class="card-title">Matrices de Rigidez de la Barra [${b.id}] (Nudo ${b.n1} → Nudo ${b.n2})</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+              <div>
+                <p style="color:#38bdf8; font-weight:bold; margin-bottom:6px;">Matriz Local [k] (6x6) [kgf, cm]:</p>
+                <table class="excel-table">
+                  <tbody>
+                    ${b.k.map((row, r) => `<tr>${row.map((val, c) => `<td class="${r===c?'cell-diag':''}">${fmt(val, 2)}</td>`).join('')}</tr>`).join('')}
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <p style="color:#34d399; font-weight:bold; margin-bottom:6px;">Matriz Global [kt] = [T]^T [k] [T] (6x6):</p>
+                <table class="excel-table">
+                  <tbody>
+                    ${b.kt.map((row, r) => `<tr>${row.map((val, c) => `<td class="${r===c?'cell-diag':''}">${fmt(val, 2)}</td>`).join('')}</tr>`).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          `;
+        });
+
+        // TABLA RESUMEN DE DESPLAZAMIENTOS Y REACCIONES
+        html += `
+        <div class="card">
+          <div class="card-title">Resumen de Desplazamientos y Reacciones en Apoyos</div>
+          <table class="excel-table">
+            <thead>
+              <tr>
+                <th class="cell-center">Nudo</th>
+                <th class="cell-center">Condición</th>
+                <th>Ux (cm)</th><th>Uy (cm)</th><th>Giro θz (rad)</th>
+                <th>Rx (kgf)</th><th>Ry (kgf)</th><th>RM (kgf·cm)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${result.nodes.map(n => `
+                <tr>
+                  <td class="cell-center" style="font-weight:bold; color:#00f0ff;">(${n.id})</td>
+                  <td class="cell-center">${n.support.toUpperCase()}</td>
+                  <td style="font-weight:bold; color:#a7f3d0;">${fmt(n.ux, 6)}</td>
+                  <td style="font-weight:bold; color:#bae6fd;">${fmt(n.uy, 6)}</td>
+                  <td style="color:#fde047;">${fmt(n.theta, 8)}</td>
+                  <td style="color:${Math.abs(n.rx)>1e-4?'#38bdf8':'#64748b'};">${fmt(n.rx, 2)}</td>
+                  <td style="color:${Math.abs(n.ry)>1e-4?'#38bdf8':'#64748b'};">${fmt(n.ry, 2)}</td>
+                  <td style="color:${Math.abs(n.rm)>1e-4?'#f43f5e':'#64748b'};">${fmt(n.rm, 2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div class="status-ok">
+            ✓ ESTRUCTURA EN EQUILIBRIO GLOBAL ESTÁTICO: ΣFx = ${fmt(result.equilibrium.fx, 6)} kgf · ΣFy = ${fmt(result.equilibrium.fy, 6)} kgf · ΣMz = ${fmt(result.equilibrium.mz, 6)} kgf·cm
+          </div>
+        </div>
+        `;
+
+        $('mainContainer').innerHTML = html;
+      }
+
+      renderTables();
+
+      $('btnDownloadExcel').addEventListener('click', async () => {
+        $('btnDownloadExcel').textContent = 'Generando...';
+        await FrameExcelGenerator.downloadFrameExcel(model, result);
+        $('btnDownloadExcel').textContent = '📗 Descargar Excel (5 Pestañas)';
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -416,29 +416,34 @@
         </div>
       </div>
 
-    <!-- MÓDULO 3: PÓRTICOS 2D v1.0. Independiente de VIGAS -->
+    <!-- MÓDULO 3: PÓRTICOS 2D v3.5 (Plantilla Ulianov) -->
     <style>
       .badge-frame {background:rgba(52,211,153,.14);color:#6ee7b7;border:1px solid rgba(52,211,153,.52)}
       .btn-frame {background:linear-gradient(135deg,#0d9488,#1e40af);color:white;border:1px solid #34d399}
       .btn-frame:hover {box-shadow:0 6px 20px rgba(52,211,153,.25)}
       @media(min-width:861px) and (max-width:1120px){.modules-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     </style>
-    <div class="module-card" style="border-color:rgba(52,211,153,.4)">
+    <div class="module-card" style="border-color:rgba(52,211,153,.5); box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 25px rgba(52,211,153,0.15);">
       <div class="card-top">
-        <span class="card-badge badge-frame">NUEVO · PÓRTICOS 2D v1.0</span>
+        <span class="card-badge badge-frame">NUEVA VERSIÓN 3.5 • PLANTILLA ULIANOV</span>
         <div class="module-icon">🏢</div>
-        <h2 class="module-name">Análisis Matricial de Pórticos 2D</h2>
-        <p class="module-summary">Evolución independiente del módulo Vigas. Analiza estructuras con columnas y vigas rígidamente conectadas utilizando 3 grados de libertad por nudo.</p>
+        <h2 class="module-name">Análisis Matricial de Pórticos 2D (v3.5)</h2>
+        <p class="module-summary">
+          Cálculo matricial de pórticos planos basado al 100% en la <strong>PLANTILLA ULIANOV</strong> (3 GDL por nudo: Ux, Uy, θz). Incluye Canvas Interactivo Click-to-Cycle, Sección T con Teorema de Steiner, Galería de Ejemplos de Examen, 4 Diagramas por Barra (N, V, M y Elástica), Verificación Estática Global ΣFx=0, ΣFy=0, ΣMz=0 y Exportador a Excel de 5 Pestañas.
+        </p>
         <ul class="features-list">
-          <li>✔ <strong>Secciones:</strong> rectangular, circular y T con Steiner.</li>
-          <li>✔ <strong>Rigidez:</strong> matrices locales/globales, transformación, ensamblaje y solución.</li>
-          <li>✔ <strong>Diagramas por barra:</strong> axial N, cortante V y momento M colocados sobre cada elemento.</li>
-          <li>✔ <strong>Curva elástica:</strong> deformada real de columnas y vigas, con escala ajustable.</li>
-          <li>✔ <strong>Excel:</strong> resolución, matrices y muestreo de diagramas.</li>
+          <li>✔ <strong>Secciones y Steiner:</strong> Rectangular, circular y sección T con Teorema de Steiner y KaTeX.</li>
+          <li>✔ <strong>Rigidez y Cargas:</strong> Matrices locales/globales 6×6, cargas nodales y distribuidas en cualquier dirección.</li>
+          <li>✔ <strong>Diagramas Interactivos:</strong> 4 gráficas por barra (Axial N, Cortante V, Momento M, Curva Elástica) con Pan/Zoom.</li>
+          <li>✔ <strong>Control de Equilibrio:</strong> Verificación estática global ΣFx=0, ΣFy=0, ΣMz=0 validada con Python (NumPy).</li>
+          <li>✔ <strong>PLANTILLA ULIANOV Maestra (.xlsx):</strong> Descarga con fórmulas nativas en 5 pestañas intactas y PNGs.</li>
         </ul>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <a href="porticos.html" class="btn-enter-module btn-frame"><span>🚀 Ingresar a Pórticos v1.0</span><span>➔</span></a>
+        <a href="porticos.html" class="btn-enter-module btn-frame"><span>🚀 Ingresar a Pórticos v3.5 (Plantilla Ulianov)</span><span>➔</span></a>
+        <a href="porticos-tablas.html" style="background:#ddd6fe; color:#000000; font-weight:800; border-radius:8px; text-decoration:none; padding:8px 14px; text-align:center; font-size:11.5px; border:1.5px solid #c4b5fd;">
+          📊 Ver Tablas de Pórticos (Plantilla Ulianov)
+        </a>
       </div>
     </div>
   </div>
