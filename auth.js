@@ -28,11 +28,29 @@
         students:  'cb_students_v81',
         excel:     'cb_excel_v81',
         trusses:   'cb_saved_trusses_v61',
-        beams:     'cb_saved_beams_v61'
+        beams:     'cb_saved_beams_v61',
+        lockdown:  'cb_lockdown_v81',
+        gh_token:  'cb_gh_token_v81',
+        admin_perm:'cb_admin_perm_v81'
     };
 
-    // Estado en memoria de la sesión del panel del desarrollador (NUNCA permanente)
+    // Estado en memoria de la sesión del panel del desarrollador
     let isDeveloperUnlocked = false;
+
+    function isMasterAdmin() {
+        if (isDeveloperUnlocked) return true;
+        try {
+            if (sessionStorage.getItem('cb_admin_session') === 'active') {
+                isDeveloperUnlocked = true;
+                return true;
+            }
+            if (localStorage.getItem(KEY.admin_perm) === 'true') {
+                isDeveloperUnlocked = true;
+                return true;
+            }
+        } catch (e) {}
+        return false;
+    }
 
     // ── UTILIDADES DE ALMACENAMIENTO ─────────────────────────────
     function load(k) {
@@ -471,6 +489,10 @@
             position: relative;
         }
 
+        @keyframes cbPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.15); }
+        }
         /* AVISO DE ACCESO RESTRINGIDO */
         .cb-restricted-box {
             background: rgba(239, 68, 68, 0.12);
@@ -655,6 +677,72 @@
 
                 <!-- 2. VISTA PRIVADA DE USUARIOS REGISTRADOS (SÓLO SI DESBLOQUEADO) -->
                 <div id="cb-admin-content-sec" style="display: none;">
+                    <!-- INTERRUPTOR MAESTRO: MODO EXAMEN / CAÍDA GLOBAL -->
+                    <div style="background: rgba(15, 23, 42, 0.95); border: 1.5px solid #00f0ff; border-radius: 14px; padding: 18px 20px; margin-bottom: 18px; box-shadow: 0 4px 22px rgba(0, 240, 255, 0.18);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                            <div style="flex: 1; min-width: 280px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span id="cb-lk-icon" style="font-size: 24px;">🌐</span>
+                                    <div>
+                                        <h4 style="margin: 0; font-size: 15px; font-weight: 900; color: #f8fafc; letter-spacing: 0.3px;">
+                                            Disponibilidad Global de la Web (Modo Examen)
+                                        </h4>
+                                        <div style="font-size: 11.5px; color: #94a3b8; margin-top: 2px;">
+                                            Interruptor de cátedra para desactivar la web y simular página caída en exámenes.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="cb-lk-status-desc" style="font-size: 12px; color: #34d399; margin-top: 8px; font-weight: 600; line-height: 1.45;">
+                                    ● Web Pública Activa: Cualquier alumno o visitante puede acceder y utilizar la aplicación.
+                                </div>
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 14px;">
+                                <!-- SWITCH INTERACTIVO ESTILO CYBERPUNK -->
+                                <label style="position: relative; display: inline-block; width: 64px; height: 34px; cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="cb-toggle-lockdown-switch" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                    <span id="cb-toggle-slider-el" style="position: absolute; cursor: pointer; inset: 0; background-color: #059669; transition: .3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 34px; border: 1.5px solid rgba(255,255,255,0.25);">
+                                        <span id="cb-toggle-knob-el" style="position: absolute; content: ''; height: 24px; width: 24px; left: 4px; bottom: 3.5px; background-color: white; transition: .3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.5);"></span>
+                                    </span>
+                                </label>
+                                <div id="cb-lk-badge" style="font-size: 11px; font-weight: 800; padding: 6px 12px; border-radius: 99px; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); text-align: center; min-width: 145px;">
+                                    ACTIVO (PÚBLICO)
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BARRA INFERIOR DE ACCIÓN Y SINCRONIZACIÓN -->
+                        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 11.5px;">
+                            <div id="cb-lk-sync-msg" style="color: #94a3b8; display: flex; align-items: center; gap: 6px;">
+                                <span>📡 Sincronización en tiempo real vía GitHub Pages (system-status.json).</span>
+                            </div>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button type="button" id="cb-btn-test-student-view" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; border-radius: 8px; padding: 6px 12px; font-size: 11px; cursor: pointer; font-weight: 700;">
+                                    👁️ Probar Vista de Alumno (503)
+                                </button>
+                                <button type="button" id="cb-btn-config-token" style="background: rgba(255,255,255,0.06); border: 1px solid #475569; color: #cbd5e1; border-radius: 8px; padding: 6px 12px; font-size: 11px; cursor: pointer;">
+                                    ⚙️ Token GitHub
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- DRAWER COLAPSABLE DE TOKEN GITHUB -->
+                        <div id="cb-token-drawer" style="display: none; margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.35); border: 1px solid #334155; border-radius: 8px;">
+                            <div style="font-size: 11.5px; color: #e2e8f0; margin-bottom: 6px; font-weight: 600;">
+                                GitHub Personal Access Token (para sincronización remota automática en GitHub Pages):
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="password" id="cb-input-gh-token" placeholder="gho_... o ghp_..." style="flex: 1; background: #0f172a; border: 1px solid #475569; border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px;">
+                                <button type="button" id="cb-btn-save-token" style="background: #0284c7; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 11.5px; cursor: pointer; font-weight: 700;">
+                                    Guardar
+                                </button>
+                            </div>
+                            <div style="font-size: 10.5px; color: #64748b; margin-top: 4px;">
+                                Guardado localmente en este navegador. Permite que el switch actualice <code>system-status.json</code> en el repositorio con 1 solo clic.
+                            </div>
+                        </div>
+                    </div>
+
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; background: rgba(255,255,255,0.03); padding: 12px 16px; border-radius: 12px; border: 1px solid #1e293b;">
                         <div>
                             <span style="font-size: 13.5px; font-weight: 700; color: #f8fafc;">Total de Alumnos / Usuarios Inscritos: </span>
@@ -706,13 +794,67 @@
         document.getElementById('cb-btn-export-csv').onclick = exportSubscribersToCSV;
         document.getElementById('cb-btn-refresh-subscribers').onclick = renderSubscribersList;
 
+        // Bind switch de disponibilidad global
+        const swEl = document.getElementById('cb-toggle-lockdown-switch');
+        if (swEl) {
+            swEl.onchange = handleToggleLockdownSwitch;
+        }
+
+        // Bind botón para probar vista de alumno (503)
+        const btnTestView = document.getElementById('cb-btn-test-student-view');
+        if (btnTestView) {
+            btnTestView.onclick = () => {
+                if (confirm('¿Deseas cerrar la sesión de Administrador para comprobar la vista del alumno?\n\nSi la web está desactivada, verás la pantalla de error 503 como cualquier estudiante.\n\nPara volver a entrar en cualquier momento, presiona Ctrl + Shift + U o haz triple clic en el título 503.')) {
+                    sessionStorage.removeItem('cb_admin_session');
+                    localStorage.removeItem(KEY.admin_perm);
+                    isDeveloperUnlocked = false;
+                    devOverlay.classList.add('cb-hidden');
+                    const badge = document.getElementById('cb-admin-exam-badge');
+                    if (badge) badge.remove();
+                    checkSystemStatusAndEnforce();
+                }
+            };
+        }
+
+        // Bind drawer de Token GitHub
+        const btnCfgTok = document.getElementById('cb-btn-config-token');
+        const tokDrawer = document.getElementById('cb-token-drawer');
+        const inputTok = document.getElementById('cb-input-gh-token');
+        const btnSaveTok = document.getElementById('cb-btn-save-token');
+        if (btnCfgTok && tokDrawer) {
+            btnCfgTok.onclick = () => {
+                tokDrawer.style.display = tokDrawer.style.display === 'none' ? 'block' : 'none';
+                if (tokDrawer.style.display === 'block' && inputTok) {
+                    inputTok.value = localStorage.getItem(KEY.gh_token) || '';
+                }
+            };
+        }
+        if (btnSaveTok && inputTok) {
+            btnSaveTok.onclick = () => {
+                const val = (inputTok.value || '').trim();
+                if (val) {
+                    localStorage.setItem(KEY.gh_token, val);
+                    alert('✓ Token GitHub guardado exitosamente en este navegador.');
+                } else {
+                    localStorage.removeItem(KEY.gh_token);
+                    alert('Token eliminado.');
+                }
+                tokDrawer.style.display = 'none';
+            };
+        }
+
         // Bind bloqueo manual
         document.getElementById('cb-btn-lock-panel').onclick = () => {
             isDeveloperUnlocked = false;
+            sessionStorage.removeItem('cb_admin_session');
+            localStorage.removeItem(KEY.admin_perm);
             document.getElementById('cb-admin-pass').value = '';
             document.getElementById('cb-admin-login-sec').style.display = 'block';
             document.getElementById('cb-admin-content-sec').style.display = 'none';
             devOverlay.classList.add('cb-hidden');
+            const badge = document.getElementById('cb-admin-exam-badge');
+            if (badge) badge.remove();
+            checkSystemStatusAndEnforce();
         };
     }
 
@@ -721,10 +863,13 @@
         const err = document.getElementById('cb-admin-err');
         if (MASTER.includes(pass)) {
             isDeveloperUnlocked = true;
+            sessionStorage.setItem('cb_admin_session', 'active');
+            localStorage.setItem(KEY.admin_perm, 'true');
             document.getElementById('cb-admin-login-sec').style.display = 'none';
             document.getElementById('cb-admin-content-sec').style.display = 'block';
             if (err) err.style.display = 'none';
             renderSubscribersList();
+            initLockdownSwitchInAdminPanel();
         } else {
             isDeveloperUnlocked = false;
             if (err) err.style.display = 'block';
@@ -957,10 +1102,11 @@
             const err = document.getElementById('cb-admin-err');
             if (err) err.style.display = 'none';
 
-            if (isDeveloperUnlocked) {
+            if (isMasterAdmin()) {
                 document.getElementById('cb-admin-login-sec').style.display = 'none';
                 document.getElementById('cb-admin-content-sec').style.display = 'block';
                 renderSubscribersList();
+                initLockdownSwitchInAdminPanel();
             } else {
                 document.getElementById('cb-admin-login-sec').style.display = 'block';
                 document.getElementById('cb-admin-content-sec').style.display = 'none';
@@ -1168,12 +1314,386 @@
         openAdminWorkflow: openAdminPanel
     };
 
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // ── MÓDULO DE CONTROL DE DISPONIBILIDAD GLOBAL Y MODO EXAMEN ────────────
+    // ═════════════════════════════════════════════════════════════════════════
+
+    async function fetchSystemStatus() {
+        const nocache = `_t=${Date.now()}`;
+        const urls = [
+            `system-status.json?${nocache}`,
+            `https://raw.githubusercontent.com/72008081-pixel/Ulianov-Continental/main/system-status.json?${nocache}`
+        ];
+        for (const u of urls) {
+            try {
+                const res = await fetch(u, { cache: 'no-store' });
+                if (res.ok) {
+                    const data = await res.json();
+                    return data;
+                }
+            } catch (err) {}
+        }
+        return null;
+    }
+
+    async function checkSystemStatusAndEnforce() {
+        // Pase VIP para el Administrador
+        if (isMasterAdmin()) {
+            const isLockdown = localStorage.getItem(KEY.lockdown) === 'true';
+            if (isLockdown) {
+                showAdminLockdownIndicator();
+            } else {
+                fetchSystemStatus().then(st => {
+                    if (st && (st.active === false || st.maintenance === true)) {
+                        localStorage.setItem(KEY.lockdown, 'true');
+                        showAdminLockdownIndicator();
+                    }
+                });
+            }
+            return;
+        }
+
+        // Para usuarios externos (Alumnos / Terceros):
+        if (localStorage.getItem(KEY.lockdown) === 'true') {
+            renderDownScreen();
+        }
+
+        try {
+            const st = await fetchSystemStatus();
+            if (st) {
+                if (st.active === false || st.maintenance === true) {
+                    localStorage.setItem(KEY.lockdown, 'true');
+                    renderDownScreen();
+                } else if (st.active === true) {
+                    localStorage.removeItem(KEY.lockdown);
+                    removeDownScreen();
+                }
+            }
+        } catch (e) {}
+    }
+
+    function renderDownScreen() {
+        if (document.getElementById('cb-down-screen')) return;
+
+        document.title = "503 Service Temporarily Unavailable";
+
+        let hideStyle = document.getElementById('cb-hide-site-style');
+        if (!hideStyle) {
+            hideStyle = document.createElement('style');
+            hideStyle.id = 'cb-hide-site-style';
+            hideStyle.textContent = `
+                body > *:not(#cb-down-screen):not(#cb-emergency-modal) {
+                    display: none !important;
+                }
+                html, body {
+                    background: #ffffff !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    overflow: auto !important;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+                }
+            `;
+            document.head.appendChild(hideStyle);
+        }
+
+        const downEl = document.createElement('div');
+        downEl.id = 'cb-down-screen';
+        downEl.style.cssText = 'position:fixed;inset:0;background:#ffffff;z-index:2147483646;padding:40px 24px;box-sizing:border-box;overflow-y:auto;';
+        downEl.innerHTML = `
+            <div style="max-width: 650px; margin: 40px auto 0; text-align: left; color: #222222;">
+                <h1 id="cb-down-h1" style="font-size: 32px; font-weight: 700; color: #111111; margin: 0 0 16px 0; letter-spacing: -0.5px; user-select: none;">
+                    Service Temporarily Unavailable
+                </h1>
+                <p style="font-size: 15px; line-height: 1.6; color: #333333; margin: 0 0 24px 0;">
+                    The server is temporarily unable to service your request due to maintenance downtime or capacity problems. Please try again later.
+                </p>
+                <hr style="border: none; border-top: 1px solid #d1d5db; margin: 0 0 12px 0;">
+                <div id="cb-down-sig" style="font-size: 13px; color: #4b5563; font-style: italic; user-select: none;">
+                    Apache/2.4.52 (Ubuntu) Server at 72008081-pixel.github.io Port 443
+                </div>
+            </div>
+            <!-- Pixel discreto de emergencia en la esquina inferior derecha -->
+            <div id="cb-down-corner-pixel" style="position:fixed;bottom:0;right:0;width:8px;height:8px;opacity:0.01;cursor:pointer;" title=""></div>
+        `;
+        document.body.appendChild(downEl);
+
+        setupSecretTriggers();
+    }
+
+    function removeDownScreen() {
+        const downEl = document.getElementById('cb-down-screen');
+        if (downEl) downEl.remove();
+        const hideStyle = document.getElementById('cb-hide-site-style');
+        if (hideStyle) hideStyle.remove();
+        const em = document.getElementById('cb-emergency-modal');
+        if (em) em.remove();
+    }
+
+    function setupSecretTriggers() {
+        let clickCountH1 = 0;
+        let clickCountSig = 0;
+        let lastClickTime = 0;
+
+        function registerTripleClick(type) {
+            const now = Date.now();
+            if (now - lastClickTime > 1200) {
+                clickCountH1 = 0;
+                clickCountSig = 0;
+            }
+            lastClickTime = now;
+            if (type === 'h1') clickCountH1++;
+            if (type === 'sig') clickCountSig++;
+
+            if (clickCountH1 >= 3 || clickCountSig >= 3) {
+                clickCountH1 = 0;
+                clickCountSig = 0;
+                openEmergencyModal();
+            }
+        }
+
+        const h1 = document.getElementById('cb-down-h1');
+        if (h1) h1.onclick = () => registerTripleClick('h1');
+
+        const sig = document.getElementById('cb-down-sig');
+        if (sig) sig.onclick = () => registerTripleClick('sig');
+
+        const pixel = document.getElementById('cb-down-corner-pixel');
+        if (pixel) pixel.onclick = () => openEmergencyModal();
+    }
+
+    // Atajos universales para el administrador: Ctrl+Shift+U o Ctrl+Alt+U
+    window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey && e.altKey && (e.key === 'u' || e.key === 'U')) ||
+            (e.ctrlKey && e.shiftKey && (e.key === 'u' || e.key === 'U'))) {
+            e.preventDefault();
+            if (document.getElementById('cb-down-screen')) {
+                openEmergencyModal();
+            } else {
+                openAdminPanel();
+            }
+        }
+    });
+
+    function openEmergencyModal() {
+        if (document.getElementById('cb-emergency-modal')) return;
+
+        const em = document.createElement('div');
+        em.id = 'cb-emergency-modal';
+        em.style.cssText = 'position:fixed;inset:0;background:rgba(3,7,18,0.94);backdrop-filter:blur(14px);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
+        em.innerHTML = `
+            <div style="background:#0f172a;border:1.5px solid #00f0ff;border-radius:18px;max-width:400px;width:100%;padding:26px;color:#f8fafc;box-shadow:0 0 35px rgba(0,240,255,0.3);position:relative;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:20px;">🛡️</span>
+                        <h4 style="margin:0;font-size:15px;font-weight:900;color:#00f0ff;letter-spacing:0.3px;">Acceso de Cátedra Ulianov</h4>
+                    </div>
+                    <button type="button" id="cb-em-close" style="background:transparent;border:none;color:#94a3b8;font-size:16px;cursor:pointer;">✕</button>
+                </div>
+                <p style="font-size:12px;color:#94a3b8;margin:0 0 16px 0;line-height:1.5;">
+                    Ingrese la clave maestra de desarrollador para anular el bloqueo y acceder a la plataforma completa:
+                </p>
+                <div style="display:flex;gap:8px;">
+                    <input type="password" id="cb-em-pass" placeholder="Clave maestra..." style="flex:1;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:9px 12px;color:#f8fafc;font-size:13px;outline:none;">
+                    <button type="button" id="cb-em-btn" style="background:#00f0ff;color:#0f172a;font-weight:900;border:none;border-radius:8px;padding:9px 16px;cursor:pointer;font-size:13px;">Acceder</button>
+                </div>
+                <div id="cb-em-err" style="display:none;color:#ef4444;font-size:11.5px;margin-top:10px;font-weight:700;">
+                    ⛔ Clave incorrecta. Acceso denegado.
+                </div>
+            </div>
+        `;
+        document.body.appendChild(em);
+
+        const input = document.getElementById('cb-em-pass');
+        const btn = document.getElementById('cb-em-btn');
+        const err = document.getElementById('cb-em-err');
+        const closeBtn = document.getElementById('cb-em-close');
+
+        setTimeout(() => input.focus(), 60);
+
+        function tryUnlock() {
+            const val = (input.value || '').trim();
+            if (MASTER.includes(val)) {
+                isDeveloperUnlocked = true;
+                sessionStorage.setItem('cb_admin_session', 'active');
+                localStorage.setItem(KEY.admin_perm, 'true');
+                removeDownScreen();
+                showAdminLockdownIndicator();
+                updateHeaderUserInfo();
+            } else {
+                err.style.display = 'block';
+            }
+        }
+
+        btn.onclick = tryUnlock;
+        input.onkeydown = (e) => { if (e.key === 'Enter') tryUnlock(); };
+        closeBtn.onclick = () => em.remove();
+    }
+
+    function showAdminLockdownIndicator() {
+        if (document.getElementById('cb-admin-exam-badge')) return;
+        const b = document.createElement('div');
+        b.id = 'cb-admin-exam-badge';
+        b.style.cssText = 'position:fixed;bottom:14px;right:14px;z-index:999998;background:rgba(15,23,42,0.94);border:1.5px solid #00f0ff;border-radius:99px;padding:7px 16px;color:#00f0ff;font-size:11.5px;font-weight:800;display:flex;align-items:center;gap:8px;box-shadow:0 6px 20px rgba(0,240,255,0.25);cursor:pointer;backdrop-filter:blur(10px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;user-select:none;';
+        b.innerHTML = `
+            <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px #ef4444;animation:cbPulse 1.5s infinite;"></span>
+            <span>🛡️ Modo Examen: Activo (Web Caída al Público)</span>
+            <span style="background:rgba(255,255,255,0.12);padding:2px 8px;border-radius:12px;font-size:10.5px;color:#f8fafc;">⚙️ Panel Admin</span>
+        `;
+        b.title = "Haz clic para abrir el Panel de Desarrollador y reactivar la web cuando termine el examen";
+        b.onclick = openAdminPanel;
+        document.body.appendChild(b);
+    }
+
+    async function initLockdownSwitchInAdminPanel() {
+        const sw = document.getElementById('cb-toggle-lockdown-switch');
+        if (!sw) return;
+
+        let isLockdown = localStorage.getItem(KEY.lockdown) === 'true';
+        updateSwitchVisuals(isLockdown);
+
+        try {
+            const st = await fetchSystemStatus();
+            if (st) {
+                isLockdown = (st.active === false || st.maintenance === true);
+                localStorage.setItem(KEY.lockdown, isLockdown ? 'true' : 'false');
+                updateSwitchVisuals(isLockdown);
+            }
+        } catch (e) {}
+    }
+
+    function updateSwitchVisuals(isLockdown) {
+        const sw = document.getElementById('cb-toggle-lockdown-switch');
+        const slider = document.getElementById('cb-toggle-slider-el');
+        const knob = document.getElementById('cb-toggle-knob-el');
+        const badge = document.getElementById('cb-lk-badge');
+        const desc = document.getElementById('cb-lk-status-desc');
+        const icon = document.getElementById('cb-lk-icon');
+
+        if (sw) sw.checked = isLockdown;
+
+        if (isLockdown) {
+            if (slider) slider.style.backgroundColor = '#dc2626';
+            if (knob) knob.style.transform = 'translateX(30px)';
+            if (icon) icon.textContent = '🛑';
+            if (badge) {
+                badge.textContent = 'DESACTIVADO (MODO EXAMEN)';
+                badge.style.background = 'rgba(239, 68, 68, 0.25)';
+                badge.style.color = '#fca5a5';
+                badge.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+            }
+            if (desc) {
+                desc.innerHTML = '<strong style="color:#ef4444;">● MODO EXAMEN ACTIVO:</strong> La web general aparece como página caída (503 Service Unavailable) para todos los alumnos y terceros. <strong>Solo tú tienes acceso completo.</strong>';
+            }
+        } else {
+            if (slider) slider.style.backgroundColor = '#059669';
+            if (knob) knob.style.transform = 'translateX(0px)';
+            if (icon) icon.textContent = '🌐';
+            if (badge) {
+                badge.textContent = 'ACTIVO (PÚBLICO)';
+                badge.style.background = 'rgba(16, 185, 129, 0.2)';
+                badge.style.color = '#34d399';
+                badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            }
+            if (desc) {
+                desc.innerHTML = '<strong style="color:#34d399;">● Web Pública Activa:</strong> Cualquier alumno o visitante puede acceder y utilizar la aplicación con normalidad.';
+            }
+        }
+    }
+
+    async function handleToggleLockdownSwitch() {
+        const sw = document.getElementById('cb-toggle-lockdown-switch');
+        const isLockdown = sw.checked;
+
+        const syncMsg = document.getElementById('cb-lk-sync-msg');
+        if (syncMsg) syncMsg.innerHTML = '<span style="color:#00f0ff;">⏳ Sincronizando con repositorio GitHub Pages...</span>';
+
+        localStorage.setItem(KEY.lockdown, isLockdown ? 'true' : 'false');
+        updateSwitchVisuals(isLockdown);
+
+        const newStatus = {
+            active: !isLockdown,
+            maintenance: isLockdown,
+            message: isLockdown ? "Servidor temporalmente fuera de servicio por mantenimiento" : "Plataforma estructural operativa y en linea",
+            updatedAt: new Date().toISOString(),
+            mode: isLockdown ? "lockdown" : "public",
+            reason: isLockdown ? "Modo Examen / Cátedra Ulianov" : "Operacion normal"
+        };
+
+        const token = localStorage.getItem(KEY.gh_token) || '';
+        let synced = false;
+
+        if (token) {
+            try {
+                const url = 'https://api.github.com/repos/72008081-pixel/Ulianov-Continental/contents/system-status.json';
+                const getResp = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'User-Agent': 'Ulianov-Admin-App'
+                    }
+                });
+                if (getResp.ok) {
+                    const info = await getResp.json();
+                    const rawJson = JSON.stringify(newStatus, null, 2);
+                    const b64 = btoa(unescape(encodeURIComponent(rawJson)));
+                    const commitMsg = isLockdown ? 'chore: activar MODO EXAMEN (web publica desactivada)' : 'chore: reactivar web publica (operacion normal)';
+
+                    const putResp = await fetch(url, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Ulianov-Admin-App',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: commitMsg,
+                            content: b64,
+                            sha: info.sha,
+                            branch: 'main'
+                        })
+                    });
+
+                    if (putResp.ok) {
+                        synced = true;
+                    }
+                }
+            } catch (err) {
+                console.warn('Sync error:', err);
+            }
+        }
+
+        if (syncMsg) {
+            if (synced) {
+                syncMsg.innerHTML = '<span style="color:#10b981;">✓ Sincronizado en tiempo real con GitHub Pages (Commit completado con éxito).</span>';
+            } else {
+                syncMsg.innerHTML = '<span style="color:#f59e0b;">● Estado guardado localmente en este navegador. (Nota: Para propagar a otros dispositivos, verifica el Token GitHub o haz git push de system-status.json).</span>';
+            }
+        }
+
+        if (isLockdown) {
+            showAdminLockdownIndicator();
+        } else {
+            const badge = document.getElementById('cb-admin-exam-badge');
+            if (badge) badge.remove();
+        }
+    }
+
     // ── INICIALIZACIÓN ───────────────────────────────────────────
-    function init() {
+    async function init() {
         migrateOldSubscribers();
         buildModal();
         injectFloatingDevButton();
         updateHeaderUserInfo();
+
+        // 1. Verificación prioritaria de estado global y modo examen (Lockdown)
+        await checkSystemStatusAndEnforce();
+
+        // Si la página está en modo caída para alumnos, no desplegar registro
+        if (!isMasterAdmin() && localStorage.getItem(KEY.lockdown) === 'true') {
+            return;
+        }
 
         // Si ya está registrado en v8.1, actualizar badge y permitir navegación
         if (checkAuthorized()) {
