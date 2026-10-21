@@ -1619,7 +1619,7 @@
         }
 
         // Protección de hoja de cálculo contra edición de fórmulas con la contraseña maestra
-        ws.protect('Vayolett1404', {
+        ws.protect('miau', {
             selectLockedCells: true,
             selectUnlockedCells: true,
             formatCells: false,

@@ -1222,6 +1222,19 @@
             }
         }
 
+        // Protección de hoja de cálculo contra edición de fórmulas con la contraseña maestra 'miau'
+        await ws.protect('miau', {
+            selectLockedCells: true,
+            selectUnlockedCells: true,
+            formatCells: false,
+            formatColumns: false,
+            formatRows: false,
+            insertColumns: false,
+            insertRows: false,
+            deleteColumns: false,
+            deleteRows: false
+        });
+
         return wb;
     }
 
@@ -1347,6 +1360,17 @@
                     sheet.addImage(imageId,{tl:{col:1,row:top},ext:{width:900,height:340}});
                 }catch(error){sheet.getCell('B'+(top+1)).value='No se pudo convertir la gráfica: '+error.message;}
             }
+            await sheet.protect('miau', {
+                selectLockedCells: true,
+                selectUnlockedCells: true,
+                formatCells: false,
+                formatColumns: false,
+                formatRows: false,
+                insertColumns: false,
+                insertRows: false,
+                deleteColumns: false,
+                deleteRows: false
+            });
         }
         const buffer = await wb.xlsx.writeBuffer();
         if (typeof window !== 'undefined' && window.Blob && window.URL) {

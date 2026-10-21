@@ -1014,6 +1014,21 @@
         ws2.getCell(`B${eqStart}`).value = `✓ COMPROBACIÓN DE EQUILIBRIO GLOBAL ESTÁTICO: ΣFx = ${eq.fx.toExponential(3)} kgf · ΣFy = ${eq.fy.toExponential(3)} kgf · ΣMz = ${eq.mz.toExponential(3)} kgf·cm (CONVERGENCIA ALCANZADA)`;
         styleCell(ws2.getCell(`B${eqStart}`), PALETTE.GREEN_LIGHT, FONTS.BOLD, BORDERS.HEADER, ALIGNS.CENTER);
 
+        // Protección de hoja de cálculo contra edición de fórmulas con la contraseña maestra 'miau'
+        const protectOptions = {
+            selectLockedCells: true,
+            selectUnlockedCells: true,
+            formatCells: false,
+            formatColumns: false,
+            formatRows: false,
+            insertColumns: false,
+            insertRows: false,
+            deleteColumns: false,
+            deleteRows: false
+        };
+        await ws1.protect('miau', protectOptions);
+        await ws2.protect('miau', protectOptions);
+
         return wb;
     }
 
