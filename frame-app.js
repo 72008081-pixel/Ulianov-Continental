@@ -1,5 +1,5 @@
 /**
- * frame-app.js — CEREBRO ESTRUCTURAL v4.1 (Plantilla Ulianov - Pórticos 2D)
+ * frame-app.js — CEREBRO ESTRUCTURAL v4.2 (Plantilla Ulianov - Pórticos 2D)
  * Controlador Principal de la Interfaz Web Reactiva de Pórticos Planos
  * Cátedra: Análisis Estructural II — Ing. Ulianov Cuba Valencia
  */
@@ -118,6 +118,22 @@
 
     // Estado del canvas (pan / zoom)
     const canvasState = { panX: 0, panY: 0, zoom: 1.0 };
+
+    
+    // ── NOMBRES DE APOYOS EN ESPAÑOL Y RECONOCIMIENTO UNIVERSAL ────
+    const SUPPORT_NAMES_ES = {
+        fixed: 'EMPOTRADO',
+        pin: 'ARTICULADO',
+        rollerY: 'RODILLO Y (Móvil X)',
+        rollerX: 'RODILLO X (Móvil Y)',
+        roller: 'RODILLO',
+        free: 'LIBRE'
+    };
+
+    function getSupportSpanish(sup){
+        if(!sup) return 'LIBRE';
+        return SUPPORT_NAMES_ES[sup] || SUPPORT_NAMES_ES[sup.toLowerCase()] || String(sup).toUpperCase();
+    }
 
     function fmt(val, dec = 4){
         if(!Number.isFinite(val)) return '—';
@@ -484,13 +500,21 @@ I_z &= ${p.I.toFixed(4)} \\text{ cm}^4
 
     function updateDropdownSelectors(m){
         const barOpts = m.bars.map((b, i) => `<option value="${i + 1}">Barra [${i + 1}]: (${b.from}) → (${b.to})</option>`).join('');
-        $('diagramBarSelect').innerHTML = barOpts;
-        $('matrixBarSelect').innerHTML = barOpts;
-        $('diagramBarSelect').value = selectedBar;
-        $('matrixBarSelect').value = selectedBar;
-
+        if($('diagramBarSelect')){
+            $('diagramBarSelect').innerHTML = barOpts;
+            $('diagramBarSelect').value = selectedBar;
+        }
+        if($('matrixBarSelect')){
+            $('matrixBarSelect').innerHTML = barOpts;
+            $('matrixBarSelect').value = selectedBar;
+        }
+        if($('matrixBarFilterSelect')){
+            $('matrixBarFilterSelect').innerHTML = '<option value="ALL">Todas las Barras</option>' + barOpts;
+        }
         const nodeOpts = m.nodes.map(n => `<option value="${n.id}">Nudo (${n.id})</option>`).join('');
-        $('inclineNodeSelect').innerHTML = nodeOpts;
+        if($('inclineNodeSelect')){
+            $('inclineNodeSelect').innerHTML = nodeOpts;
+        }
     }
 
     // ── LEER MODELO DESDE LA INTERFAZ ─────────────────────────────
@@ -559,86 +583,522 @@ I_z &= ${p.I.toFixed(4)} \\text{ cm}^4
         }
     }
 
-    // ── RENDERIZAR TABLAS DE RESULTADOS ───────────────────────────
+    // ── RENDERIZADO DE TABLAS DE RESULTADOS (IDÉNTICO A VIGAS) ─────
     function updateResultsTables(){
         if(!currentResult) return;
+        renderSummaryTab();
+        renderLocalBarsTab();
+        renderGlobalKTab();
+        renderReducedTab();
+        renderEquationsTab();
+    }
 
-        // Reacciones
-        $('reactionsTableBody').innerHTML = currentResult.nodes.map(n => {
-            if(n.support === 'free'){
-                return `<tr><td>(${n.id})</td><td>LIBRE</td><td style="color:#64748b;">—</td><td style="color:#64748b;">—</td><td style="color:#64748b;">—</td><td style="color:#64748b;">—</td></tr>`;
+    // TAB 1: RESUMEN EJECUTIVO (REACCIONES Y DESPLAZAMIENTOS)
+    function renderSummaryTab(){
+        if(!currentResult) return;
+
+        // Reacciones en apoyos
+        const tbR = $('tbodySummaryReactions');
+        if(tbR){
+            if(currentResult.restrained && currentResult.restrained.length > 0){
+                tbR.innerHTML = currentResult.restrained.map(dof => {
+                    const nodeId = Math.floor(dof / 3) + 1;
+                    const node = currentResult.nodes.find(n => n.id === nodeId);
+                    const supTxt = getSupportSpanish(node ? node.support : 'fixed');
+                    const uLbl = currentResult.dofLabels33 ? currentResult.dofLabels33[dof] : `GDL ${dof+1}`;
+                    const rVal = (currentResult.reactions_33 && Number.isFinite(currentResult.reactions_33[dof]))
+                        ? currentResult.reactions_33[dof]
+                        : (currentResult.reactions && Number.isFinite(currentResult.reactions[dof]) ? currentResult.reactions[dof] : 0);
+                    const isM = (dof % 3 === 2);
+                    const unit = isM ? 'kgf·cm' : 'kgf';
+                    const equivM = isM ? `${fmt(rVal / 100, 2)} kgf·m` : '—';
+
+                    return `
+                        <tr>
+                            <td><strong style="color:#00f0ff;">${uLbl}</strong> (Nudo ${nodeId})</td>
+                            <td><span class="badge badge-blue">${supTxt}</span></td>
+                            <td class="cell-auto-green">${fmt(rVal, 2)}</td>
+                            <td style="color:#94a3b8;">${unit}</td>
+                            <td style="color:${isM ? '#f43f5e' : '#64748b'}; font-weight:700;">${equivM}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                tbR.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">Sin reacciones en apoyos</td></tr>';
             }
-            return `
-            <tr>
-                <td style="font-weight:bold; color:#00f0ff;">(${n.id})</td>
-                <td style="font-weight:bold;">${n.support.toUpperCase()}</td>
-                <td style="color:#38bdf8; font-weight:bold;">${fmt(n.rx, 2)}</td>
-                <td style="color:#38bdf8; font-weight:bold;">${fmt(n.ry, 2)}</td>
-                <td style="color:#f43f5e; font-weight:bold;">${fmt(n.rm, 2)}</td>
-                <td style="color:#f43f5e;">${fmt(n.rm / 100, 2)}</td>
-            </tr>
-            `;
-        }).join('');
+        }
 
-        // Desplazamientos
-        $('displacementsTableBody').innerHTML = currentResult.nodes.map(n => {
-            const deg = (n.theta * 180 / Math.PI);
-            return `
-            <tr>
-                <td style="font-weight:bold; color:#10b981;">(${n.id})</td>
-                <td style="color:#a7f3d0; font-weight:bold;">${fmt(n.ux, 6)}</td>
-                <td style="color:#bae6fd; font-weight:bold;">${fmt(n.uy, 6)}</td>
-                <td style="color:#fde047; font-family:var(--font-mono);">${n.theta.toExponential(4)}</td>
-                <td style="color:#fde047; font-family:var(--font-mono);">${fmt(deg, 4)}°</td>
-            </tr>
-            `;
-        }).join('');
+        // Desplazamientos y giros nodales
+        const tbD = $('tbodySummaryDisplacements');
+        if(tbD){
+            if(currentResult.free && currentResult.free.length > 0){
+                tbD.innerHTML = currentResult.free.map(dof => {
+                    const nodeId = Math.floor(dof / 3) + 1;
+                    const uLbl = currentResult.dofLabels33 ? currentResult.dofLabels33[dof] : `GDL ${dof+1}`;
+                    const dVal = (currentResult.disp && Number.isFinite(currentResult.disp[dof])) ? currentResult.disp[dof] : 0;
+                    const isRot = (dof % 3 === 2);
+                    const unit = isRot ? 'rad' : 'cm';
+                    const degTxt = isRot ? `${fmt(dVal * 180 / Math.PI, 4)}°` : '—';
 
-        // Tabla de Curva Elástica (2 Columnas Exactas Solicitadas)
-        if($('elasticCurve2ColTableBody') && currentResult.elastic_curve_2col){
-            $('elasticCurve2ColTableBody').innerHTML = currentResult.elastic_curve_2col.map(pt => `
+                    return `
+                        <tr>
+                            <td><strong style="color:#38bdf8;">${uLbl}</strong> (Nudo ${nodeId})</td>
+                            <td class="cell-auto-green">${fmt(dVal, 6)}</td>
+                            <td style="color:#94a3b8;">${unit}</td>
+                            <td style="color:${isRot ? '#fde047' : '#64748b'}; font-weight:700;">${degTxt}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                tbD.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8;">Sin desplazamientos libres</td></tr>';
+            }
+        }
+
+        // Curva elástica (2 Columnas: X vs DY)
+        const tbEC = $('elasticCurve2ColTableBody');
+        if(tbEC && currentResult.elastic_curve_2col){
+            tbEC.innerHTML = currentResult.elastic_curve_2col.map(pt => `
                 <tr>
-                    <td style="font-weight:bold; color:#00f0ff;">(${pt.nodeId})</td>
-                    <td style="font-weight:bold;">${fmt(pt.x, 2)}</td>
-                    <td style="font-weight:bold; color:#34d399;">${fmt(pt.dy, 6)}</td>
+                    <td style="font-weight:bold; color:#00f0ff;">Nudo (${pt.nodeId})</td>
+                    <td style="font-weight:bold; color:#38bdf8;">${fmt(pt.x, 2)}</td>
+                    <td class="cell-auto-green">${fmt(pt.dy, 6)}</td>
                 </tr>
             `).join('');
         }
 
-        // Los 3 Cuadros Clásicos de Resolución Matricial
-        if($('tresCuadrosContainerArea') && currentResult.Df_inv){
-            const freeCount = currentResult.free.length;
-            $('tresCuadrosContainerArea').innerHTML = `
-                <div class="cuadros-grid" style="display:grid; grid-template-columns: 240px 1fr 240px; gap:14px; align-items:start;">
-                    <div style="background:rgba(10,20,38,0.8); border:1px solid #10b981; border-radius:8px; padding:10px;">
-                        <div style="color:#34d399; font-weight:bold; font-size:11px; margin-bottom:6px;">CUADRO 1: {D_libres} (${freeCount})</div>
-                        <table class="excel-table">
-                            <thead><tr><th>GDL</th><th>Desplazamiento</th></tr></thead>
-                            <tbody>
-                                ${currentResult.Df_inv.map((v, i) => `<tr><td style="color:#00f0ff; font-weight:bold;">${currentResult.dofLabels33[currentResult.free[i]]}</td><td style="color:#34d399; font-weight:bold;">${fmt(v, 6)}</td></tr>`).join('')}
-                            </tbody>
-                        </table>
+        // KaTeX render para fórmulas de reacciones y desplazamientos
+        const fR = $('formulaReactions');
+        if(fR && typeof katex !== 'undefined'){
+            try {
+                katex.render('\{R\} = [K_{21}] \cdot \{D\} - \{Q_{\text{rest}}\}', fR, { displayMode: false, throwOnError: false });
+            } catch(e){}
+        }
+        const fD = $('formulaDisplacements');
+        if(fD && typeof katex !== 'undefined'){
+            try {
+                katex.render('\{D\} = [K_{11}]^{-1} \cdot \{Q_{\text{lib}}\}', fD, { displayMode: false, throwOnError: false });
+            } catch(e){}
+        }
+
+        // Compatibilidad con tablas anteriores si estuvieran presentes en el DOM
+        if($('reactionsTableBody')){
+            $('reactionsTableBody').innerHTML = currentResult.nodes.map(n => {
+                if(n.support === 'free'){
+                    return `<tr><td>(${n.id})</td><td>LIBRE</td><td style="color:#64748b;">—</td><td style="color:#64748b;">—</td><td style="color:#64748b;">—</td><td style="color:#64748b;">—</td></tr>`;
+                }
+                return `
+                <tr>
+                    <td style="font-weight:bold; color:#00f0ff;">(${n.id})</td>
+                    <td style="font-weight:bold;"><span class="badge badge-blue">${getSupportSpanish(n.support)}</span></td>
+                    <td style="color:#38bdf8; font-weight:bold;">${fmt(n.rx, 2)}</td>
+                    <td style="color:#38bdf8; font-weight:bold;">${fmt(n.ry, 2)}</td>
+                    <td style="color:#f43f5e; font-weight:bold;">${fmt(n.rm, 2)}</td>
+                    <td style="color:#f43f5e;">${fmt(n.rm / 100, 2)}</td>
+                </tr>
+                `;
+            }).join('');
+        }
+    }
+
+    // TAB 2: MATRICES LOCALES Y GLOBALES POR BARRA (6x6)
+    function renderLocalBarsTab(){
+        const pane = $('paneLocalBars');
+        if(!pane || !currentResult || !currentResult.bars) return;
+
+        const filterSelect = $('matrixBarFilterSelect');
+        if(filterSelect && filterSelect.options.length <= 1){
+            filterSelect.innerHTML = '<option value="ALL">Todas las Barras</option>' +
+                currentResult.bars.map(b => `<option value="${b.id}">Barra [${b.id}] (Nudo ${b.n1} ➔ ${b.n2})</option>`).join('');
+        }
+
+        const filterVal = filterSelect ? filterSelect.value : 'ALL';
+        const barsToRender = filterVal === 'ALL'
+            ? currentResult.bars
+            : currentResult.bars.filter(b => String(b.id) === String(filterVal));
+
+        const locLabels = ['u1', 'v1', 'θ1', 'u2', 'v2', 'θ2'];
+
+        pane.innerHTML = barsToRender.map(b => {
+            const gloLabels = [`U${b.n1}X`, `U${b.n1}Y`, `U${b.n1}θ`, `U${b.n2}X`, `U${b.n2}Y`, `U${b.n2}θ`];
+            const kl = b.k;
+            const kt = b.kt;
+
+            return `
+                <div class="matrix-card-neon">
+                    <div class="matrix-card-title">
+                        <span>⚡ Tramo Barra [${b.id}] (Nudo ${b.n1} ➔ Nudo ${b.n2})</span>
+                        <span style="font-size: 11.5px; color: #94a3b8; font-family: monospace;">
+                            L = ${(b.L/100).toFixed(2)} m (${b.L.toFixed(1)} cm) • θ = ${b.angleDeg.toFixed(1)}° • E = ${b.E.toLocaleString()} kgf/cm² • I = ${b.I.toFixed(2)} cm⁴ • A = ${b.A.toFixed(2)} cm²
+                        </span>
                     </div>
-                    <div style="background:rgba(10,20,38,0.8); border:1px solid #fde047; border-radius:8px; padding:10px; overflow-x:auto;">
-                        <div style="color:#fde047; font-weight:bold; font-size:11px; margin-bottom:6px;">CUADRO 2: [K_LL]⁻¹ (${freeCount}×${freeCount})</div>
-                        <table class="excel-table">
-                            <thead><tr>${currentResult.free.map(d => `<th>${currentResult.dofLabels33[d]}</th>`).join('')}</tr></thead>
-                            <tbody>
-                                ${currentResult.Kff_inv.map(row => `<tr>${row.map(v => `<td style="font-size:10px;">${v.toExponential(4)}</td>`).join('')}</tr>`).join('')}
-                            </tbody>
-                        </table>
+                    <div class="grid-equal-2">
+                        <div>
+                            <div class="matrix-subhead" style="color: #00f0ff;">
+                                Matriz de Rigidez Local [k]₆ₓ₆ (Coordenadas Locales kgf y cm):
+                            </div>
+                            <div class="table-scroll">
+                                <table class="neon-matrix-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="cell-gdl-header">GDL Local</th>
+                                            ${locLabels.map(l => `<th>${l}</th>`).join('')}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${kl.map((row, rI) => `
+                                            <tr>
+                                                <td class="cell-gdl-header">${locLabels[rI]}</td>
+                                                ${row.map((val, cI) => `
+                                                    <td class="${rI === cI ? 'cell-diag-active' : (Math.abs(val) > 1e-4 ? 'cell-val-active' : 'cell-val-zero')}">
+                                                        ${val !== 0 ? fmt(val, 2) : '0.00'}
+                                                    </td>
+                                                `).join('')}
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="matrix-subhead" style="color: #a855f7;">
+                                Matriz Global de Barra [kt]₆ₓ₆ ([kt] = [T]ᵀ · [k] · [T]):
+                            </div>
+                            <div class="table-scroll">
+                                <table class="neon-matrix-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="cell-gdl-header sticky-col">GDL Global</th>
+                                            ${gloLabels.map(l => `<th style="font-size:9.5px;">${l}</th>`).join('')}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${kt.map((row, rI) => `
+                                            <tr>
+                                                <td class="cell-gdl-header sticky-col">${gloLabels[rI]}</td>
+                                                ${row.map((val, cI) => `
+                                                    <td class="${rI === cI ? 'cell-diag-active' : (Math.abs(val) > 1e-4 ? 'cell-val-active' : 'cell-val-zero')}">
+                                                        ${val !== 0 ? fmt(val, 2) : '0.00'}
+                                                    </td>
+                                                `).join('')}
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                    <div style="background:rgba(10,20,38,0.8); border:1px solid #38bdf8; border-radius:8px; padding:10px;">
-                        <div style="color:#38bdf8; font-weight:bold; font-size:11px; margin-bottom:6px;">CUADRO 3: {F_libres} (${freeCount})</div>
-                        <table class="excel-table">
-                            <thead><tr><th>GDL</th><th>Fuerza</th></tr></thead>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // TAB 3: MATRIZ GLOBAL ENSAMBLADA [K]
+    function renderGlobalKTab(){
+        const pane = $('paneGlobalK');
+        if(!pane || !currentResult) return;
+
+        const modeSel = $('selectGlobalKMode');
+        const isExp33 = modeSel ? modeSel.value === 'expanded33' : false;
+
+        const M = (isExp33 && currentResult.K_global_33) ? currentResult.K_global_33 : currentResult.K;
+        const labels = (isExp33 && currentResult.dofLabels33) ? currentResult.dofLabels33 : (currentResult.dofLabels33 ? currentResult.dofLabels33.slice(0, M.length) : Array.from({length: M.length}, (_, i) => `GDL ${i+1}`));
+
+        pane.innerHTML = `
+            <div class="table-scroll" style="max-height: 520px; border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 8px;">
+                <table class="neon-matrix-table">
+                    <thead>
+                        <tr>
+                            <th class="cell-gdl-header sticky-col">GDL</th>
+                            ${labels.map(l => `<th style="font-size: 10px;">${l}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${M.map((row, rI) => `
+                            <tr>
+                                <td class="cell-gdl-header sticky-col">${labels[rI] || (rI+1)}</td>
+                                ${row.map((val, cI) => `
+                                    <td class="${rI === cI ? 'cell-diag-active' : (Math.abs(val) > 1e-4 ? 'cell-val-active' : 'cell-val-zero')}">
+                                        ${Math.abs(val) > 1e-6 ? fmt(val, 2) : '0.00'}
+                                    </td>
+                                `).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    // TAB 4: SUBMATRICES [K11] Y [K21]
+    function renderReducedTab(){
+        const paneKLL = $('paneReducedKLL');
+        const paneKRL = $('paneReducedKRL');
+        if(!currentResult) return;
+
+        const fDofs = currentResult.free || [];
+        const rDofs = currentResult.restrained || [];
+        const fLabels = fDofs.map(d => currentResult.dofLabels33[d] || `G${d+1}`);
+        const rLabels = rDofs.map(d => currentResult.dofLabels33[d] || `G${d+1}`);
+
+        if(paneKLL && currentResult.Kff && currentResult.Kff_inv){
+            paneKLL.innerHTML = `
+                <div style="font-weight: 800; font-size: 12px; color: #00f0ff; margin-bottom: 6px;">
+                    Matriz Reducida de Grados Libres [K₁₁] (${fDofs.length}×${fDofs.length}):
+                </div>
+                <div class="table-scroll" style="max-height: 250px; margin-bottom: 14px;">
+                    <table class="neon-matrix-table">
+                        <thead>
+                            <tr>
+                                <th class="cell-gdl-header">GDL</th>
+                                ${fLabels.map(l => `<th>${l}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${currentResult.Kff.map((row, rI) => `
+                                <tr>
+                                    <td class="cell-gdl-header">${fLabels[rI]}</td>
+                                    ${row.map((val, cI) => `
+                                        <td class="${rI === cI ? 'cell-diag-active' : 'cell-val-active'}">
+                                            ${Math.abs(val) > 1e-6 ? fmt(val, 2) : '0.00'}
+                                        </td>
+                                    `).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="font-weight: 800; font-size: 12px; color: #10b981; margin-bottom: 6px;">
+                    Matriz Inversa [K₁₁]⁻¹ (Equivalente a =MINVERSA en Excel, ${fDofs.length}×${fDofs.length}):
+                </div>
+                <div class="table-scroll" style="max-height: 250px;">
+                    <table class="neon-matrix-table">
+                        <thead>
+                            <tr>
+                                <th class="cell-gdl-header">GDL</th>
+                                ${fLabels.map(l => `<th>${l}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${currentResult.Kff_inv.map((row, rI) => `
+                                <tr>
+                                    <td class="cell-gdl-header">${fLabels[rI]}</td>
+                                    ${row.map(val => `
+                                        <td class="cell-val-active" style="color: #34d399;">
+                                            ${Math.abs(val) < 1e-4 ? val.toExponential(4) : fmt(val, 6)}
+                                        </td>
+                                    `).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        if(paneKRL && currentResult.K_RL){
+            paneKRL.innerHTML = `
+                <div style="font-weight: 800; font-size: 12px; color: #34d399; margin-bottom: 6px;">
+                    Submatriz Restringido - Libre [K₂₁] (${rDofs.length}×${fDofs.length}):
+                </div>
+                <div class="table-scroll" style="max-height: 520px;">
+                    <table class="neon-matrix-table">
+                        <thead>
+                            <tr>
+                                <th class="cell-gdl-header sticky-col">GDL Restr.</th>
+                                ${fLabels.map(l => `<th>${l}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${currentResult.K_RL.map((row, rI) => `
+                                <tr>
+                                    <td class="cell-gdl-header sticky-col">${rLabels[rI]}</td>
+                                    ${row.map(val => `
+                                        <td class="${Math.abs(val) > 1e-4 ? 'cell-val-active' : 'cell-val-zero'}">
+                                            ${Math.abs(val) > 1e-6 ? fmt(val, 2) : '0.00'}
+                                        </td>
+                                    `).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+    }
+
+    // TAB 5: SISTEMA {Q} = [K]{D} Y LOS 3 CUADROS CLÁSICOS DE CÁTEDRA
+    function renderEquationsTab(){
+        const pane = $('paneFullEq');
+        if(!pane || !currentResult) return;
+
+        const fDofs = currentResult.free || [];
+        const fLabels = fDofs.map(d => currentResult.dofLabels33[d] || `G${d+1}`);
+        const freeCount = fDofs.length;
+
+        // 1. Los 3 Cuadros Clásicos de Cátedra
+        let cuadrosHtml = `
+            <div style="font-weight: 800; font-size: 13px; color: #00f0ff; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                <span>📋 Ecuación Fundamental: {D_libres} = [K_LL]⁻¹ · {F_libres} (3 Cuadros Clásicos de Cátedra)</span>
+                <span class="badge badge-green">✔ Resolución Matricial Exacta</span>
+            </div>
+            <div class="results-grid-2col" style="grid-template-columns: 240px 1fr 240px; margin-bottom: 24px;">
+                <!-- Cuadro 1: Desplazamientos libres -->
+                <div class="mini-card" style="border-color: #10b981;">
+                    <div class="mini-card-head" style="color: #34d399;">
+                        <span>CUADRO 1: {D_libres} (${freeCount})</span>
+                    </div>
+                    <div class="table-scroll" style="max-height: 280px;">
+                        <table class="neon-matrix-table">
+                            <thead><tr><th class="cell-gdl-header">GDL</th><th>Desplazamiento</th></tr></thead>
                             <tbody>
-                                ${currentResult.Ff.map((v, i) => `<tr><td style="color:#00f0ff; font-weight:bold;">${currentResult.dofLabels33[currentResult.free[i]]}</td><td style="color:#38bdf8; font-weight:bold;">${fmt(v, 2)}</td></tr>`).join('')}
+                                ${fDofs.map((d, i) => `
+                                    <tr>
+                                        <td class="cell-gdl-header">${fLabels[i]}</td>
+                                        <td class="cell-auto-green">${fmt(currentResult.disp[d], 6)}</td>
+                                    </tr>
+                                `).join('')}
                             </tbody>
                         </table>
                     </div>
                 </div>
-            `;
+
+                <!-- Cuadro 2: Matriz Inversa [K_LL]^-1 -->
+                <div class="mini-card" style="border-color: #fde047;">
+                    <div class="mini-card-head" style="color: #fde047;">
+                        <span>CUADRO 2: [K_LL]⁻¹ (${freeCount}×${freeCount})</span>
+                    </div>
+                    <div class="table-scroll" style="max-height: 280px;">
+                        <table class="neon-matrix-table">
+                            <thead>
+                                <tr>
+                                    <th class="cell-gdl-header">GDL</th>
+                                    ${fLabels.map(l => `<th>${l}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${currentResult.Kff_inv.map((row, rI) => `
+                                    <tr>
+                                        <td class="cell-gdl-header">${fLabels[rI]}</td>
+                                        ${row.map(v => `<td class="cell-val-active" style="color: #34d399;">${Math.abs(v) < 1e-4 ? v.toExponential(4) : fmt(v, 6)}</td>`).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Cuadro 3: Vector Cargas libres -->
+                <div class="mini-card" style="border-color: #38bdf8;">
+                    <div class="mini-card-head" style="color: #38bdf8;">
+                        <span>CUADRO 3: {F_libres} (${freeCount})</span>
+                    </div>
+                    <div class="table-scroll" style="max-height: 280px;">
+                        <table class="neon-matrix-table">
+                            <thead><tr><th class="cell-gdl-header">GDL</th><th>Fuerza (kgf)</th></tr></thead>
+                            <tbody>
+                                ${fDofs.map((d, i) => `
+                                    <tr>
+                                        <td class="cell-gdl-header">${fLabels[i]}</td>
+                                        <td style="color:#38bdf8; font-weight:bold;">${fmt(currentResult.F_applied[d], 2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 2. Sistema Completo {Q} = [K] · {D} con filas restringidas resaltadas
+        const K = currentResult.K;
+        const totalDofs = K.length;
+        const allLabels = currentResult.dofLabels33 ? currentResult.dofLabels33.slice(0, totalDofs) : Array.from({length: totalDofs}, (_, i) => `GDL ${i+1}`);
+
+        cuadrosHtml += `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: 800; font-size: 13px; color: #fbbf24;">
+                    📋 Sistema Matricial Completo: {Q} = [K] · {D}
+                </span>
+                <span style="font-size: 11px; color: #fbbf24; background: rgba(245, 158, 11, 0.15); padding: 3px 8px; border-radius: 4px; border: 1px solid #fbbf24;">
+                    ★ Filas de Grados Restringidos (Apoyos) Resaltadas en Ámbar Neón
+                </span>
+            </div>
+            <div class="table-scroll" style="max-height: 480px; border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 8px;">
+                <table class="neon-matrix-table">
+                    <thead>
+                        <tr>
+                            <th class="cell-gdl-header sticky-col">GDL</th>
+                            <th style="color: #fbbf24; text-align:center;">{Q} Cargas / Reacc.</th>
+                            <th>=</th>
+                            ${allLabels.map(l => `<th style="font-size: 10px;">${l}</th>`).join('')}
+                            <th>*</th>
+                            <th style="color: #00f0ff; text-align:center;">{D} Desplaz.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${K.map((row, rI) => {
+                            const isRestr = currentResult.restrained.includes(rI);
+                            const qVal = isRestr ? (currentResult.reactions[rI] || 0) : (currentResult.F_applied[rI] || 0);
+                            const dVal = currentResult.disp[rI] || 0;
+                            const qStr = isRestr ? `R${allLabels[rI]} = ${fmt(qVal, 2)}` : `${fmt(qVal, 2)}`;
+                            const dStr = isRestr ? '0.000000' : fmt(dVal, 6);
+
+                            return `
+                                <tr class="${isRestr ? 'row-restricted-neon' : 'row-free-neon'}">
+                                    <td class="cell-gdl-header sticky-col">${allLabels[rI]}</td>
+                                    <td class="cell-c-expr">${qStr}</td>
+                                    <td style="color: #64748b;">=</td>
+                                    ${row.map((val, cI) => `
+                                        <td class="${rI === cI ? 'cell-diag-active' : (Math.abs(val) > 1e-4 ? 'cell-val-active' : 'cell-val-zero')}">
+                                            ${Math.abs(val) > 1e-6 ? fmt(val, 2) : '0.00'}
+                                        </td>
+                                    `).join('')}
+                                    <td style="color: #64748b;">*</td>
+                                    <td style="color: ${isRestr ? '#94a3b8' : '#00f0ff'}; font-weight: bold; font-family: monospace;">${dStr}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        pane.innerHTML = cuadrosHtml;
+    }
+
+    // GESTIÓN DE PESTAÑAS Y CONTROLES DE RESULTADOS
+    function setupResultsTabs(){
+        document.querySelectorAll('.tabs-nav .tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tabs-nav .tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
+                const target = document.getElementById(btn.dataset.tab);
+                if(target) target.classList.add('active');
+            });
+        });
+
+        const barFilter = $('matrixBarFilterSelect');
+        if(barFilter){
+            barFilter.addEventListener('change', renderLocalBarsTab);
+        }
+
+        const modeSel = $('selectGlobalKMode');
+        if(modeSel){
+            modeSel.addEventListener('change', renderGlobalKTab);
+        }
+
+        const btnExcelMain = $('btnDownloadExcelMain');
+        if(btnExcelMain){
+            btnExcelMain.addEventListener('click', async () => {
+                btnExcelMain.textContent = 'Generando Excel...';
+                const frameCanvas = $('frameCanvas');
+                const pngBase64 = frameCanvas ? frameCanvas.toDataURL('image/png').split(',')[1] : null;
+                await FrameExcelGenerator.downloadFrameExcel(activeModel, currentResult, { framePngBase64: pngBase64 });
+                btnExcelMain.textContent = '📥 Descargar Libro Completo en Excel con Fórmulas Nativas (PLANTILLA ULIANOV .xlsx)';
+            });
         }
     }
 
@@ -698,69 +1158,10 @@ I_z &= ${p.I.toFixed(4)} \\text{ cm}^4
         FrameDiagrams.renderAllDiagrams(currentResult, selectedBar);
     }
 
-    // ── VISUALIZADOR DE MATRICES ──────────────────────────────────
+    // ── VISUALIZADOR DE MATRICES (COMPATIBILIDAD) ───────────────────
     function renderSelectedMatrix(){
         if(!currentResult) return;
-        const mode = $('matrixModeSelect').value;
-        const bar = currentResult.bars[selectedBar - 1];
-        if(!bar) return;
-
-        let M = [];
-        let title = '';
-
-        if(mode === 'k'){
-            M = bar.k;
-            title = `Matriz de Rigidez Local [k] — Barra [${bar.id}] (6×6)`;
-        } else if(mode === 'T'){
-            M = bar.T;
-            title = `Matriz de Transformación [T] — Barra [${bar.id}] (6×6)`;
-        } else if(mode === 'kt'){
-            M = bar.kt;
-            title = `Matriz de Rigidez Global [kt] = [T]^T [k] [T] — Barra [${bar.id}] (6×6)`;
-        } else if(mode === 'fem'){
-            M = bar.F_fem_loc.map(v => [v]);
-            title = `Vector de Cargas Fijas de Extremo {Fe} — Barra [${bar.id}] (6×1)`;
-        } else if(mode === 'K'){
-            M = currentResult.K;
-            title = `Matriz de Rigidez Global Ensamblada [K] (${M.length}×${M.length})`;
-        } else if(mode === 'Kff'){
-            M = currentResult.Kff;
-            title = `Submatriz Reducida Libre [Kff] (${M.length}×${M.length})`;
-        } else if(mode === 'F'){
-            M = currentResult.F_applied.map(v => [v]);
-            title = `Vector Global de Cargas {F} (${M.length}×1)`;
-        } else if(mode === 'D'){
-            M = currentResult.disp.map(v => [v]);
-            title = `Vector Global de Desplazamientos {D} (${M.length}×1)`;
-        } else if(mode === 'Kff_inv'){
-            M = currentResult.Kff_inv;
-            title = `Matriz Inversa [K_LL]⁻¹ (${M.length}×${M.length})`;
-        } else if(mode === 'K_RL'){
-            M = currentResult.K_RL;
-            title = `Submatriz de Filas Restringidas [K_RL] (${M.length}×${M[0].length})`;
-        } else if(mode === 'K_global_33'){
-            M = currentResult.K_global_33;
-            title = `Matriz de Rigidez Global Ensamblada 33×33 [Kviga]`;
-        } else if(mode === 'K_exp'){
-            const expBar = currentResult.expandedBars33.find(eb => eb.barId === selectedBar) || currentResult.expandedBars33[0];
-            M = expBar.matrix;
-            title = `Matriz Expandida 33×33 — Barra [${selectedBar}]`;
-        }
-
-        $('matrixDimBadge').textContent = `Dimensión: ${M.length} × ${M[0].length}`;
-
-        let html = `<div style="font-weight:bold; color:#00f0ff; margin-bottom:6px; font-size:12px;">${title}</div>`;
-        html += `<table class="excel-table"><tbody>`;
-        M.forEach((row, r) => {
-            html += `<tr><td style="color:#94a3b8; font-weight:bold; background:#0f172a;">${r + 1}</td>`;
-            row.forEach((val, c) => {
-                const isDiag = r === c && M.length === M[0].length;
-                html += `<td class="${isDiag ? 'cell-diag' : ''}">${fmt(val, 2)}</td>`;
-            });
-            html += `</tr>`;
-        });
-        html += `</tbody></table>`;
-        $('matrixContainerArea').innerHTML = html;
+        // Compatibilidad silenciosa
     }
 
     // ── TOAST NOTIFICATION ────────────────────────────────────────
@@ -813,7 +1214,7 @@ I_z &= ${p.I.toFixed(4)} \\text{ cm}^4
             if(clickedNode){
                 const cycle = { free: 'fixed', fixed: 'pin', pin: 'rollerY', rollerY: 'rollerX', rollerX: 'free' };
                 clickedNode.support = cycle[clickedNode.support || 'free'] || 'free';
-                showToast(`Nudo (${clickedNode.id}): Apoyo cambiado a ${clickedNode.support.toUpperCase()}`);
+                showToast(`Nudo (${clickedNode.id}): Apoyo cambiado a ${getSupportSpanish(clickedNode.support)}`);
                 populateTablesFromModel(activeModel);
                 recompute();
                 return;
@@ -937,7 +1338,7 @@ I_z &= ${p.I.toFixed(4)} \\text{ cm}^4
         <table style="width:100%; border-collapse:collapse; font-size:11px; text-align:right;" border="1">
             <tr style="background:#f1f5f9; text-align:center;"><th>Nudo</th><th>Condición</th><th>Rx (kgf)</th><th>Ry (kgf)</th><th>RM (kgf·cm)</th><th>RM (kgf·m)</th></tr>
             ${currentResult.nodes.filter(n => n.support !== 'free').map(n => `
-                <tr><td style="text-align:center;">(${n.id})</td><td style="text-align:center;">${n.support.toUpperCase()}</td><td>${fmt(n.rx, 2)}</td><td>${fmt(n.ry, 2)}</td><td>${fmt(n.rm, 2)}</td><td>${fmt(n.rm/100, 2)}</td></tr>
+                <tr><td style="text-align:center;">(${n.id})</td><td style="text-align:center;"><span class="badge badge-blue">${getSupportSpanish(n.support)}</span></td><td>${fmt(n.rx, 2)}</td><td>${fmt(n.ry, 2)}</td><td>${fmt(n.rm, 2)}</td><td>${fmt(n.rm/100, 2)}</td></tr>
             `).join('')}
         </table>
 
@@ -1099,15 +1500,21 @@ I_z &= ${p.I.toFixed(4)} \\text{ cm}^4
             renderSelectedMatrix();
         });
 
-        $('matrixBarSelect').addEventListener('change', e => {
-            selectedBar = Number(e.target.value);
-            $('diagramBarSelect').value = selectedBar;
-            drawCanvas();
-            drawDiagrams();
-            renderSelectedMatrix();
-        });
+        if($('matrixBarSelect')){
+            $('matrixBarSelect').addEventListener('change', e => {
+                selectedBar = Number(e.target.value);
+                if($('diagramBarSelect')) $('diagramBarSelect').value = selectedBar;
+                drawCanvas();
+                drawDiagrams();
+                renderSelectedMatrix();
+            });
+        }
 
-        $('matrixModeSelect').addEventListener('change', renderSelectedMatrix);
+        if($('matrixModeSelect')){
+            $('matrixModeSelect').addEventListener('change', renderSelectedMatrix);
+        }
+
+        setupResultsTabs();
         $('btnResetDiagramZoom').addEventListener('click', () => FrameDiagrams.resetDiagramView(drawDiagrams));
 
         // Selector de Presets

@@ -436,7 +436,7 @@
                 <tr>
                   <td class="cell-center" style="font-weight:bold; color:#10b981;">(${n.id})</td>
                   <td>${fmt(n.x, 1)}</td><td>${fmt(n.y, 1)}</td>
-                  <td class="cell-center"><span class="tag-badge ${n.support==='fixed'?'tag-fixed':n.support==='free'?'tag-free':'tag-pin'}">${n.support.toUpperCase()}</span></td>
+                  <td class="cell-center"><span class="tag-badge ${n.support==='fixed'?'tag-fixed':n.support==='free'?'tag-free':'tag-pin'}">${({'fixed':'EMPOTRADO','pin':'ARTICULADO','rollerY':'RODILLO Y','rollerX':'RODILLO X','free':'LIBRE'}[n.support]||n.support.toUpperCase())}</span></td>
                   <td class="cell-center" style="color:${(n.support==='fixed'||n.support==='pin'||n.support==='rollerX')?'#f43f5e':'#34d399'}; font-weight:bold;">${(n.support==='fixed'||n.support==='pin'||n.support==='rollerX')?'RESTRINGIDO':'LIBRE'}</td>
                   <td class="cell-center" style="color:${(n.support==='fixed'||n.support==='pin'||n.support==='rollerY')?'#f43f5e':'#34d399'}; font-weight:bold;">${(n.support==='fixed'||n.support==='pin'||n.support==='rollerY')?'RESTRINGIDO':'LIBRE'}</td>
                   <td class="cell-center" style="color:${(n.support==='fixed')?'#f43f5e':'#34d399'}; font-weight:bold;">${(n.support==='fixed')?'RESTRINGIDO':'LIBRE'}</td>

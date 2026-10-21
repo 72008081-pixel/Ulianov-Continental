@@ -777,7 +777,281 @@
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(0, 240, 255, 0.2);
         }
+    
+        /* ── RESULTADOS INFERIORES: PESTAÑAS (IDÉNTICO A VIGAS) ────── */
+        .tabs-nav {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 16px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            border-bottom: 2px solid transparent;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+        }
+
+        .tab-btn.active {
+            color: #000000;
+            background: var(--pastel-sky, #bae6fd);
+            border-radius: 6px 6px 0 0;
+            border-bottom-color: #0284c7;
+            font-weight: 800;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .results-grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .grid-equal-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 900px) {
+            .results-grid-2col, .grid-equal-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .mini-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            padding: 12px 14px;
+        }
+
+        .mini-card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border-subtle);
+            font-weight: 800;
+            font-size: 12px;
+        }
+
+        .mini-card-formula {
+            font-size: 10.5px;
+            color: #94a3b8;
+            font-family: var(--font-mono);
+        }
+
+        table.results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11.5px;
+        }
+
+        table.results-table th {
+            color: #94a3b8;
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--border-subtle);
+            text-align: center;
+            background: rgba(30, 41, 59, 0.6);
+            white-space: nowrap;
+        }
+
+        table.results-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-family: var(--font-mono);
+            text-align: center;
+        }
+
+        table.results-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .table-scroll, .matrix-scroll-wrap {
+            overflow-x: auto;
+            max-width: 100%;
+        }
+
+        /* ── ESTILOS MATRICIALES NEÓN DE ALTO CONTRASTE (WCAG AAA) ──── */
+        .neon-matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono, monospace);
+            font-size: 11px;
+            text-align: right;
+            background: #090e1a;
+        }
+
+        .neon-matrix-table th {
+            background: #0f1c34;
+            color: #00f0ff;
+            padding: 7px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-weight: 700;
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        .neon-matrix-table td {
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+            white-space: nowrap;
+        }
+
+        .cell-gdl-header {
+            background: #0d182e !important;
+            color: #00f0ff !important;
+            font-weight: 800;
+            text-align: center !important;
+            border-right: 2px solid rgba(0, 240, 255, 0.3) !important;
+        }
+
+        .cell-diag-active {
+            background: rgba(0, 255, 136, 0.18) !important;
+            color: #00ff88 !important;
+            font-weight: 900;
+            text-shadow: 0 0 6px rgba(0, 255, 136, 0.35);
+        }
+
+        .cell-val-active {
+            color: #f8fafc;
+            font-weight: 600;
+        }
+
+        .cell-val-zero {
+            color: #475569 !important;
+        }
+
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background: #0d182e !important;
+            z-index: 3;
+            box-shadow: 2px 0 6px rgba(0,0,0,0.4);
+        }
+
+        .matrix-card-neon {
+            margin-bottom: 20px;
+            background: #091224;
+            border: 1px solid rgba(0, 240, 255, 0.22);
+            border-radius: 10px;
+            padding: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        .matrix-card-title {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #00f0ff;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .matrix-subhead {
+            font-weight: 700;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        .row-restricted-neon {
+            background: rgba(245, 158, 11, 0.15) !important;
+            border-left: 4px solid #fbbf24 !important;
+        }
+
+        .row-restricted-neon td {
+            color: #f8fafc !important;
+        }
+
+        .row-restricted-neon .cell-gdl-header {
+            color: #fbbf24 !important;
+        }
+
+        .row-restricted-neon .cell-c-expr {
+            color: #ffd700 !important;
+            font-weight: 800;
+        }
+
+        .row-free-neon {
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        .row-free-neon td {
+            color: #f8fafc;
+        }
+
+        .cell-auto-green {
+            color: #00ff88 !important;
+            font-weight: 700;
+        }
+
+        /* Tabla estilo Excel genérica con bordes sólidos y espaciado */
+        table.excel-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono, monospace);
+            font-size: 11px;
+            background: #090e1a;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        table.excel-table th {
+            background: #0f1c34;
+            color: #00f0ff;
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-weight: 700;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        table.excel-table td {
+            padding: 5px 8px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        table.excel-table td.cell-diag {
+            background: rgba(0, 255, 136, 0.18) !important;
+            color: #00ff88 !important;
+            font-weight: 900;
+        }
     </style>
+
 </head>
 <body>
 
@@ -787,8 +1061,8 @@
             <div class="brand-box">
                 <div class="brand-logo">🏢</div>
                 <div class="brand-title-wrap">
-                    <h1>CEREBRO ESTRUCTURAL <span class="brand-badge">PÓRTICOS v4.1</span></h1>
-                    <div class="brand-subtitle">Análisis Matricial de Rigidez Directo · Plantilla Ulianov · 3 GDL por Nudo · Parche v4.1 Sección Transversal & Steiner</div>
+                    <h1>CEREBRO ESTRUCTURAL <span class="brand-badge">PÓRTICOS v4.2</span></h1>
+                    <div class="brand-subtitle">Análisis Matricial de Rigidez Directo · Plantilla Ulianov · 3 GDL por Nudo · Parche v4.2 Resultados Vigas & 100% Español</div>
                 </div>
             </div>
             <div class="header-controls">
@@ -840,7 +1114,7 @@
                 <div class="canvas-toolbar">
                     <button type="button" id="btnZoomInFrame" class="tool-btn" title="Acercar">🔍+</button>
                     <button type="button" id="btnZoomOutFrame" class="tool-btn" title="Alejar">🔍−</button>
-                    <button type="button" id="btnResetFrameView" class="tool-btn" title="Restablecer">⟲ Reset</button>
+                    <button type="button" id="btnResetFrameView" class="tool-btn" title="Restablecer">⟲ Restablecer</button>
                     <button type="button" id="btnToggleUnits" class="tool-btn" title="Cambiar unidades">m / cm</button>
                     <button type="button" id="btnToggleDeformed" class="tool-btn" style="background:#a7f3d0;" title="Alternar Deformada">🟢 Deformada</button>
                     <button type="button" id="btnCanvasPNG" class="tool-btn" title="Descargar Imagen">📸 PNG</button>
@@ -1072,87 +1346,153 @@
         </div>
     </div>
 
-    <!-- ══ SECCIÓN 5: RESUMEN EJECUTIVO Y MATRICES ════════════════════ -->
-    <section class="results-section">
-        <div class="results-card">
-            <div class="section-header-title">
-                <span>📊 Resumen Ejecutivo de Reacciones y Desplazamientos</span>
-                <span style="font-size:11px; color:#94a3b8;">Método de Rigidez Directa (K · D = F)</span>
-            </div>
-
-            <div style="display:grid; grid-template-columns: 1.1fr 1.1fr 0.8fr; gap:16px;">
-                <!-- Reacciones -->
-                <div>
-                    <h3 style="font-size:12px; color:#38bdf8; margin-bottom:8px;">Reacciones en Apoyos:</h3>
-                    <div class="table-wrap">
-                        <table class="data-table">
-                            <thead>
-                                <tr><th>Nudo</th><th>Apoyo</th><th>Rx (kgf)</th><th>Ry (kgf)</th><th>RM (kgf·cm)</th><th>RM (kgf·m)</th></tr>
-                            </thead>
-                            <tbody id="reactionsTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Desplazamientos -->
-                <div>
-                    <h3 style="font-size:12px; color:#00ff88; margin-bottom:8px;">Desplazamientos y Giros Nodales:</h3>
-                    <div class="table-wrap">
-                        <table class="data-table">
-                            <thead>
-                                <tr><th>Nudo</th><th>Ux (cm)</th><th>Uy (cm)</th><th>θz (rad)</th><th>θz (°)</th></tr>
-                            </thead>
-                            <tbody id="displacementsTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Tabla de Curva Elástica (2 Columnas Exactas Solicitada) -->
-                <div>
-                    <h3 style="font-size:12px; color:#fde047; margin-bottom:8px;"><i class="fa-solid fa-chart-line"></i> Curva Elástica (2 Columnas):</h3>
-                    <div class="table-wrap">
-                        <table class="data-table">
-                            <thead>
-                                <tr><th>Nudo</th><th style="color:#38bdf8;">X (cm)</th><th style="color:#34d399;">DY (cm)</th></tr>
-                            </thead>
-                            <tbody id="elasticCurve2ColTableBody"></tbody>
-                        </table>
-                    </div>
+    <!-- ══ SECCIÓN 5: RESULTADOS MATRICIALES (ARQUITECTURA DE PESTAÑAS IDÉNTICA A VIGAS) ════════════════════ -->
+    <section class="results-section" id="cardMatrices">
+        <div class="results-card" style="padding: 16px;">
+            <div class="card-header-bar" style="border-bottom: none; padding-bottom: 0; margin-bottom: 8px;">
+                <div class="tabs-nav">
+                    <button class="tab-btn active" data-tab="tab-frame-summary">
+                        📊 Resumen Ejecutivo y Reacciones
+                    </button>
+                    <button class="tab-btn" data-tab="tab-frame-local">
+                        🧠 Matrices Locales de Pórticos [k] y [kt] (6×6)
+                    </button>
+                    <button class="tab-btn" data-tab="tab-frame-global">
+                        📐 Matriz de Rigidez Global [K]
+                    </button>
+                    <button class="tab-btn" data-tab="tab-frame-reduced">
+                        🧮 Submatrices [K₁₁] y [K₂₁]
+                    </button>
+                    <button class="tab-btn" data-tab="tab-frame-equations">
+                        📋 Sistema {Q} = [K]{D} (3 Cuadros Clásicos)
+                    </button>
                 </div>
             </div>
 
-            <!-- Los 3 Cuadros Clásicos de Resolución Matricial -->
-            <div style="margin-top:24px; border-top:1px solid var(--border-subtle); padding-top:16px;">
-                <div style="font-weight:bold; color:#00f0ff; margin-bottom:12px; font-size:13px; display:flex; align-items:center; gap:8px;">
-                    <i class="fa-solid fa-equals"></i> Ecuación Matricial Fundamental: {D_libres} = [K_LL]⁻¹ · {F_libres} (3 Cuadros Clásicos de Cátedra)
+            <div style="padding: 4px 0;">
+                <!-- TAB 1: RESUMEN EJECUTIVO -->
+                <div class="tab-content active" id="tab-frame-summary">
+                    <div class="results-grid-2col">
+                        <!-- Reacciones en Apoyos -->
+                        <div class="mini-card">
+                            <div class="mini-card-head" style="color: var(--accent-emerald);">
+                                <span>Reacciones en Apoyos</span>
+                                <span class="mini-card-formula" id="formulaReactions">{R} = [K₂₁] · {D} − {Q_rest}</span>
+                            </div>
+                            <div class="table-wrap">
+                                <table class="results-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Nudo / GDL</th>
+                                            <th>Apoyo</th>
+                                            <th>Reacción</th>
+                                            <th>Unidad</th>
+                                            <th>Equivalente M (kgf·m)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodySummaryReactions"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Desplazamientos y Deflexiones Nodales -->
+                        <div class="mini-card">
+                            <div class="mini-card-head" style="color: var(--accent-sky);">
+                                <span>Desplazamientos y Giros Nodales</span>
+                                <span class="mini-card-formula" id="formulaDisplacements">{D} = [K₁₁]⁻¹ · {Q_lib}</span>
+                            </div>
+                            <div class="table-wrap">
+                                <table class="results-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Nudo / GDL</th>
+                                            <th>Desplazamiento / Giro</th>
+                                            <th>Unidad</th>
+                                            <th>Ángulo (°)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodySummaryDisplacements"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabla Curva Elástica (2 Columnas Exactas Solicitada por el Usuario) -->
+                    <div class="mini-card" style="margin-top: 14px;">
+                        <div class="mini-card-head" style="color: #fde047;">
+                            <span>📈 Curva Elástica (2 Columnas Exactas: Coordenada X vs Deflexión Vertical DY)</span>
+                            <span class="mini-card-formula">Valores directos para graficación de deformada de pórtico</span>
+                        </div>
+                        <div class="table-wrap" style="max-height: 250px; overflow-y: auto;">
+                            <table class="results-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 15%;">Nudo</th>
+                                        <th style="color:#38bdf8; width: 42%;">Coordenada X (cm)</th>
+                                        <th style="color:#34d399; width: 43%;">Deflexión Vertical DY (cm)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="elasticCurve2ColTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                <div id="tresCuadrosContainerArea"></div>
+
+                <!-- TAB 2: MATRICES LOCALES Y GLOBALES POR BARRA -->
+                <div class="tab-content" id="tab-frame-local">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <span>Matrices de Rigidez de Barra [k] en coordenadas locales (6×6) y matriz transformada en coordenadas globales [kt] (6×6). GDL locales: [u₁_local, v₁_local, θ₁_local, u₂_local, v₂_local, θ₂_local].</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <label style="font-size:11px; color:#fde047; font-weight:700;">Filtrar Barra:</label>
+                            <select id="matrixBarFilterSelect" class="cell-select" style="width:140px;"></select>
+                        </div>
+                    </div>
+                    <div id="paneLocalBars" class="matrix-scroll-wrap"></div>
+                </div>
+
+                <!-- TAB 3: MATRIZ GLOBAL -->
+                <div class="tab-content" id="tab-frame-global">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <span style="font-weight: 700; color: #00f0ff;">Matriz Ensamblada Global [K]. Diagonal principal resaltada en verde neón.</span>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-family: var(--font-mono); color: #34d399;">✔ Simétrica [K] = [K]ᵀ</span>
+                            <select id="selectGlobalKMode" class="cell-select" style="width: 210px; font-size:11px;">
+                                <option value="active">Matriz Activa de Nudos</option>
+                                <option value="expanded33">Matriz Extendida 33×33 (Cátedra)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="paneGlobalK" class="matrix-scroll-wrap"></div>
+                </div>
+
+                <!-- TAB 4: SUBMATRICES -->
+                <div class="tab-content" id="tab-frame-reduced">
+                    <div class="results-grid-2col">
+                        <div class="mini-card">
+                            <div class="mini-card-head" style="color: var(--accent-sky);">
+                                <span>Submatriz [K₁₁] = [K_LL] (Libre - Libre) y su Inversa [K₁₁]⁻¹</span>
+                            </div>
+                            <div id="paneReducedKLL" class="matrix-scroll-wrap"></div>
+                        </div>
+                        <div class="mini-card">
+                            <div class="mini-card-head" style="color: var(--accent-emerald);">
+                                <span>Submatriz [K₂₁] = [K_RL] (Restringido - Libre)</span>
+                            </div>
+                            <div id="paneReducedKRL" class="matrix-scroll-wrap"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: SISTEMA DE ECUACIONES Y LOS 3 CUADROS CLÁSICOS -->
+                <div class="tab-content" id="tab-frame-equations">
+                    <div id="paneFullEq" class="matrix-scroll-wrap"></div>
+                </div>
             </div>
 
-            <!-- Visualizador Interactivo de Matrices -->
-            <div style="margin-top:24px; border-top:1px solid var(--border-subtle); padding-top:16px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-weight:bold; color:#fde047;">🔍 Explorador Matricial en Vivo:</span>
-                        <select id="matrixBarSelect" class="cell-select" style="width:160px;"></select>
-                        <select id="matrixModeSelect" class="cell-select">
-                            <option value="k">Matriz de Rigidez Local [k] (6x6)</option>
-                            <option value="T">Matriz de Transformación [T] (6x6)</option>
-                            <option value="kt">Matriz de Rigidez Global [kt] (6x6)</option>
-                            <option value="fem">Vector de Cargas Fijas [Fe] (6x1)</option>
-                            <option value="K_exp">Matriz Expandida de la Barra (33x33)</option>
-                            <option value="K">Matriz Global Ensamblada [K]</option>
-                            <option value="K_global_33">Matriz Global Ensamblada 33x33 [Kviga]</option>
-                            <option value="Kff">Submatriz Reducida Libre [Kff] = [K_LL]</option>
-                            <option value="Kff_inv">Matriz Inversa [K_LL]⁻¹ (=MINVERSA)</option>
-                            <option value="K_RL">Submatriz de Filas Restringidas [K_RL]</option>
-                            <option value="F">Vector Global {F}</option>
-                            <option value="D">Vector Desplazamientos {D}</option>
-                        </select>
-                    </div>
-                    <span id="matrixDimBadge" class="badge badge-blue">Dimensión: 6 × 6</span>
-                </div>
-                <div class="table-wrap" id="matrixContainerArea"></div>
+            <div style="text-align: center; margin-top: 20px; border-top: 1px solid var(--border-subtle); padding-top: 16px;">
+                <button type="button" id="btnDownloadExcelMain" class="btn btn-excel" style="font-size: 13px; padding: 10px 24px; cursor: pointer;">
+                    📥 Descargar Libro Completo en Excel con Fórmulas Nativas (PLANTILLA ULIANOV .xlsx)
+                </button>
             </div>
         </div>
     </section>
@@ -1166,7 +1506,7 @@
                     <select id="diagramBarSelect" class="cell-select" style="width:180px; font-weight:800; color:#00f0ff;"></select>
                 </div>
                 <div style="display:flex; gap:8px;">
-                    <button type="button" id="btnResetDiagramZoom" class="tool-btn">⟲ Reset Escalas</button>
+                    <button type="button" id="btnResetDiagramZoom" class="tool-btn">⟲ Restablecer Escalas</button>
                     <button type="button" id="btnDownloadAllDiagrams" class="tool-btn" style="background:#bae6fd;">📸 Descargar 4 PNGs</button>
                 </div>
             </div>
