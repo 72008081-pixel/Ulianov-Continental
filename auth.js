@@ -727,18 +727,28 @@
                         </div>
 
                         <!-- DRAWER COLAPSABLE DE TOKEN GITHUB -->
-                        <div id="cb-token-drawer" style="display: none; margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.35); border: 1px solid #334155; border-radius: 8px;">
-                            <div style="font-size: 11.5px; color: #e2e8f0; margin-bottom: 6px; font-weight: 600;">
-                                GitHub Personal Access Token (para sincronización remota automática en GitHub Pages):
+                        <div id="cb-token-drawer" style="display: none; margin-top: 12px; padding: 14px; background: rgba(0,0,0,0.35); border: 1px solid #334155; border-radius: 8px;">
+                            <div style="font-size: 12px; color: #e2e8f0; margin-bottom: 10px; font-weight: 700; display:flex; justify-content:space-between; align-items:center;">
+                                <span>🔑 GitHub Personal Access Token (PAT)</span>
+                                <a href="https://github.com/settings/tokens/new?scopes=repo&description=Ulianov-Modo-Examen" target="_blank" style="font-size:11px; color:#38bdf8; text-decoration:none; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); padding:3px 8px; border-radius:6px;">+ Crear Token ↗</a>
                             </div>
-                            <div style="display: flex; gap: 8px;">
-                                <input type="password" id="cb-input-gh-token" placeholder="gho_... o ghp_..." style="flex: 1; background: #0f172a; border: 1px solid #475569; border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px;">
-                                <button type="button" id="cb-btn-save-token" style="background: #0284c7; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 11.5px; cursor: pointer; font-weight: 700;">
-                                    Guardar
+                            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px; line-height:1.5; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); border-radius:6px; padding:8px 10px;">
+                                ⚠️ <strong style="color:#fbbf24;">Sin este token el switch solo te bloquea a ti.</strong> Para bloquear a TODOS los alumnos necesitas un PAT con permiso <code style="background:#1e293b;padding:1px 4px;border-radius:3px;">repo</code>. Solo se guarda en este navegador.
+                            </div>
+                            <div style="display: flex; gap: 8px; margin-bottom:8px;">
+                                <input type="password" id="cb-input-gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex: 1; background: #0f172a; border: 1px solid #475569; border-radius: 6px; padding: 7px 10px; color: #fff; font-size: 12px; font-family: monospace;">
+                                <button type="button" id="cb-btn-save-token" style="background: #0284c7; color: #fff; border: none; border-radius: 6px; padding: 7px 14px; font-size: 12px; cursor: pointer; font-weight: 700; white-space:nowrap;">
+                                    💾 Guardar
                                 </button>
                             </div>
-                            <div style="font-size: 10.5px; color: #64748b; margin-top: 4px;">
-                                Guardado localmente en este navegador. Permite que el switch actualice <code>system-status.json</code> en el repositorio con 1 solo clic.
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <button type="button" id="cb-btn-verify-token" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); color: #34d399; border-radius: 6px; padding: 6px 12px; font-size: 11px; cursor: pointer; font-weight: 700;">
+                                    🧪 Verificar Token
+                                </button>
+                                <div id="cb-token-verify-msg" style="font-size:11px; color:#94a3b8;"></div>
+                            </div>
+                            <div id="cb-token-status-line" style="font-size: 11px; margin-top:8px; padding:6px 8px; border-radius:5px; background:#0f172a; border:1px solid #1e293b; color:#64748b;">
+                                Estado: Sin token guardado
                             </div>
                         </div>
                     </div>
@@ -826,6 +836,20 @@
                 tokDrawer.style.display = tokDrawer.style.display === 'none' ? 'block' : 'none';
                 if (tokDrawer.style.display === 'block' && inputTok) {
                     inputTok.value = localStorage.getItem(KEY.gh_token) || '';
+                    // Actualizar línea de estado del token
+                    const savedTok = localStorage.getItem(KEY.gh_token) || '';
+                    const statusLine = document.getElementById('cb-token-status-line');
+                    if (statusLine) {
+                        if (savedTok) {
+                            statusLine.style.color = '#34d399';
+                            statusLine.style.borderColor = 'rgba(16,185,129,0.3)';
+                            statusLine.textContent = `Estado: ✓ Token guardado — ${savedTok.substring(0,6)}${'*'.repeat(12)} (${savedTok.length} chars)`;
+                        } else {
+                            statusLine.style.color = '#ef4444';
+                            statusLine.style.borderColor = 'rgba(239,68,68,0.3)';
+                            statusLine.textContent = 'Estado: ✕ Sin token — el bloqueo solo afectará a este navegador';
+                        }
+                    }
                 }
             };
         }
@@ -834,12 +858,61 @@
                 const val = (inputTok.value || '').trim();
                 if (val) {
                     localStorage.setItem(KEY.gh_token, val);
-                    alert('✓ Token GitHub guardado exitosamente en este navegador.');
+                    const statusLine = document.getElementById('cb-token-status-line');
+                    if (statusLine) {
+                        statusLine.style.color = '#34d399';
+                        statusLine.textContent = `Estado: ✓ Token guardado — ${val.substring(0,6)}${'*'.repeat(12)} (${val.length} chars)`;
+                    }
+                    alert('✓ Token GitHub guardado exitosamente en este navegador.\n\nAhora vuelve a mover el switch para sincronizar el bloqueo con TODOS los dispositivos.');
                 } else {
                     localStorage.removeItem(KEY.gh_token);
+                    const statusLine = document.getElementById('cb-token-status-line');
+                    if (statusLine) {
+                        statusLine.style.color = '#ef4444';
+                        statusLine.textContent = 'Estado: ✕ Sin token — el bloqueo solo afectará a este navegador';
+                    }
                     alert('Token eliminado.');
                 }
                 tokDrawer.style.display = 'none';
+            };
+        }
+
+        // Botón de verificación del token
+        const btnVerifyTok = document.getElementById('cb-btn-verify-token');
+        if (btnVerifyTok) {
+            btnVerifyTok.onclick = async () => {
+                const verifyMsg = document.getElementById('cb-token-verify-msg');
+                const currentToken = (inputTok ? inputTok.value.trim() : '') || localStorage.getItem(KEY.gh_token) || '';
+                if (!currentToken) {
+                    if (verifyMsg) verifyMsg.innerHTML = '<span style="color:#ef4444;">⛔ No hay token. Ingresa uno primero.</span>';
+                    return;
+                }
+                if (verifyMsg) verifyMsg.innerHTML = '<span style="color:#00f0ff;">⏳ Verificando...</span>';
+                try {
+                    const resp = await fetch('https://api.github.com/repos/72008081-pixel/Ulianov-Continental/contents/system-status.json', {
+                        headers: {
+                            'Authorization': `Bearer ${currentToken}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Ulianov-Admin-App'
+                        }
+                    });
+                    if (resp.ok) {
+                        if (verifyMsg) verifyMsg.innerHTML = '<span style="color:#34d399; font-weight:700;">✓ Token válido. El bloqueo global funcionará.</span>';
+                        const statusLine = document.getElementById('cb-token-status-line');
+                        if (statusLine) {
+                            statusLine.style.color = '#34d399';
+                            statusLine.textContent = 'Estado: ✓ Token verificado con GitHub API — Permisos OK';
+                        }
+                    } else if (resp.status === 401) {
+                        if (verifyMsg) verifyMsg.innerHTML = '<span style="color:#ef4444; font-weight:700;">✕ Token inválido o expirado (401). Genera uno nuevo en GitHub.</span>';
+                    } else if (resp.status === 403) {
+                        if (verifyMsg) verifyMsg.innerHTML = '<span style="color:#f59e0b; font-weight:700;">⚠ Sin permisos suficientes (403). Necesita permiso "repo".</span>';
+                    } else {
+                        if (verifyMsg) verifyMsg.innerHTML = `<span style="color:#ef4444;">Error HTTP ${resp.status}</span>`;
+                    }
+                } catch(e) {
+                    if (verifyMsg) verifyMsg.innerHTML = `<span style="color:#ef4444;">Error de red: ${e.message}</span>`;
+                }
             };
         }
 
@@ -1337,28 +1410,56 @@
         return null;
     }
 
+    // ── SONDEO ACTIVO PARA ALUMNOS (cada 45 segundos) ─────────────
+    let _pollInterval = null;
+    function startStatusPolling() {
+        if (_pollInterval) return; // ya activo
+        _pollInterval = setInterval(async () => {
+            if (isMasterAdmin()) return; // admin: no bloquear
+            try {
+                const st = await fetchSystemStatus();
+                if (!st) return;
+                if (st.active === false || st.maintenance === true) {
+                    localStorage.setItem(KEY.lockdown, 'true');
+                    if (!document.getElementById('cb-down-screen')) {
+                        renderDownScreen();
+                    }
+                } else if (st.active === true) {
+                    if (localStorage.getItem(KEY.lockdown) === 'true') {
+                        localStorage.removeItem(KEY.lockdown);
+                        removeDownScreen();
+                    }
+                }
+            } catch (e) {}
+        }, 45000);
+    }
+
     async function checkSystemStatusAndEnforce() {
         // Pase VIP para el Administrador
         if (isMasterAdmin()) {
-            const isLockdown = localStorage.getItem(KEY.lockdown) === 'true';
-            if (isLockdown) {
-                showAdminLockdownIndicator();
-            } else {
-                fetchSystemStatus().then(st => {
-                    if (st && (st.active === false || st.maintenance === true)) {
-                        localStorage.setItem(KEY.lockdown, 'true');
+            // El admin siempre lee el estado actual de GitHub para sincronizar su panel
+            fetchSystemStatus().then(st => {
+                if (st) {
+                    const isLockdown = (st.active === false || st.maintenance === true);
+                    localStorage.setItem(KEY.lockdown, isLockdown ? 'true' : 'false');
+                    if (isLockdown) {
                         showAdminLockdownIndicator();
+                    } else {
+                        const badge = document.getElementById('cb-admin-exam-badge');
+                        if (badge) badge.remove();
                     }
-                });
-            }
+                }
+            });
             return;
         }
 
         // Para usuarios externos (Alumnos / Terceros):
+        // Mostrar pantalla de caída inmediatamente si el localStorage ya lo sabe
         if (localStorage.getItem(KEY.lockdown) === 'true') {
             renderDownScreen();
         }
 
+        // Luego verificar el estado real desde GitHub (fuente de verdad)
         try {
             const st = await fetchSystemStatus();
             if (st) {
@@ -1371,6 +1472,9 @@
                 }
             }
         } catch (e) {}
+
+        // Activar sondeo activo para detectar cambios en tiempo real
+        startStatusPolling();
     }
 
     function renderDownScreen() {
@@ -1549,6 +1653,22 @@
         const sw = document.getElementById('cb-toggle-lockdown-switch');
         if (!sw) return;
 
+        // Mostrar estado del token en el sync msg
+        const syncMsg = document.getElementById('cb-lk-sync-msg');
+        const hasTok = !!(localStorage.getItem(KEY.gh_token) || '').trim();
+        if (syncMsg) {
+            if (hasTok) {
+                syncMsg.innerHTML = '<span style="color:#34d399;">✓ Token GitHub configurado — El switch actualizará GitHub Pages en tiempo real.</span>';
+            } else {
+                syncMsg.innerHTML = `
+                    <span style="color:#f59e0b; font-weight:700;">
+                        ⚠️ Sin Token GitHub — El switch solo afectará a este navegador.<br>
+                        Configura el token pulsando "⚙️ Token GitHub" abajo.
+                    </span>
+                `;
+            }
+        }
+
         let isLockdown = localStorage.getItem(KEY.lockdown) === 'true';
         updateSwitchVisuals(isLockdown);
 
@@ -1622,6 +1742,7 @@
 
         const token = localStorage.getItem(KEY.gh_token) || '';
         let synced = false;
+        let syncError = '';
 
         if (token) {
             try {
@@ -1657,18 +1778,36 @@
 
                     if (putResp.ok) {
                         synced = true;
+                    } else {
+                        const errBody = await putResp.json().catch(() => ({}));
+                        syncError = `HTTP ${putResp.status}: ${errBody.message || 'Error desconocido'}`;
                     }
+                } else {
+                    syncError = `Error al leer el archivo: HTTP ${getResp.status}`;
+                    if (getResp.status === 401) syncError = 'Token inválido o expirado (401 Unauthorized)';
+                    if (getResp.status === 404) syncError = 'Repositorio o archivo no encontrado (404)';
                 }
             } catch (err) {
+                syncError = `Error de red: ${err.message}`;
                 console.warn('Sync error:', err);
             }
+        } else {
+            syncError = 'Sin Token GitHub configurado';
         }
 
         if (syncMsg) {
             if (synced) {
-                syncMsg.innerHTML = '<span style="color:#10b981;">✓ Sincronizado en tiempo real con GitHub Pages (Commit completado con éxito).</span>';
+                syncMsg.innerHTML = `<span style="color:#10b981;">✓ SINCRONIZADO con GitHub Pages — El cambio afecta a <strong>todos los usuarios en tiempo real</strong> (en ~1-2 min que GitHub Pages se actualice).</span>`;
             } else {
-                syncMsg.innerHTML = '<span style="color:#f59e0b;">● Estado guardado localmente en este navegador. (Nota: Para propagar a otros dispositivos, verifica el Token GitHub o haz git push de system-status.json).</span>';
+                syncMsg.innerHTML = `
+                    <span style="color:#ef4444; font-weight:700;">
+                        ✕ No se pudo sincronizar con GitHub: <em>${syncError}</em>
+                    </span>
+                    <span style="color:#f59e0b; display:block; margin-top:6px;">
+                        ⚠️ El bloqueo está guardado solo en <strong>este navegador</strong>. Los alumnos desde otros dispositivos NO serán bloqueados hasta que sincronices.<br>
+                        👉 <strong>Solución:</strong> Haz clic en "⚙️ Token GitHub", pega tu <a href="https://github.com/settings/tokens" target="_blank" style="color:#38bdf8;">Personal Access Token (PAT)</a> con permiso <code>repo</code>, guarda y vuelve a mover el switch.
+                    </span>
+                `;
             }
         }
 
