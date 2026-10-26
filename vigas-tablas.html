@@ -307,7 +307,8 @@
               <table class="calc-table">
                 <thead>
                   <tr>
-                    <th>GL #</th>
+                    <th>C_i</th>
+                    <th>GDL (U)</th>
                     <th>NUDO</th>
                     <th>COMP.</th>
                     <th>VALOR {C}</th>
@@ -325,7 +326,8 @@
               <table class="calc-table">
                 <thead>
                   <tr>
-                    <th>GL #</th>
+                    <th>D_i</th>
+                    <th>GDL (U)</th>
                     <th>NUDO</th>
                     <th>COMP.</th>
                     <th>VALOR {D}</th>
@@ -369,6 +371,33 @@
         </div>
       </div>
     </div>
+
+    <!-- TABLA 7: DATOS PARA GRAFICAR LA CURVA ELÁSTICA (TABLA DE 2 COLUMNAS) -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSec('sec7_elastica')">
+        <span>📈 TABLA 7: DATOS PARA GRAFICAR LA CURVA ELÁSTICA (2 COLUMNAS: X vs DY)</span>
+        <span id="ico-sec7_elastica">▼</span>
+      </div>
+      <div class="section-body" id="sec7_elastica">
+        <p style="font-size:11px; color:#94a3b8; margin-bottom:12px;">
+          Tabla compacta oficial de 2 columnas para graficación directa de la curva elástica de la viga (Coordenada X vs Deflexión Vertical DY).
+        </p>
+        <div style="max-width: 460px;">
+          <table class="calc-table">
+            <thead>
+              <tr>
+                <th>NUDO</th>
+                <th style="background:#0284c7; color:#fff;">X (cm)</th>
+                <th style="background:#10b981; color:#fff;">DY (cm)</th>
+                <th>θz (rad)</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyElasticCurve"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
 
   </div>
 
@@ -575,7 +604,8 @@
           const hasLoad = Math.abs(cVal) > 1e-4;
           return `
             <tr>
-              <td class="cell-subhdr">${idx + 1}</td>
+              <td class="cell-subhdr" style="font-weight:700; color:#38bdf8;">C${nId}${comp}</td>
+              <td class="cell-val" style="font-weight:700; color:#00f0ff;">${cr.uLbl || ('U' + nId + comp)}</td>
               <td class="cell-val">Nudo ${nId}</td>
               <td class="cell-subhdr">${comp}</td>
               <td class="cell-num" style="color: ${hasLoad ? (cVal < 0 ? '#f43f5e' : '#34d399') : '#64748b'}; font-weight:700;">
@@ -603,7 +633,8 @@
           const isNonZero = Math.abs(dVal) > 1e-9;
           return `
             <tr>
-              <td class="cell-subhdr">${idx + 1}</td>
+              <td class="cell-subhdr" style="font-weight:700; color:#10b981;">D${nId}${comp}</td>
+              <td class="cell-val" style="font-weight:700; color:#00f0ff;">${dr.uLbl || ('U' + nId + comp)}</td>
               <td class="cell-val">Nudo ${nId}</td>
               <td class="cell-subhdr">${comp}</td>
               <td class="cell-num" style="color: ${isRestricted ? '#f43f5e' : (isNonZero ? '#a7f3d0' : '#64748b')}; font-weight:700;">

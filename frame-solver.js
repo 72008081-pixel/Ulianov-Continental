@@ -641,7 +641,7 @@
     const F_applied_33 = Array(maxDofs33).fill(0);
     const D_total_33 = Array(maxDofs33).fill(0);
     const reactions_33 = Array(maxDofs33).fill(0);
-    const dofConditions_33 = Array(maxDofs33).fill('LIBRE');
+    const dofConditions_33 = Array(maxDofs33).fill('RESTRINGIDO');
 
     nodes.forEach(n => {
       const nIdx = n.id - 1;
@@ -654,8 +654,8 @@
       }
     });
 
-    restrained.forEach(dIdx => {
-      if(dIdx < maxDofs33) dofConditions_33[dIdx] = 'RESTRINGIDO';
+    free.forEach(dIdx => {
+      if(dIdx < maxDofs33) dofConditions_33[dIdx] = 'LIBRE';
     });
 
     // TABLA DE 2 COLUMNAS PARA CURVA ELÁSTICA (Exacta de 2 columnas)

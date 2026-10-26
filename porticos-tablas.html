@@ -568,7 +568,7 @@
         html += `
         <div class="card">
           <div class="card-title">
-            <div class="card-title-left"><i class="fa-solid fa-list-ol"></i> 6B. Matriz Individual de Cargas Globales {P} y Matriz de Desplazamientos {D} (33 GDL)</div>
+            <div class="card-title-left"><i class="fa-solid fa-list-ol"></i> 6B. Matriz Individual de Cargas Globales {C} y Matriz de Desplazamientos {D} (33 GDL)</div>
           </div>
           <p style="font-size:11px; color:#94a3b8; margin-bottom:12px;">
             Desglose completo individual grado por grado (11 Nudos × 3 GDL = 33 Filas). Muestra en qué nodos hay cargas aplicadas (positivas o negativas por fuerzas o momentos) y los desplazamientos o condiciones de frontera de cada grado.
@@ -578,7 +578,7 @@
             <!-- Matriz / Vector de Cargas {P} -->
             <div style="border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px; background: rgba(10, 20, 38, 0.6);">
               <div style="font-weight: 800; font-size: 13px; color: #38bdf8; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                <i class="fa-solid fa-weight-hanging"></i> Matriz Individual de Cargas Globales {P} (33 × 1)
+                <i class="fa-solid fa-weight-hanging"></i> Matriz Individual de Cargas Globales {C} (33 × 1)
               </div>
               <p style="font-size: 10.5px; color: #94a3b8; margin-bottom: 8px;">
                 Cargas nodales directas + cargas nodales equivalentes de tramos:
@@ -587,10 +587,11 @@
                 <table class="excel-table">
                   <thead>
                     <tr>
-                      <th class="cell-center">GDL</th>
+                      <th class="cell-center">C_i</th>
+                      <th class="cell-center">GDL (U)</th>
                       <th class="cell-center">Nudo</th>
                       <th class="cell-center">Comp.</th>
-                      <th>Carga {P}</th>
+                      <th>Valor Carga {C}</th>
                       <th class="cell-center">Unidad</th>
                       <th class="cell-center">Identificación de Carga</th>
                     </tr>
@@ -603,6 +604,7 @@
                       const hasLoad = Math.abs(fVal) > 1e-4;
                       return `
                       <tr>
+                        <td class="cell-center" style="font-weight:bold; color:#38bdf8;">C${nId}${comp === 'Mz' ? 'θ' : comp.replace('F', '')}</td>
                         <td class="cell-center cell-header-gdl">${result.dofLabels33[g]}</td>
                         <td class="cell-center" style="font-weight:bold; color:#00f0ff;">Nudo ${nId}</td>
                         <td class="cell-center" style="font-weight:bold; color:${comp==='Mz'?'#f43f5e':'#38bdf8'};">${comp}</td>
@@ -633,7 +635,8 @@
                 <table class="excel-table">
                   <thead>
                     <tr>
-                      <th class="cell-center">GDL</th>
+                      <th class="cell-center">D_i</th>
+                      <th class="cell-center">GDL (U)</th>
                       <th class="cell-center">Nudo</th>
                       <th class="cell-center">Comp.</th>
                       <th>Desplazamiento {D}</th>
@@ -650,6 +653,7 @@
                       const isNonZero = Math.abs(dVal) > 1e-9;
                       return `
                       <tr>
+                        <td class="cell-center" style="font-weight:bold; color:#10b981;">D${nId}${comp === 'θz' ? 'θ' : comp.replace('U', '')}</td>
                         <td class="cell-center cell-header-gdl">${result.dofLabels33[g]}</td>
                         <td class="cell-center" style="font-weight:bold; color:#00f0ff;">Nudo ${nId}</td>
                         <td class="cell-center" style="font-weight:bold; color:${comp==='θz'?'#fde047':'#10b981'};">${comp}</td>
@@ -737,7 +741,7 @@
         html += `
         <div class="card">
           <div class="card-title">
-            <div class="card-title-left"><i class="fa-solid fa-equals"></i> 9. Ecuación Matricial Fundamental: {D_libres} = [K_LL]^-1 · {F_libres} (Los 3 Cuadros Clásicos)</div>
+            <div class="card-title-left"><i class="fa-solid fa-equals"></i> 9. Ecuación Matricial Fundamental: {D_libres} = [K_LL]^-1 · {C_libres} (Los 3 Cuadros Clásicos)</div>
           </div>
           <div class="cuadros-grid">
             <!-- Cuadro 1: Desplazamientos -->
@@ -780,7 +784,7 @@
 
             <!-- Cuadro 3: Cargas libres -->
             <div class="cuadro-box" style="border-color:#38bdf8;">
-              <div class="cuadro-title" style="color:#38bdf8;"><i class="fa-solid fa-weight-hanging"></i> CUADRO 3: {F_libres}</div>
+              <div class="cuadro-title" style="color:#38bdf8;"><i class="fa-solid fa-weight-hanging"></i> CUADRO 3: {C_libres}</div>
               <table class="excel-table">
                 <thead><tr><th class="cell-center">GDL</th><th>Fuerza</th><th>Unidad</th></tr></thead>
                 <tbody>
@@ -802,7 +806,7 @@
         html += `
         <div class="card">
           <div class="card-title">
-            <div class="card-title-left"><i class="fa-solid fa-anchor"></i> 10. Cálculo de Reacciones: {R} = [K_RL] · {D_libres} - {F_restringidos}</div>
+            <div class="card-title-left"><i class="fa-solid fa-anchor"></i> 10. Cálculo de Reacciones: {R} = [K_RL] · {D_libres} - {C_restringidos}</div>
           </div>
           <p style="font-size:11px; color:#94a3b8; margin-bottom:10px;">
             Multiplicación de las filas retenidas de la matriz de rigidez donde D=0 por el vector de desplazamientos libres resuelto.

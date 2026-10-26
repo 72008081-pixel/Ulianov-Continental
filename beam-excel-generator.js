@@ -1222,6 +1222,47 @@
             }
         }
 
+
+        // =========================================================================
+        // BLOQUE 12 (Filas 565..580): DATOS PARA GRAFICAR LA CURVA ELÁSTICA (2 COLUMNAS)
+        // =========================================================================
+        const elastBanner = 565;
+        const elastHdr = 566;
+        const elastStart = 567;
+
+        makeBanner(ws, elastBanner, 2, 6, '12. DATOS PARA GRAFICAR LA CURVA ELÁSTICA (TABLA DE 2 COLUMNAS)', PALETTE.GREEN_SOFT);
+
+        const elastCols = [[2, 'Nudo'], [3, 'X (cm)'], [4, 'DY (cm)'], [5, 'θz (rad)']];
+        elastCols.forEach(([colI, hT]) => {
+            ws.getCell(elastHdr, colI).value = hT;
+            styleCell(ws.getCell(elastHdr, colI), PALETTE.HEADER_BLUE, FONTS.HDR, BORDERS.HDR, ALIGNS.CENTER);
+        });
+
+        const numNodesPlot = Math.min(12, Math.max(2, solver.maxActiveNode || 2));
+        for (let n = 1; n <= 12; n++) {
+            const currR = elastStart + n - 1;
+            const pt = (solver.elastic_curve_2col && solver.elastic_curve_2col[n - 1]) ? solver.elastic_curve_2col[n - 1] : null;
+            ws.getRow(currR).height = 18;
+
+            ws.getCell(currR, 2).value = n;
+            styleCell(ws.getCell(currR, 2), PALETTE.SUBHDR_BLUE, FONTS.SMALL_B, BORDERS.ALL, ALIGNS.CENTER);
+
+            if (n <= numNodesPlot && pt) {
+                ws.getCell(currR, 3).value = pt.x;
+                ws.getCell(currR, 4).value = pt.dy;
+                ws.getCell(currR, 5).value = pt.theta;
+
+                styleCell(ws.getCell(currR, 3), PALETTE.WHITE, FONTS.SMALL_B, BORDERS.ALL, ALIGNS.RIGHT, FMTS.DEC1);
+                styleCell(ws.getCell(currR, 4), PALETTE.GREEN_PASTEL, FONTS.SMALL_B, BORDERS.ALL, ALIGNS.RIGHT, FMTS.DISP);
+                styleCell(ws.getCell(currR, 5), PALETTE.YELLOW_INPUT, FONTS.SMALL, BORDERS.ALL, ALIGNS.RIGHT, FMTS.ROT);
+            } else {
+                for (let cI = 3; cI <= 5; cI++) {
+                    ws.getCell(currR, cI).value = '';
+                    styleCell(ws.getCell(currR, cI), PALETTE.WHITE, FONTS.SMALL, BORDERS.ALL, ALIGNS.CENTER);
+                }
+            }
+        }
+
         // Protección de hoja de cálculo contra edición de fórmulas con la contraseña maestra 'miau'
         await ws.protect('miau', {
             selectLockedCells: true,

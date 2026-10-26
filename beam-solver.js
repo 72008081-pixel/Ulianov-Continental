@@ -897,6 +897,26 @@
             });
         }
 
+        // Tabla de 2 columnas para graficar la curva elástica (Nudo, X cm, DY cm, theta rad)
+        let accX = 0;
+        const elastic_curve_2col = [];
+        const numNodesActive = Math.max(2, maxActiveNode || 2);
+        for (let n = 1; n <= numNodesActive; n++) {
+            const dy = D_full[3 * (n - 1) + 1] || 0.0;
+            const dx = D_full[3 * (n - 1)] || 0.0;
+            const theta = D_full[3 * (n - 1) + 2] || 0.0;
+            elastic_curve_2col.push({
+                nodeId: n,
+                x: accX,
+                dy: dy,
+                dx: dx,
+                theta: theta
+            });
+            if (n - 1 < activeBarsCount && barsTable[n - 1]) {
+                accX += (barsTable[n - 1].L || 0.0);
+            }
+        }
+
         return {
             success: true,
             secProps,
@@ -925,7 +945,8 @@
             K_LL_inv,
             calculatedDisplacements,
             K_RL,
-            calculatedReactions
+            calculatedReactions,
+            elastic_curve_2col
         };
     }
 

@@ -1381,19 +1381,21 @@
           }
         }
 
+        const k_exp = Array.from({ length: totalDofs }, () => Array(totalDofs).fill(0));
+        for (let i = 0; i < 4; i++) {
+          for (let k = 0; k < 4; k++) {
+            k_exp[barDofIndices[i]][barDofIndices[k]] = ke[i][k];
+            K[barDofIndices[i]][barDofIndices[k]] += ke[i][k];
+          }
+        }
+
         localMatrices.push({
           bar: br,
           barDofIndices,
           T,
-          ke
+          ke,
+          k_exp
         });
-
-        // Add to global K
-        for (let i = 0; i < 4; i++) {
-          for (let k = 0; k < 4; k++) {
-            K[barDofIndices[i]][barDofIndices[k]] += ke[i][k];
-          }
-        }
       });
 
       // 5. Build Submatrices K11 and K21
@@ -1733,6 +1735,41 @@
           tableHtml += `<tr><th style="background:${col.bg}; color:${col.text};">${dofNames[r]}</th>`;
           for (let c = 0; c < 4; c++) {
             tableHtml += `<td style="background:${col.bg};">${lm.ke[r][c].toFixed(2)}</td>`;
+          }
+          tableHtml += `</tr>`;
+        }
+
+        tableHtml += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        // Matriz Expandida en el espacio total de GDL debajo de cada rigidez
+        tableHtml += `
+          <div style="margin-top: 14px; margin-bottom: 6px; font-weight: 700; font-size: 0.85rem; color: #38bdf8; display: flex; align-items: center; justify-content: space-between;">
+            <span><i class="fa-solid fa-table-cells-large"></i> Matriz Expandida K${br.id} (${res.totalDofs} × ${res.totalDofs} GDL) Mapeada en el Espacio Total:</span>
+            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: normal;">(Se ubica en filas/cols [${dofNames.join(', ')}])</span>
+          </div>
+          <div class="matrix-wrapper" style="max-height: 280px; overflow: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;">
+            <table class="matrix-table">
+              <thead>
+                <tr>
+                  <th style="position:sticky; left:0; z-index:2; background:#0f172a;">GDL</th>
+                  ${res.dofs.map(d => `<th>${d.name}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        for (let r = 0; r < res.totalDofs; r++) {
+          tableHtml += `<tr><th style="position:sticky; left:0; background:#0f172a; color:#00f0ff;">${res.dofs[r].name}</th>`;
+          for (let c = 0; c < res.totalDofs; c++) {
+            const val = lm.k_exp[r][c];
+            const isNZ = Math.abs(val) > 1e-4;
+            const isDiag = (r === c && isNZ);
+            let cls = isDiag ? "cell-diag" : (isNZ ? "cell-peach" : "cell-zero");
+            tableHtml += `<td class="${cls}" style="${isNZ ? 'font-weight:bold;' : 'color:#475569;'}">${isNZ ? val.toFixed(2) : '0'}</td>`;
           }
           tableHtml += `</tr>`;
         }
