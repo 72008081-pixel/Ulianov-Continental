@@ -1762,7 +1762,11 @@
         for (let c = 0; c < n; c++) {
           const isDiag = (r === c);
           const isK11 = res.freeDofIndices.includes(r) && res.freeDofIndices.includes(c);
-          let cls = isDiag ? "cell-diag" : (isK11 ? "cell-k11" : "");
+          const isNZ = Math.abs(res.K[r][c]) > 1e-4;
+          let cls = "";
+          if (isDiag && isNZ) cls = "cell-diag";
+          else if (isK11 && isNZ) cls = "cell-k11";
+          else if (!isNZ) cls = "cell-zero";
           html += `<td class="${cls}">${res.K[r][c].toFixed(2)}</td>`;
         }
         html += `</tr>`;
@@ -1774,18 +1778,21 @@
     function renderVectors(res) {
       // Vector C
       const contC = document.getElementById("container-vector-c");
-      let htmlC = `<table class="matrix-table"><thead><tr><th>DOF</th><th>Cargas {C}</th></tr></thead><tbody>`;
+      let htmlC = `<table class="matrix-table"><thead><tr><th>DOF</th><th>Nudo</th><th>Eje</th><th>Cargas {C}</th><th>Estado Carga</th></tr></thead><tbody>`;
       res.dofs.forEach((d, idx) => {
         const isFree = res.freeDofIndices.includes(idx);
         const nodeIdx = Math.floor(idx / 2);
-        const nd = res.activeNodes[nodeIdx];
+        const nd = res.activeNodes[nodeIdx] || {};
         const isY = idx % 2 === 1;
         const pVal = isY ? (nd.py || 0) : (nd.px || 0);
+        const hasP = Math.abs(pVal) > 1e-4;
 
         if (isFree) {
-          htmlC += `<tr><th>${d.name}</th><td class="cell-peach">${pVal.toFixed(2)}</td></tr>`;
+          const loadLabel = hasP ? (pVal < 0 ? 'MENOS CARGA (-)' : 'MÁS CARGA (+)') : 'SIN CARGA (0)';
+          const color = hasP ? (pVal < 0 ? '#f43f5e' : '#10b981') : '#64748b';
+          htmlC += `<tr><th>${d.name}</th><td style="font-weight:bold; color:#00f0ff;">Nudo ${d.node}</td><td style="font-weight:bold;">${d.axis}</td><td class="cell-peach" style="color:${color}; font-weight:bold;">${pVal.toFixed(2)} Tonf</td><td><span style="display:inline-block; padding:1px 6px; border-radius:4px; font-size:10px; font-weight:bold; background:${hasP ? (pVal < 0 ? 'rgba(244,63,94,0.15)' : 'rgba(16,185,129,0.15)') : 'rgba(148,163,184,0.1)'}; color:${color};">${loadLabel}</span></td></tr>`;
         } else {
-          htmlC += `<tr><th>${d.name}</th><td style="color:#64748b; font-style:italic;">C${d.node}${d.axis}</td></tr>`;
+          htmlC += `<tr><th>${d.name}</th><td style="font-weight:bold; color:#00f0ff;">Nudo ${d.node}</td><td style="font-weight:bold;">${d.axis}</td><td style="color:#64748b; font-style:italic;">Reacción C${d.node}${d.axis}</td><td><span style="display:inline-block; padding:1px 6px; border-radius:4px; font-size:10px; font-weight:bold; background:rgba(56,189,248,0.15); color:#38bdf8;">APOYO</span></td></tr>`;
         }
       });
       htmlC += `</tbody></table>`;
@@ -1793,13 +1800,17 @@
 
       // Vector D
       const contD = document.getElementById("container-vector-d");
-      let htmlD = `<table class="matrix-table"><thead><tr><th>DOF</th><th>Despl. {D}</th></tr></thead><tbody>`;
+      let htmlD = `<table class="matrix-table"><thead><tr><th>DOF</th><th>Nudo</th><th>Eje</th><th>Despl. {D}</th><th>Condición</th></tr></thead><tbody>`;
       res.dofs.forEach((d, idx) => {
         const isFree = res.freeDofIndices.includes(idx);
+        const freeOrder = res.freeDofIndices.indexOf(idx);
+        const dVal = (freeOrder !== -1 && res.D) ? (res.D[freeOrder] || 0) : 0;
+        const isNonZero = Math.abs(dVal) > 1e-8;
+
         if (isFree) {
-          htmlD += `<tr><th>${d.name}</th><td class="cell-peach">D${d.node}${d.axis}</td></tr>`;
+          htmlD += `<tr><th>${d.name}</th><td style="font-weight:bold; color:#00f0ff;">Nudo ${d.node}</td><td style="font-weight:bold;">${d.axis}</td><td class="cell-peach" style="color:${isNonZero ? '#10b981' : '#64748b'}; font-weight:bold;">${isNonZero ? dVal.toFixed(6) + ' m' : 'D' + d.node + d.axis}</td><td><span style="display:inline-block; padding:1px 6px; border-radius:4px; font-size:10px; font-weight:bold; background:rgba(16,185,129,0.15); color:#10b981;">LIBRE</span></td></tr>`;
         } else {
-          htmlD += `<tr><th>${d.name}</th><td style="font-weight:700;">0.0000</td></tr>`;
+          htmlD += `<tr><th>${d.name}</th><td style="font-weight:bold; color:#00f0ff;">Nudo ${d.node}</td><td style="font-weight:bold;">${d.axis}</td><td style="font-weight:700; color:#f43f5e;">0.000000 (Apoyo)</td><td><span style="display:inline-block; padding:1px 6px; border-radius:4px; font-size:10px; font-weight:bold; background:rgba(244,63,94,0.15); color:#f43f5e;">RESTRINGIDO</span></td></tr>`;
         }
       });
       htmlD += `</tbody></table>`;

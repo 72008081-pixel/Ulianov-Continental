@@ -290,6 +290,57 @@
     </div>
 
     <!-- TABLA 6: RESULTADOS (DESPLAZAMIENTOS Y REACCIONES) -->
+        <!-- TABLA 5B: MATRICES INDIVIDUALES DE CARGAS GLOBALES {C} Y DESPLAZAMIENTOS {D} -->
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSec('sec5b')">
+        <span>📋 TABLA 5B: MATRIZ INDIVIDUAL DE CARGAS GLOBALES {C} Y MATRIZ DE DESPLAZAMIENTOS {D}</span>
+        <span id="ico-sec5b">▼</span>
+      </div>
+      <div class="section-body" id="sec5b">
+        <p style="font-size:11px; color:#94a3b8; margin-bottom:12px;">
+          Desglose completo y detallado grado por grado (12 Nudos × 3 GDL = 36 GDL). Especifica en qué nodos existen cargas (fuerzas directas, momentos concentrados y cargas equivalentes en tramos) y la condición de desplazamiento (libre con valor hallado o restringido en apoyo).
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <h4 style="color: #38bdf8; margin-bottom: 6px;">Matriz Individual de Cargas {C} (36 × 1):</h4>
+            <div style="max-height: 440px; overflow-y: auto;">
+              <table class="calc-table">
+                <thead>
+                  <tr>
+                    <th>GL #</th>
+                    <th>NUDO</th>
+                    <th>COMP.</th>
+                    <th>VALOR {C}</th>
+                    <th>UNIDAD</th>
+                    <th>IDENTIFICACIÓN</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyCargasTable"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <h4 style="color: #10b981; margin-bottom: 6px;">Matriz Individual de Desplazamientos {D} (36 × 1):</h4>
+            <div style="max-height: 440px; overflow-y: auto;">
+              <table class="calc-table">
+                <thead>
+                  <tr>
+                    <th>GL #</th>
+                    <th>NUDO</th>
+                    <th>COMP.</th>
+                    <th>VALOR {D}</th>
+                    <th>UNIDAD</th>
+                    <th>CONDICIÓN</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyFullDispTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="section-card">
       <div class="section-header" onclick="toggleSec('sec6')">
         <span>📊 TABLA 6: DESPLAZAMIENTOS CALCULADOS {D} Y REACCIONES EN APOYOS {R}</span>
@@ -495,7 +546,15 @@
               ${k.map((row, rI) => `
                 <tr>
                   <td style="color:#38bdf8; font-weight:700;">${lbls[rI]}</td>
-                  ${row.map((v, cI) => `<td class="${rI === cI ? 'matrix-diag' : ''}">${Math.abs(v) > 1e-9 ? Number(v).toFixed(1) : '<span style="color:#334155;">0</span>'}</td>`).join('')}
+                  ${row.map((v, cI) => {
+                    const isNZ = Math.abs(v) > 1e-9;
+                    const isDiag = (rI === cI && isNZ);
+                    const isZeroDiag = (rI === cI && !isNZ);
+                    let cls = '';
+                    if (isDiag) cls = 'matrix-diag';
+                    else if (isNZ) cls = 'cell-highlight';
+                    return `<td class="${cls}">${isNZ ? Number(v).toFixed(1) : '<span style="color:#334155;">0</span>'}</td>`;
+                  }).join('')}
                 </tr>
               `).join('')}
             </tbody>
@@ -504,6 +563,64 @@
       }
 
       // 8. Renderizar Tabla 6: Desplazamientos y Reacciones
+      
+      // Renderizar Tabla 5B: Matriz Individual de Cargas {C} y Matriz de Desplazamientos {D}
+      const tbCargas = document.getElementById('tbodyCargasTable');
+      if (tbCargas && sol.cargasRows) {
+        tbCargas.innerHTML = sol.cargasRows.map((cr, idx) => {
+          const nId = Math.floor(idx / 3) + 1;
+          const comp = ['X', 'Y', 'θ'][idx % 3];
+          const unit = comp === 'θ' ? 'Kgf·cm' : 'Kgf';
+          const cVal = Number(cr.C_num) || 0;
+          const hasLoad = Math.abs(cVal) > 1e-4;
+          return `
+            <tr>
+              <td class="cell-subhdr">${idx + 1}</td>
+              <td class="cell-val">Nudo ${nId}</td>
+              <td class="cell-subhdr">${comp}</td>
+              <td class="cell-num" style="color: ${hasLoad ? (cVal < 0 ? '#f43f5e' : '#34d399') : '#64748b'}; font-weight:700;">
+                ${hasLoad ? cVal.toFixed(2) : '0.00'}
+              </td>
+              <td class="cell-val">${unit}</td>
+              <td class="cell-val">
+                <span style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; background:${hasLoad ? (cVal < 0 ? 'rgba(244,63,94,0.15)' : 'rgba(16,185,129,0.15)') : 'rgba(148,163,184,0.1)'}; color:${hasLoad ? (cVal < 0 ? '#f43f5e' : '#34d399') : '#94a3b8'};">
+                  ${hasLoad ? (cVal < 0 ? 'MENOS ' + (comp === 'θ' ? 'MOMENTO' : 'CARGA') : 'MÁS ' + (comp === 'θ' ? 'MOMENTO' : 'CARGA')) : 'SIN CARGA (0)'}
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      const tbFullD = document.getElementById('tbodyFullDispTable');
+      if (tbFullD && sol.dispRows) {
+        tbFullD.innerHTML = sol.dispRows.map((dr, idx) => {
+          const nId = Math.floor(idx / 3) + 1;
+          const comp = ['X', 'Y', 'θ'][idx % 3];
+          const unit = comp === 'θ' ? 'rad' : 'cm';
+          const isRestricted = dr.hay === 'NO';
+          const dVal = Number(dr.D_val) || 0;
+          const isNonZero = Math.abs(dVal) > 1e-9;
+          return `
+            <tr>
+              <td class="cell-subhdr">${idx + 1}</td>
+              <td class="cell-val">Nudo ${nId}</td>
+              <td class="cell-subhdr">${comp}</td>
+              <td class="cell-num" style="color: ${isRestricted ? '#f43f5e' : (isNonZero ? '#a7f3d0' : '#64748b')}; font-weight:700;">
+                ${isRestricted ? '0.000000 (Apoyo)' : (isNonZero ? dVal.toFixed(6) : '0.000000')}
+              </td>
+              <td class="cell-val">${unit}</td>
+              <td class="cell-val">
+                <span style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; background:${isRestricted ? 'rgba(244,63,94,0.15)' : 'rgba(56,189,248,0.15)'}; color:${isRestricted ? '#f43f5e' : '#38bdf8'};">
+                  ${isRestricted ? 'RESTRINGIDO' : 'LIBRE'}
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+
       const tbDisp = document.getElementById('tbodyDispTable');
       if (tbDisp && sol.calculatedDisplacements) {
         tbDisp.innerHTML = sol.calculatedDisplacements.map(d => {

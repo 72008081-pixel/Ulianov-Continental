@@ -547,13 +547,127 @@
                     <td class="cell-center cell-header-gdl" style="position:sticky; left:0; background:#0f172a;">${result.dofLabels33[r]}</td>
                     ${row.map((val, c) => {
                       const isNonZero = Math.abs(val) > 1e-4;
-                      const isDiag = (r === c);
-                      return `<td class="${isDiag?'cell-diag':(isNonZero?'':'cell-zero')}">${isNonZero ? fmt(val, 2) : '0'}</td>`;
+                      const isDiag = (r === c && isNonZero);
+                      const isZeroDiag = (r === c && !isNonZero);
+                      let cls = 'cell-zero';
+                      if(isDiag) cls = 'cell-diag';
+                      else if(isNonZero) cls = 'cell-highlight';
+                      else if(isZeroDiag) cls = 'cell-zero';
+                      return `<td class="${cls}">${isNonZero ? fmt(val, 2) : '0'}</td>`;
                     }).join('')}
                   </tr>
                 `).join('')}
               </tbody>
             </table>
+          </div>
+        </div>
+        `;
+
+
+        // TABLA 6B: MATRICES / VECTORES INDIVIDUALES DE CARGAS {P} Y DESPLAZAMIENTOS {D} (SISTEMA TOTAL 33 GDL)
+        html += `
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-left"><i class="fa-solid fa-list-ol"></i> 6B. Matriz Individual de Cargas Globales {P} y Matriz de Desplazamientos {D} (33 GDL)</div>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin-bottom:12px;">
+            Desglose completo individual grado por grado (11 Nudos × 3 GDL = 33 Filas). Muestra en qué nodos hay cargas aplicadas (positivas o negativas por fuerzas o momentos) y los desplazamientos o condiciones de frontera de cada grado.
+          </p>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+            
+            <!-- Matriz / Vector de Cargas {P} -->
+            <div style="border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px; background: rgba(10, 20, 38, 0.6);">
+              <div style="font-weight: 800; font-size: 13px; color: #38bdf8; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-weight-hanging"></i> Matriz Individual de Cargas Globales {P} (33 × 1)
+              </div>
+              <p style="font-size: 10.5px; color: #94a3b8; margin-bottom: 8px;">
+                Cargas nodales directas + cargas nodales equivalentes de tramos:
+              </p>
+              <div style="max-height: 440px; overflow-y: auto;">
+                <table class="excel-table">
+                  <thead>
+                    <tr>
+                      <th class="cell-center">GDL</th>
+                      <th class="cell-center">Nudo</th>
+                      <th class="cell-center">Comp.</th>
+                      <th>Carga {P}</th>
+                      <th class="cell-center">Unidad</th>
+                      <th class="cell-center">Identificación de Carga</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${result.F_applied_33.map((fVal, g) => {
+                      const nId = Math.floor(g / 3) + 1;
+                      const comp = ['Fx', 'Fy', 'Mz'][g % 3];
+                      const unit = comp === 'Mz' ? 'kgf·cm' : 'kgf';
+                      const hasLoad = Math.abs(fVal) > 1e-4;
+                      return `
+                      <tr>
+                        <td class="cell-center cell-header-gdl">${result.dofLabels33[g]}</td>
+                        <td class="cell-center" style="font-weight:bold; color:#00f0ff;">Nudo ${nId}</td>
+                        <td class="cell-center" style="font-weight:bold; color:${comp==='Mz'?'#f43f5e':'#38bdf8'};">${comp}</td>
+                        <td style="font-weight:bold; color:${hasLoad ? (fVal < 0 ? '#f43f5e' : '#34d399') : '#64748b'};">${hasLoad ? fmt(fVal, 2) : '0.00'}</td>
+                        <td class="cell-center" style="color:#94a3b8;">${unit}</td>
+                        <td class="cell-center">
+                          <span class="tag-badge ${hasLoad ? (fVal < 0 ? 'tag-fixed' : 'tag-pin') : 'tag-free'}">
+                            ${hasLoad ? (fVal < 0 ? 'MENOS ' + (comp === 'Mz' ? 'MOMENTO' : 'CARGA') : 'MÁS ' + (comp === 'Mz' ? 'MOMENTO' : 'CARGA')) : 'SIN CARGA (0)'}
+                          </span>
+                        </td>
+                      </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Matriz / Vector de Desplazamientos {D} -->
+            <div style="border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px; background: rgba(10, 20, 38, 0.6);">
+              <div style="font-weight: 800; font-size: 13px; color: #10b981; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-arrows-up-down-left-right"></i> Matriz Individual de Desplazamientos {D} (33 × 1)
+              </div>
+              <p style="font-size: 10.5px; color: #94a3b8; margin-bottom: 8px;">
+                Desplazamientos lineales (cm) y giros angulares (rad) en los 33 GDL:
+              </p>
+              <div style="max-height: 440px; overflow-y: auto;">
+                <table class="excel-table">
+                  <thead>
+                    <tr>
+                      <th class="cell-center">GDL</th>
+                      <th class="cell-center">Nudo</th>
+                      <th class="cell-center">Comp.</th>
+                      <th>Desplazamiento {D}</th>
+                      <th class="cell-center">Unidad</th>
+                      <th class="cell-center">Condición</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${result.D_total_33.map((dVal, g) => {
+                      const nId = Math.floor(g / 3) + 1;
+                      const comp = ['Ux', 'Uy', 'θz'][g % 3];
+                      const unit = comp === 'θz' ? 'rad' : 'cm';
+                      const isRestricted = result.dofConditions_33[g] === 'RESTRINGIDO';
+                      const isNonZero = Math.abs(dVal) > 1e-9;
+                      return `
+                      <tr>
+                        <td class="cell-center cell-header-gdl">${result.dofLabels33[g]}</td>
+                        <td class="cell-center" style="font-weight:bold; color:#00f0ff;">Nudo ${nId}</td>
+                        <td class="cell-center" style="font-weight:bold; color:${comp==='θz'?'#fde047':'#10b981'};">${comp}</td>
+                        <td style="font-weight:bold; color:${isRestricted ? '#f43f5e' : (isNonZero ? '#a7f3d0' : '#64748b')};">${isRestricted ? '0.000000 (Apoyo)' : (isNonZero ? fmt(dVal, 6) : '0.000000')}</td>
+                        <td class="cell-center" style="color:#94a3b8;">${unit}</td>
+                        <td class="cell-center">
+                          <span class="tag-badge ${isRestricted ? 'tag-fixed' : 'tag-free'}">
+                            ${isRestricted ? 'RESTRINGIDO' : 'LIBRE'}
+                          </span>
+                        </td>
+                      </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </div>
         `;

@@ -604,9 +604,9 @@
 
     elements.forEach((el, bIdx) => {
       const expMat = zeros(maxDofs33, maxDofs33);
-      const ni = el.n1.id - 1;
-      const nj = el.n2.id - 1;
-      if(ni < maxNodes33 && nj < maxNodes33){
+      const ni = (typeof el.n1 === 'object' ? el.n1.id : el.n1) - 1;
+      const nj = (typeof el.n2 === 'object' ? el.n2.id : el.n2) - 1;
+      if(ni >= 0 && nj >= 0 && ni < maxNodes33 && nj < maxNodes33){
         const elDofs = [
           3 * ni,     3 * ni + 1, 3 * ni + 2,
           3 * nj,     3 * nj + 1, 3 * nj + 2
@@ -621,8 +621,8 @@
       }
       expandedBars33.push({
         barId: el.id,
-        n1: el.n1.id,
-        n2: el.n2.id,
+        n1: typeof el.n1 === 'object' ? el.n1.id : el.n1,
+        n2: typeof el.n2 === 'object' ? el.n2.id : el.n2,
         matrix: expMat
       });
     });
