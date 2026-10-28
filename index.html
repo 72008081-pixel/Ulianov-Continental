@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CEREBRO ESTRUCTURAL v8.1 — Suite de Análisis Matricial (Ing. Ulianov Cuba)</title>
+  <title>CEREBRO ESTRUCTURAL v8.2 — Suite de Análisis Matricial & Mathcad Prime 11 (Ing. Ulianov Cuba)</title>
   <style>
     :root {
       --bg-dark: #0b1120;
@@ -170,15 +170,38 @@
     /* ── GRILLA DE MÓDULOS ── */
     .modules-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 24px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 20px;
       margin-bottom: 34px;
     }
 
-    @media (max-width: 860px) {
+    @media (max-width: 1200px) {
+      .modules-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 680px) {
       .modules-grid {
         grid-template-columns: 1fr;
       }
+    }
+
+    .badge-mathcad {
+      background: rgba(225, 29, 72, 0.2);
+      color: #fb7185;
+      border: 1px solid rgba(225, 29, 72, 0.5);
+    }
+
+    .btn-mathcad {
+      background: linear-gradient(135deg, #e11d48 0%, #be123c 50%, #881337 100%);
+      color: #ffffff;
+      border: 1px solid #f43f5e;
+    }
+
+    .btn-mathcad:hover {
+      box-shadow: 0 6px 20px rgba(244, 63, 94, 0.4);
+      filter: brightness(1.1);
     }
 
     .module-card {
@@ -334,10 +357,10 @@
   <!-- HEADER -->
   <header class="hub-header">
     <div class="brand-wrap">
-      <div class="brand-logo-pill">CEREBRO ESTRUCTURAL v8.1</div>
+      <div class="brand-logo-pill">CEREBRO ESTRUCTURAL v8.2</div>
       <div>
-        <div class="brand-title">CEREBRO ESTRUCTURAL — SUITE DE INGENIERÍA v8.1</div>
-        <div class="brand-sub">Métodos Matriciales de Rigidez Directa • Cátedra Ing. Ulianov Cuba Valencia</div>
+        <div class="brand-title">CEREBRO ESTRUCTURAL — SUITE DE INGENIERÍA v8.2 (4 MÓDULOS)</div>
+        <div class="brand-sub">Métodos Matriciales & Mathcad Prime 11 • Cátedra Ing. Ulianov Cuba Valencia</div>
       </div>
     </div>
 
@@ -352,10 +375,10 @@
   <!-- CONTENIDO CENTRAL -->
   <main class="hub-main">
     <div class="hero-banner">
-      <div class="hero-badge">⚡ PLATAFORMA INTEGRADA DE CÁLCULO ESTRUCTURAL v8.1</div>
+      <div class="hero-badge">⚡ SUITE INTEGRADA DE 4 APLICACIONES ESTRUCTURALES v8.2</div>
       <h1 class="hero-title">Selecciona tu Módulo de Análisis Matricial</h1>
       <p class="hero-desc">
-        Software oficial de Análisis Estructural II — Cátedra Ing. Ulianov Cuba Valencia • Universidad Continental. Acceso 100% gratuito con Licencia MIT de Código Abierto.
+        Software oficial de Análisis Estructural II — Cátedra Ing. Ulianov Cuba Valencia • Universidad Continental. Acceso 100% gratuito: Armaduras 2D, Vigas Matriciales, Pórticos Planos y PTC Mathcad Prime 11.
       </p>
     </div>
 
@@ -421,7 +444,7 @@
       .badge-frame {background:rgba(52,211,153,.14);color:#6ee7b7;border:1px solid rgba(52,211,153,.52)}
       .btn-frame {background:linear-gradient(135deg,#0d9488,#1e40af);color:white;border:1px solid #34d399}
       .btn-frame:hover {box-shadow:0 6px 20px rgba(52,211,153,.25)}
-      @media(min-width:861px) and (max-width:1120px){.modules-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      /* responsive grid handled globally */
     </style>
     <div class="module-card" style="border-color:rgba(52,211,153,.5); box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 25px rgba(52,211,153,0.15);">
       <div class="card-top">
@@ -446,7 +469,41 @@
         </a>
       </div>
     </div>
-  </div>
+
+      <!-- MÓDULO 4: PTC MATHCAD PRIME 11 (VIGAS & DIAGRAMAS) -->
+      <div class="module-card" style="border-color: rgba(244, 63, 94, 0.5); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 25px rgba(244, 63, 94, 0.15);">
+        <div class="card-top">
+          <span class="card-badge badge-mathcad">NUEVO MÓDULO 4 • PTC MATHCAD PRIME 11</span>
+          <div class="module-icon">⚡</div>
+          <h2 class="module-name">PTC Mathcad Prime 11 (Vigas & Diagramas)</h2>
+          <p class="module-summary">
+            Generador universal de memorias de cálculo <strong>.mcdx</strong> y diagramas de cortante <strong>Q(x)</strong> y momento <strong>M(x)</strong> mediante <strong>Funciones de Singularidad de Macaulay</strong>. 100% compatible y certificado para Mathcad Prime 11.
+          </p>
+          <ul class="features-list">
+            <li>✔ <strong>Generador .mcdx Certificado:</strong> Descarga directa con blindaje XSD anti-errores.</li>
+            <li>✔ <strong>Funciones de Macaulay:</strong> Formulación analítica continua en tramos múltiples.</li>
+            <li>✔ <strong>Canvas Interactivo de Vigas:</strong> Cotas, cargas nodales, distribuidas y apoyos dinámicos.</li>
+            <li>✔ <strong>Diagramas DFC y DMF:</strong> Escalamiento dinámico automático de ejes en tiempo real.</li>
+            <li>✔ <strong>Acceso Dual:</strong> Módulo local embebido y versión en la nube (GitHub Pages).</li>
+          </ul>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <a href="mathcad/index.html" class="btn-enter-module btn-mathcad">
+            <span>🚀 Ingresar a Mathcad Prime 11 (Local)</span>
+            <span>➔</span>
+          </a>
+          <a href="https://72008081-pixel.github.io/diagramas-en-MATHCAD/" target="_blank" rel="noopener noreferrer" style="background: rgba(244, 63, 94, 0.15); color: #fda4af; font-weight: 800; border-radius: 8px; text-decoration: none; padding: 8px 14px; text-align: center; font-size: 11.5px; border: 1.5px solid rgba(244, 63, 94, 0.4); display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <span>🌐 Abrir en la Nube (GitHub Pages)</span>
+            <span>↗</span>
+          </a>
+          <a href="https://github.com/72008081-pixel/diagramas-en-MATHCAD" target="_blank" rel="noopener noreferrer" style="background: rgba(255, 255, 255, 0.05); color: #94a3b8; font-weight: 700; border-radius: 8px; text-decoration: none; padding: 6px 14px; text-align: center; font-size: 11px; border: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <span>📂 Repositorio Oficial GitHub</span>
+            <span>↗</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
 
     <!-- BANNER DE APORTE VOLUNTARIO POR YAPE -->
     <div class="yape-info-banner">

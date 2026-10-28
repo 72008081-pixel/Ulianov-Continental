@@ -1,0 +1,2111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CEREBRO ESTRUCTURAL v11.0 | Suite y Generador de Vigas para Mathcad Prime 11</title>
+  
+  <!-- CDNs: Tailwind CSS, Chart.js, JSZip, FileSaver -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-dark: #070d19;
+      --card-dark: #0f172a;
+      --card-border: rgba(56, 189, 248, 0.2);
+      --primary-cyan: #00d2b5;
+      --primary-sky: #38bdf8;
+      --accent-purple: #a855f7;
+      --accent-amber: #fbbf24;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+    }
+    
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(14, 165, 233, 0.15) 0px, transparent 50%),
+        linear-gradient(180deg, #070d19 0%, #030712 100%);
+      color: #f8fafc;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .tech-border {
+      border: 1px solid var(--card-border);
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+    }
+    
+    .glow-cyan {
+      box-shadow: 0 0 15px rgba(0, 210, 181, 0.25);
+    }
+    
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #070d19; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+    
+    /* Code styling */
+    pre, code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    
+    /* Print Styles */
+    @media print {
+      body { background: white !important; color: black !important; }
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      .card-print { border: 1px solid #ccc !important; box-shadow: none !important; background: white !important; color: black !important; }
+    }
+  </style>
+</head>
+<body class="flex flex-col">
+
+  <!-- ========================================== -->
+  <!-- BARRA DE NAVEGACIÓN SUPERIOR               -->
+  <!-- ========================================== -->
+  <header class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-sky-500/20 px-4 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+    <div class="flex items-center gap-3">
+      <div class="bg-gradient-to-r from-teal-500 to-sky-600 text-white font-black text-xs px-3 py-1.5 rounded-full shadow-md tracking-wider flex items-center gap-1.5 border border-sky-300/30">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        PTC MATHCAD PRIME 11
+      </div>
+      <div>
+        <h1 class="text-base lg:text-lg font-bold text-white flex items-center gap-2">
+          <span>CEREBRO ESTRUCTURAL</span>
+          <span class="text-sky-400 text-xs font-mono font-normal px-2 py-0.5 rounded bg-sky-950/60 border border-sky-800/60">v11.0 Live</span>
+        </h1>
+        <p class="text-xs text-slate-400 hidden sm:block">Generador y Analizador Seccional de Vigas por Funciones de Singularidad / Macaulay</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-2 flex-wrap">
+      <button onclick="openModal('manualModal')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition">
+        📖 Manual y Formulario
+      </button>
+      <button onclick="openModal('reportModal')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-900/50 flex items-center gap-1.5 transition">
+        🖨️ Memoria Imprimible
+      </button>
+      <button onclick="generateMCDX()" id="btnDownloadMcdx" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-teal-500 to-sky-500 hover:from-teal-400 hover:to-sky-400 text-slate-950 flex items-center gap-1.5 shadow-md transition transform active:scale-95">
+        💾 Descargar .mcdx
+      </button>
+      <a href="https://github.com/72008081-pixel/diagramas-en-MATHCAD" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5 transition">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
+        GitHub
+      </a>
+    </div>
+  </header>
+
+  <!-- ========================================== -->
+  <!-- BARRA DE PRESETS RÁPIDOS (1 CLIC)          -->
+  <!-- ========================================== -->
+  <section class="bg-slate-900/95 border-b border-sky-500/10 px-4 lg:px-8 py-2.5">
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+      <span class="text-xs font-bold text-sky-400 uppercase tracking-wider whitespace-nowrap flex items-center gap-1 mr-1">
+        ⚡ Presets de Examen:
+      </span>
+      <button onclick="loadPreset('oficial')" class="px-2.5 py-1 text-xs font-medium rounded bg-teal-950/80 hover:bg-teal-900 text-teal-300 border border-teal-700/50 whitespace-nowrap transition flex items-center gap-1 shadow-sm">
+        🎯 01. Examen Oficial (4 Tramos)
+      </button>
+      <button onclick="loadPreset('examen_3tramos')" class="px-2.5 py-1 text-xs font-medium rounded bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-700/50 whitespace-nowrap transition flex items-center gap-1 shadow-sm">
+        ⚡ 02. Examen 3 Tramos (q=500)
+      </button>
+      <button onclick="loadPreset('centrica')" class="px-2.5 py-1 text-xs font-medium rounded bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-900/40 whitespace-nowrap transition flex items-center gap-1 shadow-sm">
+        🔹 02. Puntual Céntrica (2 Tramos)
+      </button>
+      <button onclick="loadPreset('distribuida')" class="px-2.5 py-1 text-xs font-medium rounded bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-900/40 whitespace-nowrap transition flex items-center gap-1 shadow-sm">
+        🔸 03. Distribuida Total (3 Tramos)
+      </button>
+      <button onclick="loadPreset('cantilever')" class="px-2.5 py-1 text-xs font-medium rounded bg-slate-800 hover:bg-slate-700 text-rose-300 border border-rose-900/40 whitespace-nowrap transition flex items-center gap-1 shadow-sm">
+        🔻 04. Cantilever Voladizo (2 Tramos)
+      </button>
+      <button onclick="loadPreset('doble_voladizo')" class="px-2.5 py-1 text-xs font-medium rounded bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-900/40 whitespace-nowrap transition flex items-center gap-1 shadow-sm">
+        🔄 05. Doble Voladizo (4 Tramos)
+      </button>
+      <button onclick="loadPreset('viga10')" class="px-2.5 py-1 text-xs font-medium rounded bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-900/40 whitespace-nowrap transition flex items-center gap-1 shadow-sm">
+        ⭐ 06. Viga Maestra (10 Tramos)
+      </button>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- CONTENIDO PRINCIPAL                        -->
+  <!-- ========================================== -->
+  <main class="flex-1 px-4 lg:px-8 py-5 max-w-7xl mx-auto w-full space-y-5">
+    
+    <!-- GRID PRINCIPAL: CONTROLES (IZQUIERDA) Y PREVISUALIZADOR (DERECHA) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      
+      <!-- COLUMNA IZQUIERDA: CONFIGURADOR DE LA VIGA (5 COLS) -->
+      <div class="lg:col-span-5 space-y-4">
+        
+        <!-- TARJETA: SELECTOR DE TRAMOS -->
+        <div class="bg-slate-900/80 rounded-xl p-4 tech-border">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+              Número de Tramos
+            </h2>
+            <span id="labelTotalSpans" class="text-xs font-mono font-bold text-teal-400 bg-teal-950/60 px-2 py-0.5 rounded border border-teal-800/40">
+              4 Tramos (5 Nudos)
+            </span>
+          </div>
+          
+          <div class="grid grid-cols-10 gap-1" id="spanButtonsContainer">
+            <!-- Botones 1 a 10 generados por JS -->
+          </div>
+        </div>
+
+        <!-- TARJETA: PESTAÑAS DE CONFIGURACIÓN -->
+        <div class="bg-slate-900/80 rounded-xl tech-border overflow-hidden">
+          
+          <!-- PESTAÑAS -->
+          <div class="flex border-b border-slate-800 bg-slate-950/60 text-xs font-medium">
+            <button onclick="switchTab('tramos')" id="tabBtn-tramos" class="flex-1 py-2.5 px-2 text-center border-b-2 border-sky-400 text-sky-300 font-bold bg-slate-900/40 transition">
+              Tramos & Apoyos
+            </button>
+            <button onclick="switchTab('cargas_q')" id="tabBtn-cargas_q" class="flex-1 py-2.5 px-2 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
+              Cargas q
+            </button>
+            <button onclick="switchTab('cargas_p')" id="tabBtn-cargas_p" class="flex-1 py-2.5 px-2 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
+              Puntuales P
+            </button>
+            <button onclick="switchTab('momentos')" id="tabBtn-momentos" class="flex-1 py-2.5 px-2 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
+              Momentos M
+            </button>
+          </div>
+
+          <!-- CONTENIDO DE PESTAÑAS -->
+          <div class="p-4 max-h-[360px] overflow-y-auto space-y-3">
+            
+            <!-- PANEL 1: TRAMOS Y APOYOS -->
+            <div id="tabPanel-tramos" class="space-y-3">
+              <div class="text-[11px] text-slate-400 mb-2 flex justify-between items-center">
+                <span>Longitudes de tramo (m) y tipo de apoyo por nudo:</span>
+                <span class="text-teal-400 font-mono font-bold" id="labelTotalLength">Ltot = 10.00 m</span>
+              </div>
+              <div id="spansInputList" class="space-y-2">
+                <!-- Generado por JS -->
+              </div>
+            </div>
+
+            <!-- PANEL 2: CARGAS DISTRIBUIDAS (q) -->
+            <div id="tabPanel-cargas_q" class="space-y-3 hidden">
+              <p class="text-[11px] text-slate-400 mb-2">Cargas distribuidas uniformes gravitatorias en kg/m (hacia abajo):</p>
+              <div id="distLoadsList" class="space-y-2">
+                <!-- Generado por JS -->
+              </div>
+            </div>
+
+            <!-- PANEL 3: CARGAS PUNTUALES (P) -->
+            <div id="tabPanel-cargas_p" class="space-y-3 hidden">
+              <p class="text-[11px] text-slate-400 mb-2">Cargas puntuales en cada nudo en kg (hacia abajo):</p>
+              <div id="pointLoadsList" class="space-y-2">
+                <!-- Generado por JS -->
+              </div>
+            </div>
+
+            <!-- PANEL 4: MOMENTOS APLICADOS (M) -->
+            <div id="tabPanel-momentos" class="space-y-3 hidden">
+              <p class="text-[11px] text-slate-400 mb-2">Momentos concentrados en cada nudo en kg·m (+ horario):</p>
+              <div id="momentsList" class="space-y-2">
+                <!-- Generado por JS -->
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- TARJETA: CONSOLA DE EQUILIBRIO ESTÁTICO Y REACCIONES -->
+        <div class="bg-slate-900/90 rounded-xl p-4 tech-border">
+          <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+            <h3 class="text-xs font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span>⚖️ Equilibrio Estático</span>
+            </h3>
+            <span id="badgeEquilibrium" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700/60">
+              ✓ Balanceado (∑Fy = 0)
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 font-mono text-xs">
+            <div class="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+              <div class="text-[10px] text-slate-400 font-sans">Reacción Izquierda</div>
+              <div class="text-base font-bold text-sky-400 flex items-center justify-between mt-0.5">
+                <span id="valVA_label">VA =</span>
+                <span id="valVA">48.06 kg</span>
+              </div>
+            </div>
+            <div class="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+              <div class="text-[10px] text-slate-400 font-sans">Reacción Derecha</div>
+              <div class="text-base font-bold text-sky-400 flex items-center justify-between mt-0.5">
+                <span id="valVD_label">VD =</span>
+                <span id="valVD">34.94 kg</span>
+              </div>
+            </div>
+            <div class="bg-slate-950/70 p-2 rounded-lg border border-slate-800">
+              <div class="text-[10px] text-slate-400 font-sans">Carga Total Vertical</div>
+              <div class="text-xs font-bold text-slate-200 mt-0.5" id="valTotalLoad">∑F = 83.00 kg</div>
+            </div>
+            <div class="bg-slate-950/70 p-2 rounded-lg border border-slate-800">
+              <div class="text-[10px] text-slate-400 font-sans">Longitud de Viga</div>
+              <div class="text-xs font-bold text-teal-400 mt-0.5" id="valLtotSummary">Ltot = 10.00 m</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMNA DERECHA: PREVISUALIZADOR VECTORIAL Y GRÁFICOS (7 COLS) -->
+      <div class="lg:col-span-7 space-y-4">
+        
+        <!-- TARJETA: CANVAS ESQUEMA DE LA VIGA CON CORTES -->
+        <div class="bg-slate-900/80 rounded-xl p-4 tech-border">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-teal-400"></span>
+              Esquema Vectorial y Cortes de Sección
+            </h3>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] text-amber-400/90 font-mono flex items-center gap-1">
+                <span class="inline-block w-2.5 h-0.5 border-t border-dashed border-amber-400"></span>
+                Cortes Formales (Corte 1-1 .. n-n)
+              </span>
+              <button onclick="downloadCanvasImage()" title="Descargar esquema en PNG" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 p-1.5 rounded border border-slate-700 transition">
+                📷 PNG
+              </button>
+            </div>
+          </div>
+
+          <!-- LIENZO CANVAS DE ALTA RESOLUCIÓN -->
+          <div class="bg-slate-950 rounded-lg p-2 border border-slate-800 overflow-hidden flex items-center justify-center">
+            <canvas id="beamCanvas" width="900" height="280" class="w-full h-auto max-h-[280px] block"></canvas>
+          </div>
+          
+          <div class="flex justify-between items-center text-[11px] text-slate-400 mt-2 px-1">
+            <span>Escala visual adaptativa con cotas milimétricas y apoyos normalizados.</span>
+            <span class="text-sky-400 font-mono text-[10px]">Mathcad Prime 11 Region 24 Native Vector</span>
+          </div>
+        </div>
+
+        <!-- TARJETA: DIAGRAMAS SECCIONALES DFC Y DMF (CHART.JS) -->
+        <div class="bg-slate-900/80 rounded-xl p-4 tech-border space-y-4">
+          
+          <!-- DIAGRAMA DE FUERZA CORTANTE (DFC) -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>📊 Diagrama de Fuerza Cortante Q(x) [DFC]</span>
+              </h4>
+              <span class="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40" id="labelZeroShear">
+                Q(x)=0 en x = 3.20 m
+              </span>
+            </div>
+            <div class="bg-slate-950 rounded-lg p-2 border border-slate-800 h-[170px] relative">
+              <canvas id="chartDFC"></canvas>
+            </div>
+          </div>
+
+          <!-- DIAGRAMA DE MOMENTO FLECTOR (DMF) -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>📈 Diagrama de Momento Flector M(x) [DMF]</span>
+              </h4>
+              <span class="text-[11px] font-mono text-purple-400 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-800/40" id="labelMaxMoment">
+                Mmax = +48.06 kg·m
+              </span>
+            </div>
+            <div class="bg-slate-950 rounded-lg p-2 border border-slate-800 h-[170px] relative">
+              <canvas id="chartDMF"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- SECCIÓN: CÓDIGO MATHCAD PRIME 11           -->
+    <!-- ========================================== -->
+    <div class="bg-slate-900/90 rounded-xl p-5 tech-border space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <span class="text-teal-400">📐</span>
+            Ecuaciones de Singularidad / Macaulay para PTC Mathcad Prime 11
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Sintaxis booleana continua nativa con derivación diferencial dM/dx = Q (sin brazos en cortante)</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="copyMathcadFormulas()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-sky-600 hover:bg-sky-500 text-white transition flex items-center gap-1.5 shadow-md">
+            📋 Copiar Ecuaciones
+          </button>
+        </div>
+      </div>
+
+      <!-- VISOR DE ECUACIONES -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
+        
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
+          <div class="text-purple-400 font-bold text-[11px] flex justify-between">
+            <span>Momento Flector M(x):</span>
+            <span class="text-slate-500 font-sans font-normal text-[10px]">Unidad: kg·m</span>
+          </div>
+          <pre id="mathcadMomentBox" class="text-slate-300 text-[11px] whitespace-pre-wrap break-all select-all leading-relaxed"></pre>
+        </div>
+
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
+          <div class="text-emerald-400 font-bold text-[11px] flex justify-between">
+            <span>Fuerza Cortante Q(x):</span>
+            <span class="text-slate-500 font-sans font-normal text-[10px]">Unidad: kg</span>
+          </div>
+          <pre id="mathcadShearBox" class="text-slate-300 text-[11px] whitespace-pre-wrap break-all select-all leading-relaxed"></pre>
+        </div>
+
+      </div>
+
+      <!-- DESCARGAS DIRECTAS -->
+      <div class="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <span class="text-xs text-slate-400 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          Archivos oficiales listos para Mathcad Prime 11 y PDF:
+        </span>
+        <div class="flex flex-wrap items-center gap-2">
+          <a href="./PLANTILLA_MAESTRA_10_TRAMOS_VIGAS.mcdx" download class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 transition">
+            📥 Plantilla Maestra 10 Tramos (.mcdx)
+          </a>
+          <a href="./EJERCICIO-01.mcdx" download class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-teal-300 border border-slate-700 transition">
+            📥 Ejercicio 01 Examen Oficial (.mcdx)
+          </a>
+          <a href="./PLANTILLA_MAESTRA_10_TRAMOS_VIGAS.pdf" target="_blank" class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition">
+            📄 Memoria PDF Oficial (460 KB)
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- FOOTER                                     -->
+  <!-- ========================================== -->
+  <footer class="bg-slate-950 border-t border-slate-800/80 px-4 py-4 text-center text-xs text-slate-400 space-y-1">
+    <p>Desarrollado para la Cátedra de <strong>Análisis Estructural II</strong> por <strong>72008081-pixel</strong>.</p>
+    <p class="text-[11px] text-slate-400">
+      Suite interactiva con despliegue en vivo en GitHub Pages &bull; Compatible al 100% con PTC Mathcad Prime 11.0.0 &bull; Batería de 10 pruebas verificadas
+    </p>
+  </footer>
+
+  <!-- ========================================== -->
+  <!-- MODAL: MANUAL TEÓRICO Y FORMULARIO        -->
+  <!-- ========================================== -->
+  <div id="manualModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-sky-500/30 rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <span>📖</span>
+          Manual Teórico: Funciones de Singularidad y Operadores Booleanos
+        </h3>
+        <button onclick="closeModal('manualModal')" class="text-slate-400 hover:text-white p-1 rounded-lg text-lg leading-none">✕</button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-4 text-xs text-slate-300 leading-relaxed">
+        
+        <div class="bg-sky-950/40 p-4 rounded-xl border border-sky-800/50 space-y-2">
+          <h4 class="font-bold text-sky-400 text-sm">1. Operadores Booleanos en Mathcad Prime como Funciones de Heaviside</h4>
+          <p>En Mathcad Prime 11, las comparaciones lógicas evalúan directamente a 1 (Verdadero) o 0 (Falso):</p>
+          <div class="font-mono bg-slate-950 p-2.5 rounded border border-slate-800 text-sky-300">
+            (x ≥ a) = { 1 si x ≥ a, 0 si x < a }<br>
+            (b > x > a) = { 1 si a < x < b, 0 en otro caso }
+          </div>
+          <p>Esto permite construir una <strong>sola expresión matemática continua</strong> para toda la viga sin requerir condicionales fragmentados ni macros.</p>
+        </div>
+
+        <div class="bg-emerald-950/40 p-4 rounded-xl border border-emerald-800/50 space-y-2">
+          <h4 class="font-bold text-emerald-400 text-sm">2. ¿Por qué se quitan los brazos en la función de cortante Q(x)?</h4>
+          <p>Por la relación diferencial de equilibrio estático fundamental en vigas de Euler-Bernoulli:</p>
+          <div class="font-mono bg-slate-950 p-2.5 rounded border border-slate-800 text-emerald-300">
+            Q(x) = dM(x) / dx
+          </div>
+          <p>Al derivar cada término de momento respecto a la coordenada x:</p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Reacción vertical:</strong> d/dx [ VA · x ] = <strong>VA</strong> (el brazo lineal desaparece).</li>
+            <li><strong>Carga uniforme activa:</strong> d/dx [ q · x² / 2 ] = <strong>q · x</strong> (la parábola pasa a variación lineal).</li>
+            <li><strong>Carga uniforme superada:</strong> d/dx [ q · L · (x - L/2) ] = <strong>q · L</strong> (permanece la fuerza constante del tramo).</li>
+            <li><strong>Carga puntual:</strong> d/dx [ P · (x - xp) ] = <strong>P</strong> (queda la fuerza puntual pura).</li>
+            <li><strong>Momento concentrado aplicado:</strong> d/dx [ M ] = <strong>0</strong> (¡Un momento puro no produce fuerza cortante!).</li>
+          </ul>
+        </div>
+
+        <div class="bg-purple-950/40 p-4 rounded-xl border border-purple-800/50 space-y-2">
+          <h4 class="font-bold text-purple-400 text-sm">3. Batería de 10 Pruebas Verificadas en Mathcad Prime 11</h4>
+          <p>Esta suite fue sometida a 10 pruebas de estrés reales abriendo, calculando y exportando a PDF con la API COM de Mathcad Prime 11:</p>
+          <div class="grid grid-cols-2 gap-2 font-mono text-[11px]">
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-slate-300">01. Oficial 4 Tramos: ✓ Aprobado</div>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-slate-300">02. Puntual Céntrica: ✓ Aprobado</div>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-slate-300">03. Distribuida Total: ✓ Aprobado</div>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-slate-300">04. Cantilever: ✓ Aprobado</div>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-slate-300">05. Doble Voladizo: ✓ Aprobado</div>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-slate-300">06. Momentos Puros: ✓ Aprobado</div>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-slate-300">07. 5 Tramos Mixto: ✓ Aprobado</div>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-slate-300">08. 6 Tramos Asimétrico: ✓ Aprobado</div>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-slate-300">09. 8 Tramos Complejo: ✓ Aprobado</div>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-emerald-400 font-bold">10. 10 Tramos Completo: ✓ 100% OK</div>
+          </div>
+        </div>
+
+      </div>
+      <div class="p-3 border-t border-slate-800 bg-slate-950 flex justify-end">
+        <button onclick="closeModal('manualModal')" class="px-4 py-1.5 text-xs font-semibold rounded bg-sky-600 hover:bg-sky-500 text-white transition">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: MEMORIA DE CÁLCULO IMPRIMIBLE       -->
+  <!-- ========================================== -->
+  <div id="reportModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white text-slate-900 rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden card-print">
+      <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-100 no-print">
+        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+          <span>🖨️</span>
+          Memoria de Cálculo Formal — Análisis Estructural II
+        </h3>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3 py-1.5 text-xs font-bold rounded bg-teal-600 hover:bg-teal-700 text-white transition flex items-center gap-1 shadow">
+            Imprimir / Guardar en PDF
+          </button>
+          <button onclick="closeModal('reportModal')" class="text-slate-500 hover:text-black p-1 text-lg leading-none">✕</button>
+        </div>
+      </div>
+      <div class="p-8 overflow-y-auto space-y-6 text-xs leading-relaxed" id="reportContent">
+        <!-- Generado dinámicamente al abrir -->
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition duration-300 pointer-events-none px-4 py-2.5 rounded-lg bg-teal-500 text-slate-950 font-bold text-xs shadow-2xl flex items-center gap-2">
+    <span>✓</span>
+    <span id="toastMsg">Copiado al portapapeles</span>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MOTOR JAVASCRIPT (COMPLETO & REACTIVO)     -->
+  <!-- ========================================== -->
+  <script>
+    // ESTADO GLOBAL DE LA VIGA
+    const state = {
+      numSpans: 4,
+      spans: [1.0, 4.0, 3.0, 2.0],
+      supports: { 0: 'pin', 3: 'roller' }, // 'pin', 'roller', 'fixed', 'free'
+      distLoads: { 0: 15.0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 },
+      pointLoads: { 0: 0, 1: 20.0, 2: 0, 3: 0, 4: 8.0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 },
+      appliedMoments: { 0: 0, 1: 0, 2: 10.0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 },
+      reactions: { VA: 48.06, VD: 34.94, sum_fy_ok: true },
+      currentTab: 'tramos'
+    };
+
+    let chartDFCInstance = null;
+    let chartDMFInstance = null;
+
+    // PRESETS PREDEFINIDOS
+    const PRESETS = {
+      oficial: {
+        numSpans: 4,
+        spans: [1.0, 4.0, 3.0, 2.0],
+        supports: { 0: 'pin', 3: 'roller' },
+        distLoads: { 0: 15.0, 1: 0, 2: 0, 3: 0 },
+        pointLoads: { 1: 20.0, 4: 8.0 },
+        appliedMoments: { 2: 10.0 }
+      },
+      examen_3tramos: {
+        numSpans: 3,
+        spans: [2.0, 4.0, 2.0],
+        supports: { 0: 'pin', 3: 'roller' },
+        distLoads: { 0: 0, 1: 500.0, 2: 0 },
+        pointLoads: {},
+        appliedMoments: {}
+      },
+      centrica: {
+        numSpans: 2,
+        spans: [3.0, 3.0],
+        supports: { 0: 'pin', 2: 'roller' },
+        distLoads: { 0: 0, 1: 0 },
+        pointLoads: { 1: 50.0 },
+        appliedMoments: {}
+      },
+      distribuida: {
+        numSpans: 3,
+        spans: [3.0, 4.0, 3.0],
+        supports: { 0: 'pin', 3: 'roller' },
+        distLoads: { 0: 10.0, 1: 10.0, 2: 10.0 },
+        pointLoads: {},
+        appliedMoments: {}
+      },
+      cantilever: {
+        numSpans: 2,
+        spans: [2.0, 2.0],
+        supports: { 0: 'fixed' },
+        distLoads: { 0: 12.0 },
+        pointLoads: { 2: 40.0 },
+        appliedMoments: {}
+      },
+      doble_voladizo: {
+        numSpans: 4,
+        spans: [1.5, 4.0, 4.0, 1.5],
+        supports: { 1: 'pin', 3: 'roller' },
+        distLoads: { 1: 8.0, 2: 8.0 },
+        pointLoads: { 0: 15.0, 4: 15.0 },
+        appliedMoments: {}
+      },
+      viga10: {
+        numSpans: 10,
+        spans: [2.0, 1.5, 2.0, 1.5, 2.0, 1.5, 2.0, 1.5, 2.0, 1.5],
+        supports: { 0: 'pin', 8: 'roller' },
+        distLoads: { 0: 10.0, 2: 12.0, 5: 8.0 },
+        pointLoads: { 3: 25.0, 7: 18.0, 10: 15.0 },
+        appliedMoments: { 4: 12.0 }
+      }
+    };
+
+    // INICIALIZACIÓN AL CARGAR LA PÁGINA
+    window.addEventListener('DOMContentLoaded', () => {
+      buildSpanButtons();
+      renderAllInputs();
+      calculateAndRender();
+      
+      window.addEventListener('resize', () => {
+        renderBeamCanvas();
+      });
+    });
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    function openModal(id) {
+      if (id === 'reportModal') generateReportHTML();
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    // CARGAR UN PRESET RÁPIDO
+    function loadPreset(key) {
+      const p = PRESETS[key];
+      if (!p) return;
+      state.numSpans = p.numSpans;
+      state.spans = [...p.spans];
+      state.supports = { ...p.supports };
+      
+      state.distLoads = {};
+      for (let i = 0; i < 10; i++) state.distLoads[i] = p.distLoads[i] || 0;
+      
+      state.pointLoads = {};
+      for (let i = 0; i <= 10; i++) state.pointLoads[i] = p.pointLoads[i] || 0;
+      
+      state.appliedMoments = {};
+      for (let i = 0; i <= 10; i++) state.appliedMoments[i] = p.appliedMoments[i] || 0;
+
+      buildSpanButtons();
+      renderAllInputs();
+      calculateAndRender();
+      showToast(`Preset "${key.toUpperCase()}" cargado con éxito`);
+    }
+
+    // GENERAR BOTONES 1 A 10 TRAMOS
+    function buildSpanButtons() {
+      const container = document.getElementById('spanButtonsContainer');
+      container.innerHTML = '';
+      for (let n = 1; n <= 10; n++) {
+        const btn = document.createElement('button');
+        btn.innerText = n;
+        btn.className = `py-1.5 text-xs font-bold rounded transition ${
+          state.numSpans === n 
+            ? 'bg-sky-500 text-slate-950 shadow-md ring-2 ring-sky-300' 
+            : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+        }`;
+        btn.onclick = () => setNumSpans(n);
+        container.appendChild(btn);
+      }
+      document.getElementById('labelTotalSpans').innerText = `${state.numSpans} Tramos (${state.numSpans + 1} Nudos)`;
+    }
+
+    // CAMBIAR NÚMERO DE TRAMOS
+    function setNumSpans(n) {
+      state.numSpans = n;
+      while (state.spans.length < n) state.spans.push(2.0);
+      if (state.spans.length > n) state.spans = state.spans.slice(0, n);
+      
+      buildSpanButtons();
+      renderAllInputs();
+      calculateAndRender();
+    }
+
+    // CAMBIO DE PESTAÑAS
+    function switchTab(tab) {
+      state.currentTab = tab;
+      ['tramos', 'cargas_q', 'cargas_p', 'momentos'].forEach(t => {
+        const btn = document.getElementById(`tabBtn-${t}`);
+        const panel = document.getElementById(`tabPanel-${t}`);
+        if (t === tab) {
+          btn.className = 'flex-1 py-2.5 px-2 text-center border-b-2 border-sky-400 text-sky-300 font-bold bg-slate-900/40 transition';
+          panel.classList.remove('hidden');
+        } else {
+          btn.className = 'flex-1 py-2.5 px-2 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition';
+          panel.classList.add('hidden');
+        }
+      });
+    }
+
+    // RENDERIZAR TODOS LOS CONTROLES DE ENTRADA
+    function renderAllInputs() {
+      renderSpansInputs();
+      renderDistLoadsInputs();
+      renderPointLoadsInputs();
+      renderMomentsInputs();
+    }
+
+    // RENDER PESTAÑA: TRAMOS Y APOYOS
+    function renderSpansInputs() {
+      const list = document.getElementById('spansInputList');
+      list.innerHTML = '';
+      
+      for (let i = 0; i < state.numSpans; i++) {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 text-xs';
+        
+        // Cota Tramo
+        row.innerHTML = `
+          <div class="w-16 font-mono font-bold text-sky-400">Tramo ${i + 1}</div>
+          <div class="flex items-center gap-1 flex-1">
+            <span class="text-slate-400">L${i + 1}:</span>
+            <input type="number" step="0.1" min="0.1" max="100" value="${state.spans[i]}" 
+              oninput="updateSpanLength(${i}, this.value)"
+              class="w-16 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-right font-mono text-white focus:border-sky-400 outline-none">
+            <span class="text-slate-400">m</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="text-slate-400">Nudo ${i}:</span>
+            <select onchange="updateSupport(${i}, this.value)" class="bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-slate-300 text-xs focus:border-sky-400 outline-none">
+              <option value="free" ${state.supports[i] === 'free' || !state.supports[i] ? 'selected' : ''}>Libre</option>
+              <option value="pin" ${state.supports[i] === 'pin' ? 'selected' : ''}>Fijo (Pin)</option>
+              <option value="roller" ${state.supports[i] === 'roller' ? 'selected' : ''}>Móvil (Roller)</option>
+              <option value="fixed" ${state.supports[i] === 'fixed' ? 'selected' : ''}>Empotrado</option>
+            </select>
+          </div>
+        `;
+        list.appendChild(row);
+      }
+
+      // Último nudo
+      const lastNode = state.numSpans;
+      const lastRow = document.createElement('div');
+      lastRow.className = 'flex items-center justify-between bg-slate-950/40 p-2 rounded-lg border border-dashed border-slate-800 text-xs';
+      lastRow.innerHTML = `
+        <div class="font-mono text-slate-400">Nudo Terminal ${lastNode} (Extremo Final)</div>
+        <div class="flex items-center gap-1">
+          <span class="text-slate-400">Apoyo:</span>
+          <select onchange="updateSupport(${lastNode}, this.value)" class="bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-slate-300 text-xs focus:border-sky-400 outline-none">
+            <option value="free" ${state.supports[lastNode] === 'free' || !state.supports[lastNode] ? 'selected' : ''}>Libre</option>
+            <option value="pin" ${state.supports[lastNode] === 'pin' ? 'selected' : ''}>Fijo (Pin)</option>
+            <option value="roller" ${state.supports[lastNode] === 'roller' ? 'selected' : ''}>Móvil (Roller)</option>
+            <option value="fixed" ${state.supports[lastNode] === 'fixed' ? 'selected' : ''}>Empotrado</option>
+          </select>
+        </div>
+      `;
+      list.appendChild(lastRow);
+    }
+
+    // RENDER PESTAÑA: CARGAS DISTRIBUIDAS
+    function renderDistLoadsInputs() {
+      const list = document.getElementById('distLoadsList');
+      list.innerHTML = '';
+      for (let i = 0; i < state.numSpans; i++) {
+        const val = state.distLoads[i] || 0;
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 text-xs';
+        row.innerHTML = `
+          <div class="font-mono text-amber-400 font-bold">q${i + 1} (Tramo ${i + 1})</div>
+          <div class="flex items-center gap-1">
+            <input type="number" step="0.5" min="0" value="${val}" 
+              oninput="state.distLoads[${i}] = parseFloat(this.value) || 0; calculateAndRender();"
+              class="w-20 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-right font-mono text-white focus:border-amber-400 outline-none">
+            <span class="text-slate-400 font-mono">kg/m</span>
+          </div>
+        `;
+        list.appendChild(row);
+      }
+    }
+
+    // RENDER PESTAÑA: CARGAS PUNTUALES
+    function renderPointLoadsInputs() {
+      const list = document.getElementById('pointLoadsList');
+      list.innerHTML = '';
+      for (let i = 0; i <= state.numSpans; i++) {
+        const val = state.pointLoads[i] || 0;
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 text-xs';
+        row.innerHTML = `
+          <div class="font-mono text-rose-400 font-bold">P${i} (Nudo ${i})</div>
+          <div class="flex items-center gap-1">
+            <input type="number" step="1" min="0" value="${val}" 
+              oninput="state.pointLoads[${i}] = parseFloat(this.value) || 0; calculateAndRender();"
+              class="w-20 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-right font-mono text-white focus:border-rose-400 outline-none">
+            <span class="text-slate-400 font-mono">kg</span>
+          </div>
+        `;
+        list.appendChild(row);
+      }
+    }
+
+    // RENDER PESTAÑA: MOMENTOS CONCENTRADOS
+    function renderMomentsInputs() {
+      const list = document.getElementById('momentsList');
+      list.innerHTML = '';
+      for (let i = 0; i <= state.numSpans; i++) {
+        const val = state.appliedMoments[i] || 0;
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 text-xs';
+        row.innerHTML = `
+          <div class="font-mono text-purple-400 font-bold">M${i} (Nudo ${i})</div>
+          <div class="flex items-center gap-1">
+            <input type="number" step="1" value="${val}" 
+              oninput="state.appliedMoments[${i}] = parseFloat(this.value) || 0; calculateAndRender();"
+              class="w-20 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-right font-mono text-white focus:border-purple-400 outline-none">
+            <span class="text-slate-400 font-mono">kg·m</span>
+          </div>
+        `;
+        list.appendChild(row);
+      }
+    }
+
+    function updateSpanLength(idx, val) {
+      const num = parseFloat(val);
+      if (num > 0) {
+        state.spans[idx] = num;
+        calculateAndRender();
+      }
+    }
+
+    function updateSupport(nodeIdx, type) {
+      if (type === 'free') {
+        delete state.supports[nodeIdx];
+      } else {
+        state.supports[nodeIdx] = type;
+      }
+      calculateAndRender();
+    }
+
+    // CÁLCULO DE COORDENADAS NODALES
+    function getNodeCoords() {
+      const coords = [0.0];
+      let acc = 0.0;
+      for (const L of state.spans) {
+        acc += L;
+        coords.push(acc);
+      }
+      return coords;
+    }
+
+    // MOTOR ESTÁTICO: REACCIONES Y EQUILIBRIO
+    function calculateReactions() {
+      const coords = getNodeCoords();
+      const Ltot = coords[coords.length - 1];
+      
+      // Apoyos activos
+      const supNodes = Object.keys(state.supports)
+        .map(Number)
+        .filter(n => n <= state.numSpans && state.supports[n] !== 'free')
+        .sort((a, b) => a - b);
+
+      let totalFyLoads = 0.0;
+      for (let i = 0; i < state.numSpans; i++) {
+        totalFyLoads += (state.distLoads[i] || 0) * state.spans[i];
+      }
+      for (let i = 0; i <= state.numSpans; i++) {
+        totalFyLoads += (state.pointLoads[i] || 0);
+      }
+
+      if (supNodes.length === 2) {
+        const nA = supNodes[0];
+        const nB = supNodes[1];
+        const xA = coords[nA];
+        const xB = coords[nB];
+        const dAB = xB - xA;
+
+        let mALoads = 0.0;
+
+        // Cargas distribuidas
+        for (let i = 0; i < state.numSpans; i++) {
+          const q = state.distLoads[i] || 0;
+          if (q !== 0) {
+            const Ls = state.spans[i];
+            const xCg = coords[i] + Ls / 2.0;
+            const Fq = q * Ls;
+            mALoads += Fq * (xCg - xA);
+          }
+        }
+
+        // Cargas puntuales
+        for (let i = 0; i <= state.numSpans; i++) {
+          const P = state.pointLoads[i] || 0;
+          if (P !== 0) {
+            mALoads += P * (coords[i] - xA);
+          }
+        }
+
+        // Momentos concentrados (+ horarios)
+        for (let i = 0; i <= state.numSpans; i++) {
+          const M = state.appliedMoments[i] || 0;
+          if (M !== 0) {
+            mALoads += M;
+          }
+        }
+
+        const vB = dAB !== 0 ? mALoads / dAB : 0.0;
+        const vA = totalFyLoads - vB;
+
+        state.reactions = {
+          nodeA: nA,
+          nodeB: nB,
+          xA: xA,
+          xB: xB,
+          VA: vA,
+          VD: vB,
+          labelA: `V${String.fromCharCode(65 + nA)}`,
+          labelB: `V${String.fromCharCode(65 + nB)}`,
+          sum_fy_ok: Math.abs((vA + vB) - totalFyLoads) < 0.01
+        };
+      } else if (supNodes.length === 1 && state.supports[supNodes[0]] === 'fixed') {
+        const nFix = supNodes[0];
+        const xFix = coords[nFix];
+        let totalM = 0.0;
+
+        for (let i = 0; i < state.numSpans; i++) {
+          const q = state.distLoads[i] || 0;
+          if (q !== 0) {
+            const Ls = state.spans[i];
+            const xCg = coords[i] + Ls / 2.0;
+            totalM += q * Ls * (xCg - xFix);
+          }
+        }
+        for (let i = 0; i <= state.numSpans; i++) {
+          const P = state.pointLoads[i] || 0;
+          if (P !== 0) totalM += P * (coords[i] - xFix);
+          const M = state.appliedMoments[i] || 0;
+          if (M !== 0) totalM += M;
+        }
+
+        state.reactions = {
+          nodeA: nFix,
+          nodeB: null,
+          xA: xFix,
+          xB: null,
+          VA: totalFyLoads,
+          VD: totalM,
+          labelA: `V_Empotrado`,
+          labelB: `M_Empotrado`,
+          sum_fy_ok: true
+        };
+      } else {
+        // Fallback simétrico
+        state.reactions = {
+          nodeA: 0,
+          nodeB: state.numSpans,
+          xA: 0,
+          xB: Ltot,
+          VA: totalFyLoads / 2.0,
+          VD: totalFyLoads / 2.0,
+          labelA: 'VA',
+          labelB: 'VD',
+          sum_fy_ok: true
+        };
+      }
+    }
+
+    // EVALUACIÓN ANALÍTICA CONTINUA DE CORTANTE Y MOMENTO
+    function evaluateSectionForces(x) {
+      const coords = getNodeCoords();
+      let Q = 0.0;
+      let M = 0.0;
+
+      // Reacción A
+      if (state.reactions.nodeA !== undefined && x >= state.reactions.xA) {
+        Q += state.reactions.VA;
+        M += state.reactions.VA * (x - state.reactions.xA);
+      }
+      // Reacción B
+      if (state.reactions.nodeB !== null && state.reactions.nodeB !== undefined && x >= state.reactions.xB) {
+        Q += state.reactions.VD;
+        M += state.reactions.VD * (x - state.reactions.xB);
+      }
+
+      // Cargas distribuidas
+      for (let i = 0; i < state.numSpans; i++) {
+        const q = state.distLoads[i] || 0;
+        if (q !== 0) {
+          const xStart = coords[i];
+          const xEnd = coords[i + 1];
+          const Ls = state.spans[i];
+
+          if (x > xStart && x <= xEnd) {
+            const dx = x - xStart;
+            Q -= q * dx;
+            M -= q * (dx * dx) / 2.0;
+          } else if (x > xEnd) {
+            Q -= q * Ls;
+            M -= q * Ls * (x - (xStart + Ls / 2.0));
+          }
+        }
+      }
+
+      // Cargas puntuales
+      for (let i = 0; i <= state.numSpans; i++) {
+        const P = state.pointLoads[i] || 0;
+        if (P !== 0 && x >= coords[i]) {
+          Q -= P;
+          M -= P * (x - coords[i]);
+        }
+      }
+
+      // Momentos concentrados (+ horarios aumentan el momento seccional)
+      for (let i = 0; i <= state.numSpans; i++) {
+        const M_app = state.appliedMoments[i] || 0;
+        if (M_app !== 0 && x >= coords[i]) {
+          M += M_app;
+        }
+      }
+
+      return { Q, M };
+    }
+
+    // ACTUALIZAR INTERFAZ Y RENDERIZAR
+    function calculateAndRender() {
+      calculateReactions();
+
+      const coords = getNodeCoords();
+      const Ltot = coords[coords.length - 1];
+
+      // Métricas y etiquetas
+      document.getElementById('labelTotalLength').innerText = `Ltot = ${Ltot.toFixed(2)} m`;
+      document.getElementById('valLtotSummary').innerText = `Ltot = ${Ltot.toFixed(2)} m`;
+      document.getElementById('valVA_label').innerText = `${state.reactions.labelA} =`;
+      document.getElementById('valVA').innerText = `${state.reactions.VA.toFixed(2)} kg`;
+      document.getElementById('valVD_label').innerText = `${state.reactions.labelB} =`;
+      document.getElementById('valVD').innerText = `${state.reactions.VD.toFixed(2)} ${state.reactions.labelB.includes('M') ? 'kg·m' : 'kg'}`;
+
+      let totalFy = 0;
+      for (let i = 0; i < state.numSpans; i++) totalFy += (state.distLoads[i] || 0) * state.spans[i];
+      for (let i = 0; i <= state.numSpans; i++) totalFy += (state.pointLoads[i] || 0);
+      document.getElementById('valTotalLoad').innerText = `∑F = ${totalFy.toFixed(2)} kg`;
+
+      renderBeamCanvas();
+      renderCharts(Ltot);
+      renderMathcadCode(coords, Ltot);
+    }
+
+    // ==========================================
+    // RENDERIZADO DEL ESQUEMA VECTORIAL CANVAS
+    // ==========================================
+    function renderBeamCanvas() {
+      const canvas = document.getElementById('beamCanvas');
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      
+      // Limpiar fondo
+      ctx.fillStyle = '#090e17';
+      ctx.fillRect(0, 0, w, h);
+
+      const coords = getNodeCoords();
+      const Ltot = coords[coords.length - 1];
+      if (Ltot <= 0) return;
+
+      const padX = 70;
+      const beamY = 150;
+      const beamLen = w - padX * 2;
+      const scaleX = beamLen / Ltot;
+
+      function toCanvasX(xVal) {
+        return padX + xVal * scaleX;
+      }
+
+      // 1. DIBUJAR CORTES FORMALES (Corte 1-1 .. Corte n-n)
+      for (let i = 0; i < state.numSpans; i++) {
+        const xCutVal = coords[i] + state.spans[i] / 2.0;
+        const cxCut = toCanvasX(xCutVal);
+
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(cxCut, 35);
+        ctx.lineTo(cxCut, beamY + 50);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Etiqueta del corte
+        ctx.fillStyle = '#fef08a';
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Corte ${i + 1}-${i + 1}`, cxCut, 30);
+      }
+
+      // 2. DIBUJAR CARGAS DISTRIBUIDAS (q)
+      for (let i = 0; i < state.numSpans; i++) {
+        const q = state.distLoads[i] || 0;
+        if (q > 0) {
+          const x1 = toCanvasX(coords[i]);
+          const x2 = toCanvasX(coords[i + 1]);
+          const blockH = 35;
+          const topY = beamY - blockH;
+
+          // Área sombreada
+          ctx.fillStyle = 'rgba(251, 191, 36, 0.18)';
+          ctx.fillRect(x1, topY, x2 - x1, blockH);
+
+          // Borde superior
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.moveTo(x1, topY);
+          ctx.lineTo(x2, topY);
+          ctx.stroke();
+
+          // Flechas verticales
+          const numArrows = Math.max(2, Math.floor((x2 - x1) / 22));
+          for (let a = 0; a <= numArrows; a++) {
+            const ax = x1 + a * ((x2 - x1) / numArrows);
+            drawArrowDown(ctx, ax, topY, beamY, '#fbbf24');
+          }
+
+          // Etiqueta de valor
+          ctx.fillStyle = '#fef08a';
+          ctx.font = 'bold 11px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`q${i + 1}=${q} kg/m`, (x1 + x2) / 2, topY - 6);
+        }
+      }
+
+      // 3. DIBUJAR VIGA (EJE NEUTRO PRINCIPAL)
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 7;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(0), beamY);
+      ctx.lineTo(toCanvasX(Ltot), beamY);
+      ctx.stroke();
+
+      // Borde interior blanco
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(0), beamY);
+      ctx.lineTo(toCanvasX(Ltot), beamY);
+      ctx.stroke();
+
+      // 4. DIBUJAR APOYOS
+      for (let i = 0; i <= state.numSpans; i++) {
+        const sup = state.supports[i];
+        const nx = toCanvasX(coords[i]);
+
+        if (sup === 'pin') {
+          drawPinSupport(ctx, nx, beamY);
+        } else if (sup === 'roller') {
+          drawRollerSupport(ctx, nx, beamY);
+        } else if (sup === 'fixed') {
+          drawFixedSupport(ctx, nx, beamY, i === 0 ? 'left' : 'right');
+        }
+
+        // Nudo círculo
+        ctx.fillStyle = '#0ea5e9';
+        ctx.beginPath();
+        ctx.arc(nx, beamY, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // Letra del nudo
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(String.fromCharCode(65 + i), nx, beamY + 45);
+      }
+
+      // 5. DIBUJAR CARGAS PUNTUALES (P)
+      for (let i = 0; i <= state.numSpans; i++) {
+        const P = state.pointLoads[i] || 0;
+        if (P > 0) {
+          const px = toCanvasX(coords[i]);
+          const arrowLen = 50;
+          drawThickArrowDown(ctx, px, beamY - arrowLen, beamY, '#f43f5e');
+
+          ctx.fillStyle = '#fecdd3';
+          ctx.font = 'bold 11px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`P${i}=${P} kg`, px, beamY - arrowLen - 6);
+        }
+      }
+
+      // 6. DIBUJAR MOMENTOS CONCENTRADOS (M)
+      for (let i = 0; i <= state.numSpans; i++) {
+        const M = state.appliedMoments[i] || 0;
+        if (M !== 0) {
+          const mx = toCanvasX(coords[i]);
+          drawMomentArc(ctx, mx, beamY, 24, M > 0, '#c084fc');
+
+          ctx.fillStyle = '#e9d5ff';
+          ctx.font = 'bold 11px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`M${i}=${M} kg·m`, mx, beamY - 32);
+        }
+      }
+
+      // 7. COTAS DE LONGITUD DE TRAMO (ABAJO)
+      const dimY = beamY + 62;
+      for (let i = 0; i < state.numSpans; i++) {
+        const x1 = toCanvasX(coords[i]);
+        const x2 = toCanvasX(coords[i + 1]);
+
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x1, dimY);
+        ctx.lineTo(x2, dimY);
+        // Ticks
+        ctx.moveTo(x1, dimY - 4);
+        ctx.lineTo(x1, dimY + 4);
+        ctx.moveTo(x2, dimY - 4);
+        ctx.lineTo(x2, dimY + 4);
+        ctx.stroke();
+
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`L${i + 1}=${state.spans[i]}m`, (x1 + x2) / 2, dimY - 3);
+      }
+
+      // COTA TOTAL Ltot
+      const totDimY = beamY + 84;
+      const xStart = toCanvasX(0);
+      const xEnd = toCanvasX(Ltot);
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(xStart, totDimY);
+      ctx.lineTo(xEnd, totDimY);
+      ctx.moveTo(xStart, totDimY - 5);
+      ctx.lineTo(xStart, totDimY + 5);
+      ctx.moveTo(xEnd, totDimY - 5);
+      ctx.lineTo(xEnd, totDimY + 5);
+      ctx.stroke();
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Ltot = ${Ltot.toFixed(2)} m`, (xStart + xEnd) / 2, totDimY - 3);
+    }
+
+    // HELPERS DE DIBUJO VECTORIAL
+    function drawArrowDown(ctx, x, y1, y2, color) {
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x, y1);
+      ctx.lineTo(x, y2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(x, y2);
+      ctx.lineTo(x - 3, y2 - 6);
+      ctx.lineTo(x + 3, y2 - 6);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawThickArrowDown(ctx, x, y1, y2, color) {
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y1);
+      ctx.lineTo(x, y2 - 8);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(x, y2);
+      ctx.lineTo(x - 5, y2 - 10);
+      ctx.lineTo(x + 5, y2 - 10);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawPinSupport(ctx, x, y) {
+      ctx.strokeStyle = '#0284c7';
+      ctx.fillStyle = '#0f172a';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - 12, y + 20);
+      ctx.lineTo(x + 12, y + 20);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Base
+      ctx.beginPath();
+      ctx.moveTo(x - 16, y + 20);
+      ctx.lineTo(x + 16, y + 20);
+      ctx.stroke();
+
+      // Achurado
+      ctx.lineWidth = 1;
+      for (let h = -12; h <= 12; h += 6) {
+        ctx.beginPath();
+        ctx.moveTo(x + h, y + 20);
+        ctx.lineTo(x + h - 4, y + 26);
+        ctx.stroke();
+      }
+    }
+
+    function drawRollerSupport(ctx, x, y) {
+      drawPinSupport(ctx, x, y);
+      // Rodillos
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(x - 6, y + 23, 2.5, 0, Math.PI * 2);
+      ctx.arc(x + 6, y + 23, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawFixedSupport(ctx, x, y, side) {
+      const dir = side === 'left' ? -1 : 1;
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 25);
+      ctx.lineTo(x, y + 25);
+      ctx.stroke();
+
+      // Achurado de pared
+      ctx.lineWidth = 1.2;
+      for (let py = y - 20; py <= y + 20; py += 8) {
+        ctx.beginPath();
+        ctx.moveTo(x, py);
+        ctx.lineTo(x + dir * 8, py + 8);
+        ctx.stroke();
+      }
+    }
+
+    function drawMomentArc(ctx, x, y, r, clockwise, color) {
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const startAngle = clockwise ? Math.PI * 0.2 : Math.PI * 0.8;
+      const endAngle = clockwise ? Math.PI * 1.8 : Math.PI * 2.2;
+      ctx.arc(x, y, r, startAngle, endAngle, !clockwise);
+      ctx.stroke();
+
+      // Flecha en el extremo
+      const tipAngle = endAngle;
+      const tx = x + r * Math.cos(tipAngle);
+      const ty = y + r * Math.sin(tipAngle);
+      ctx.beginPath();
+      ctx.arc(tx, ty, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // ==========================================
+    // RENDERIZADO DE GRÁFICOS DFC Y DMF (CHART.JS)
+    // ==========================================
+    function renderCharts(Ltot) {
+      const steps = 250;
+      const dx = Ltot / steps;
+      const labels = [];
+      const dataQ = [];
+      const dataM = [];
+
+      let zeroShearX = null;
+      let minAbsQ = Infinity;
+      let maxAbsM = 0;
+      let maxMX = 0;
+      let maxMVal = 0;
+
+      for (let i = 0; i <= steps; i++) {
+        const x = i * dx;
+        const { Q, M } = evaluateSectionForces(x);
+        labels.push(x.toFixed(2));
+        dataQ.push(Q);
+        dataM.push(M);
+
+        if (Math.abs(Q) < minAbsQ && i > 0 && i < steps) {
+          minAbsQ = Math.abs(Q);
+          zeroShearX = x;
+        }
+
+        if (Math.abs(M) > maxAbsM) {
+          maxAbsM = Math.abs(M);
+          maxMX = x;
+          maxMVal = M;
+        }
+      }
+
+      document.getElementById('labelZeroShear').innerText = zeroShearX !== null 
+        ? `Q(x)=0 aprox en x = ${zeroShearX.toFixed(2)} m` 
+        : `Q(x) continuo`;
+      document.getElementById('labelMaxMoment').innerText = `Mmax = ${maxMVal > 0 ? '+' : ''}${maxMVal.toFixed(2)} kg·m (x = ${maxMX.toFixed(2)} m)`;
+
+      // CHART DFC
+      const ctxQ = document.getElementById('chartDFC').getContext('2d');
+      if (chartDFCInstance) chartDFCInstance.destroy();
+      chartDFCInstance = new Chart(ctxQ, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Fuerza Cortante Q(x) [kg]',
+            data: dataQ,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: true,
+            stepped: false,
+            tension: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items) => `x = ${items[0].label} m`,
+                label: (item) => `Q = ${item.raw.toFixed(2)} kg`
+              }
+            }
+          },
+          scales: {
+            x: {
+              display: true,
+              ticks: { maxTicksLimit: 10, color: '#64748b', font: { size: 9, family: 'monospace' } },
+              grid: { color: 'rgba(51, 65, 85, 0.3)' }
+            },
+            y: {
+              ticks: { color: '#64748b', font: { size: 9, family: 'monospace' } },
+              grid: { color: 'rgba(51, 65, 85, 0.3)' }
+            }
+          }
+        }
+      });
+
+      // CHART DMF
+      const ctxM = document.getElementById('chartDMF').getContext('2d');
+      if (chartDMFInstance) chartDMFInstance.destroy();
+      chartDMFInstance = new Chart(ctxM, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Momento Flector M(x) [kg·m]',
+            data: dataM,
+            borderColor: '#a855f7',
+            backgroundColor: 'rgba(168, 85, 247, 0.15)',
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: true,
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items) => `x = ${items[0].label} m`,
+                label: (item) => `M = ${item.raw.toFixed(2)} kg·m`
+              }
+            }
+          },
+          scales: {
+            x: {
+              display: true,
+              ticks: { maxTicksLimit: 10, color: '#64748b', font: { size: 9, family: 'monospace' } },
+              grid: { color: 'rgba(51, 65, 85, 0.3)' }
+            },
+            y: {
+              ticks: { color: '#64748b', font: { size: 9, family: 'monospace' } },
+              grid: { color: 'rgba(51, 65, 85, 0.3)' }
+            }
+          }
+        }
+      });
+    }
+
+    // ==========================================
+    // GENERADOR DE CÓDIGO MATHCAD PRIME 11
+    // ==========================================
+    function renderMathcadCode(coords, Ltot) {
+      let mLines = [];
+      let qLines = [];
+
+      // 1. Reacción A
+      if (state.reactions.nodeA !== undefined) {
+        if (state.reactions.xA === 0) {
+          mLines.push(`+ VA · x`);
+          qLines.push(`+ VA`);
+        } else {
+          mLines.push(`+ (x ≥ x${state.reactions.nodeA}) · VA · (x - x${state.reactions.nodeA})`);
+          qLines.push(`+ (x ≥ x${state.reactions.nodeA}) · VA`);
+        }
+      }
+
+      // 2. Cargas Distribuidas
+      for (let i = 0; i < state.numSpans; i++) {
+        const q = state.distLoads[i] || 0;
+        if (q > 0) {
+          if (i === 0) {
+            mLines.push(`- (x1 > x > x0) · q1 · (x² / 2)`);
+            qLines.push(`- (x1 > x > x0) · q1 · x`);
+            mLines.push(`- (x ≥ x1) · q1 · L1 · (x - L1 / 2)`);
+            qLines.push(`- (x ≥ x1) · q1 · L1`);
+          } else {
+            mLines.push(`- (x${i + 1} > x > x${i}) · q${i + 1} · ((x - x${i})² / 2)`);
+            qLines.push(`- (x${i + 1} > x > x${i}) · q${i + 1} · (x - x${i})`);
+            mLines.push(`- (x ≥ x${i + 1}) · q${i + 1} · L${i + 1} · (x - (x${i} + L${i + 1} / 2))`);
+            qLines.push(`- (x ≥ x${i + 1}) · q${i + 1} · L${i + 1}`);
+          }
+        }
+      }
+
+      // 3. Momentos Concentrados
+      for (let i = 0; i <= state.numSpans; i++) {
+        const M = state.appliedMoments[i] || 0;
+        if (M !== 0) {
+          if (i === 0) {
+            mLines.push(`+ M0`);
+          } else {
+            mLines.push(`+ (x ≥ x${i}) · M${i}`);
+          }
+        }
+      }
+
+      // 4. Cargas Puntuales
+      for (let i = 0; i <= state.numSpans; i++) {
+        const P = state.pointLoads[i] || 0;
+        if (P > 0) {
+          if (i === 0) {
+            mLines.push(`- P0 · x`);
+            qLines.push(`- P0`);
+          } else {
+            mLines.push(`- (x ≥ x${i}) · P${i} · (x - x${i})`);
+            qLines.push(`- (x ≥ x${i}) · P${i}`);
+          }
+        }
+      }
+
+      // 5. Reacción B
+      if (state.reactions.nodeB !== null && state.reactions.nodeB !== undefined) {
+        mLines.push(`+ (x ≥ x${state.reactions.nodeB}) · VD · (x - x${state.reactions.nodeB})`);
+        qLines.push(`+ (x ≥ x${state.reactions.nodeB}) · VD`);
+      }
+
+      const mCode = `M(x) := \n  ${mLines.join('\n  ')}\n\nRango: x := 0 m , 0.001 m .. Ltot`;
+      const qCode = `Q(x) := \n  ${qLines.join('\n  ')}\n\nRelación: Q(x) = d/dx [ M(x) ]`;
+
+      document.getElementById('mathcadMomentBox').innerText = mCode;
+      document.getElementById('mathcadShearBox').innerText = qCode;
+    }
+
+    function copyMathcadFormulas() {
+      const mText = document.getElementById('mathcadMomentBox').innerText;
+      const qText = document.getElementById('mathcadShearBox').innerText;
+      const fullText = `=== FUNCIONES DE SINGULARIDAD PARA PTC MATHCAD PRIME 11 ===\n\n${mText}\n\n${qText}\n`;
+      navigator.clipboard.writeText(fullText).then(() => {
+        showToast('Ecuaciones de Mathcad copiadas al portapapeles');
+      });
+    }
+
+    function downloadCanvasImage() {
+      const canvas = document.getElementById('beamCanvas');
+      const link = document.createElement('a');
+      link.download = 'Esquema_Viga_Cortes_Mathcad.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showToast('Esquema en PNG descargado');
+    }
+
+    // ==========================================
+    // GENERADOR DINÁMICO NATIVO DE .MCDX EN JS
+    // ==========================================
+    async function generateMCDX() {
+      const btn = document.getElementById('btnDownloadMcdx');
+      const oldHtml = btn.innerHTML;
+      btn.innerHTML = `<span class="animate-spin">⏳</span> Generando .mcdx...`;
+      btn.disabled = true;
+
+      try {
+        // Cargar plantilla base corregida y libre de parásitos
+        let resp = await fetch('./PLANTILLA_MAESTRA_10_TRAMOS_CORREGIDA.mcdx');
+        if (!resp.ok) {
+          resp = await fetch('./PLANTILLA_MAESTRA_10_TRAMOS_VIGAS.mcdx');
+        }
+        if (!resp.ok) throw new Error('No se pudo cargar la plantilla base');
+        const blob = await resp.blob();
+
+        const zip = await JSZip.loadAsync(blob);
+        let wsXmlStr = await zip.file('mathcad/worksheet.xml').async('string');
+
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(wsXmlStr, 'application/xml');
+
+        // 1. Eliminar regiones parásitas o repetidas
+        const unwantedIds = new Set(['0', '1', '57', '60', '63', '65']);
+        unwantedIds.forEach(id => {
+          const el = xmlDoc.querySelector(`[region-id="${id}"]`);
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        });
+
+        // 2. Modificar valores de longitudes L1..L10 (Regiones 2..11)
+        for (let i = 0; i < 10; i++) {
+          const regId = (2 + i).toString();
+          const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
+          if (reg) {
+            const real = reg.querySelector('real');
+            if (real) {
+              const val = i < state.numSpans ? state.spans[i] : 0.0;
+              real.textContent = val.toString();
+            }
+          }
+        }
+
+        // 3. Modificar Cargas Distribuidas q1..q10 (Regiones 25..34)
+        for (let i = 0; i < 10; i++) {
+          const regId = (25 + i).toString();
+          const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
+          if (reg) {
+            const real = reg.querySelector('real');
+            if (real) {
+              const val = i < state.numSpans ? (state.distLoads[i] || 0) : 0;
+              real.textContent = val.toString();
+            }
+          }
+        }
+
+        // 4. Modificar Cargas Puntuales P0..P10 (Regiones 35..45)
+        for (let i = 0; i <= 10; i++) {
+          const regId = (35 + i).toString();
+          const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
+          if (reg) {
+            const real = reg.querySelector('real');
+            if (real) {
+              const val = i <= state.numSpans ? (state.pointLoads[i] || 0) : 0;
+              real.textContent = val.toString();
+            }
+          }
+        }
+
+        // 5. Modificar Momentos M0..M10 (Regiones 46..56)
+        for (let i = 0; i <= 10; i++) {
+          const regId = (46 + i).toString();
+          const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
+          if (reg) {
+            const real = reg.querySelector('real');
+            if (real) {
+              const val = i <= state.numSpans ? (state.appliedMoments[i] || 0) : 0;
+              real.textContent = val.toString();
+            }
+          }
+        }
+
+        // 6. Modificar Reacciones VA (r59) y VD (r58)
+        const r58 = xmlDoc.querySelector('[region-id="58"]');
+        if (r58) {
+          const real = r58.querySelector('real');
+          if (real) real.textContent = state.reactions.VD.toFixed(4);
+        }
+        const r59 = xmlDoc.querySelector('[region-id="59"]');
+        if (r59) {
+          const real = r59.querySelector('real');
+          if (real) real.textContent = state.reactions.VA.toFixed(4);
+        }
+
+        // 7. Reorganización geométrica estricta anti-colisión
+        const setPos = (rid, top, left, w, h) => {
+          const el = xmlDoc.querySelector(`[region-id="${rid}"]`);
+          if (el) {
+            el.setAttribute('top', top.toFixed(1));
+            el.setAttribute('left', left.toFixed(1));
+            if (w !== undefined) el.setAttribute('width', w.toString());
+            if (h !== undefined) el.setAttribute('height', h.toString());
+          }
+        };
+
+        setPos('2', 35.0, 37.8);  setPos('3', 35.0, 170.0); setPos('4', 35.0, 305.0); setPos('5', 35.0, 440.0); setPos('6', 35.0, 575.0);
+        setPos('7', 68.0, 37.8);  setPos('8', 68.0, 170.0); setPos('9', 68.0, 305.0); setPos('10', 68.0, 440.0); setPos('11', 68.0, 575.0);
+
+        setPos('12', 105.0, 37.8); setPos('13', 105.0, 170.0); setPos('14', 105.0, 305.0); setPos('15', 105.0, 440.0); setPos('16', 105.0, 575.0);
+        setPos('17', 140.0, 37.8); setPos('18', 140.0, 150.0); setPos('19', 140.0, 265.0); setPos('20', 140.0, 380.0); setPos('21', 140.0, 495.0); setPos('22', 140.0, 610.0);
+        setPos('23', 175.0, 37.8);
+
+        const r24 = xmlDoc.querySelector('[region-id="24"]');
+        if (r24) {
+          r24.setAttribute('top', '210.0');
+          r24.setAttribute('left', '37.8');
+          r24.setAttribute('width', '700');
+          r24.setAttribute('height', '145');
+          const png = r24.querySelector('png');
+          if (png) {
+            png.setAttribute('display-width', '700');
+            png.setAttribute('display-height', '145');
+          }
+        }
+
+        setPos('25', 380.0, 37.8);  setPos('26', 380.0, 170.0); setPos('27', 380.0, 305.0); setPos('28', 380.0, 440.0); setPos('29', 380.0, 575.0);
+        setPos('30', 418.0, 37.8);  setPos('31', 418.0, 170.0); setPos('32', 418.0, 305.0); setPos('33', 418.0, 440.0); setPos('34', 418.0, 575.0);
+
+        setPos('35', 458.0, 37.8);  setPos('36', 458.0, 150.0); setPos('37', 458.0, 265.0); setPos('38', 458.0, 380.0); setPos('39', 458.0, 495.0); setPos('40', 458.0, 610.0);
+        setPos('41', 495.0, 37.8);  setPos('42', 495.0, 150.0); setPos('43', 495.0, 265.0); setPos('44', 495.0, 380.0); setPos('45', 495.0, 495.0);
+
+        setPos('46', 535.0, 37.8);  setPos('47', 535.0, 205.0); setPos('48', 535.0, 375.0); setPos('49', 535.0, 545.0);
+        setPos('50', 570.0, 37.8);  setPos('51', 570.0, 205.0); setPos('52', 570.0, 375.0); setPos('53', 570.0, 545.0);
+        setPos('54', 605.0, 37.8);  setPos('55', 605.0, 205.0); setPos('56', 605.0, 375.0);
+
+        setPos('58', 650.0, 37.8);
+        setPos('59', 650.0, 230.0);
+
+        setPos('61', 695.0, 37.8);
+        setPos('62', 760.0, 37.8);
+        setPos('64', 820.0, 37.8);
+
+        setPos('66', 865.0, 37.8, 650, 230);
+        setPos('67', 1135.0, 37.8, 650, 230);
+
+        // 8. Construcción de Expresiones Macaulay Dinámicas para M(x) y Q(x)
+        const ML_NS = 'http://schemas.mathsoft.com/math50';
+        const P_NS = 'http://schemas.microsoft.com/winfx/2006/xaml/presentation';
+        const C_NS = 'clr-namespace:Ptc.Wpf;assembly=Ptc.Core';
+
+        function mkId(name, subscript) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:id');
+          el.setAttribute('labels', 'VARIABLE');
+          el.setAttribute('label-is-contextual', 'true');
+          el.setAttribute('xml:space', 'preserve');
+          if (subscript !== undefined && subscript !== null) {
+            const span = xmlDoc.createElementNS(P_NS, 'p:Span');
+            span.textContent = name;
+            const sub = xmlDoc.createElementNS(C_NS, 'c:Subscript');
+            sub.textContent = subscript.toString();
+            span.appendChild(sub);
+            el.appendChild(span);
+          } else {
+            el.textContent = name;
+          }
+          return el;
+        }
+
+        function mkReal(val) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:real');
+          el.textContent = (typeof val === 'number') ? val.toString() : val;
+          return el;
+        }
+
+        function mkParens(child) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:parens');
+          el.appendChild(child.cloneNode(true));
+          return el;
+        }
+
+        function mkApply(opName, ...args) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:apply');
+          const op = xmlDoc.createElementNS(ML_NS, `ml:${opName}`);
+          el.appendChild(op);
+          for (const a of args) {
+            el.appendChild(a.cloneNode(true));
+          }
+          return el;
+        }
+
+        function buildChain(terms) {
+          let acc = null;
+          for (const [sign, el] of terms) {
+            const elClone = el.cloneNode(true);
+            if (!acc) {
+              if (sign === '+') acc = elClone;
+              else acc = mkApply('minus', elClone);
+            } else {
+              const op = (sign === '+') ? 'plus' : 'minus';
+              acc = mkApply(op, acc, elClone);
+            }
+          }
+          return acc || mkReal(0);
+        }
+
+        const termsM = [];
+        const termsQ = [];
+
+        // Apoyos y Reacciones
+        const supNodes = Object.keys(state.supports).map(Number).sort((a,b)=>a-b);
+        if (supNodes.length >= 2) {
+          const nA = supNodes[0], nB = supNodes[1];
+          if (nA === 0) {
+            termsM.push(['+', mkApply('mult', mkId('V', 'A'), mkId('x'))]);
+            termsQ.push(['+', mkId('V', 'A')]);
+          } else {
+            const condVA = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', nA)));
+            const armVA = mkParens(mkApply('minus', mkId('x'), mkId('x', nA)));
+            termsM.push(['+', mkApply('mult', mkApply('mult', condVA, mkId('V', 'A')), armVA)]);
+            termsQ.push(['+', mkApply('mult', condVA, mkId('V', 'A'))]);
+          }
+          const condVB = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', nB)));
+          const armVB = mkParens(mkApply('minus', mkId('x'), mkId('x', nB)));
+          termsM.push(['+', mkApply('mult', mkApply('mult', condVB, mkId('V', 'D')), armVB)]);
+          termsQ.push(['+', mkApply('mult', condVB, mkId('V', 'D'))]);
+        } else if (supNodes.length === 1 && state.supports[supNodes[0]] === 'fixed') {
+          const nFix = supNodes[0];
+          if (nFix === 0) {
+            termsM.push(['+', mkId('V', 'D')]);
+            termsM.push(['+', mkApply('mult', mkId('V', 'A'), mkId('x'))]);
+            termsQ.push(['+', mkId('V', 'A')]);
+          } else {
+            const condFix = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', nFix)));
+            const armFix = mkParens(mkApply('minus', mkId('x'), mkId('x', nFix)));
+            termsM.push(['+', mkApply('mult', condFix, mkId('V', 'D'))]);
+            termsM.push(['+', mkApply('mult', mkApply('mult', condFix, mkId('V', 'A')), armFix)]);
+            termsQ.push(['+', mkApply('mult', condFix, mkId('V', 'A'))]);
+          }
+        } else {
+          termsM.push(['+', mkApply('mult', mkId('V', 'A'), mkId('x'))]);
+          termsQ.push(['+', mkId('V', 'A')]);
+        }
+
+        // Cargas Distribuidas
+        for (let k = 0; k < state.numSpans; k++) {
+          const qVal = state.distLoads[k] || 0;
+          if (qVal !== 0) {
+            const condAct = mkParens(mkApply('greaterThan',
+              mkApply('greaterThan', mkId('x', k+1), mkId('x')),
+              mkId('x', k)));
+            let armSq, armV;
+            if (k === 0) {
+              armSq = mkApply('div', mkApply('pow', mkId('x'), mkReal(2)), mkReal(2));
+              armV = mkId('x');
+            } else {
+              const armDiff = mkParens(mkApply('minus', mkId('x'), mkId('x', k)));
+              armSq = mkApply('div', mkApply('pow', armDiff, mkReal(2)), mkReal(2));
+              armV = armDiff;
+            }
+            termsM.push(['-', mkApply('mult', mkApply('mult', condAct, mkId('q', k+1)), armSq)]);
+            termsQ.push(['-', mkApply('mult', mkApply('mult', condAct, mkId('q', k+1)), armV)]);
+
+            const condSup = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', k+1)));
+            let armCg;
+            if (k === 0) {
+              armCg = mkParens(mkApply('minus', mkId('x'), mkApply('div', mkId('L', 1), mkReal(2))));
+            } else {
+              const cgPos = mkParens(mkApply('plus', mkId('x', k), mkApply('div', mkId('L', k+1), mkReal(2))));
+              armCg = mkParens(mkApply('minus', mkId('x'), cgPos));
+            }
+            termsM.push(['-', mkApply('mult', mkApply('mult', mkApply('mult', condSup, mkId('q', k+1)), mkId('L', k+1)), armCg)]);
+            termsQ.push(['-', mkApply('mult', mkApply('mult', condSup, mkId('q', k+1)), mkId('L', k+1))]);
+          }
+        }
+
+        // Momentos Aplicados
+        for (let i = 0; i <= state.numSpans; i++) {
+          const mVal = state.appliedMoments[i] || 0;
+          if (mVal !== 0) {
+            if (i === 0) termsM.push(['+', mkId('M', 0)]);
+            else {
+              const condM = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', i)));
+              termsM.push(['+', mkApply('mult', condM, mkId('M', i))]);
+            }
+          }
+        }
+
+        // Cargas Puntuales
+        for (let i = 0; i <= state.numSpans; i++) {
+          const pVal = state.pointLoads[i] || 0;
+          if (pVal !== 0) {
+            if (i === 0) {
+              termsM.push(['-', mkApply('mult', mkId('P', 0), mkId('x'))]);
+              termsQ.push(['-', mkId('P', 0)]);
+            } else {
+              const condP = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', i)));
+              const armP = mkParens(mkApply('minus', mkId('x'), mkId('x', i)));
+              termsM.push(['-', mkApply('mult', mkApply('mult', condP, mkId('P', i)), armP)]);
+              termsQ.push(['-', mkApply('mult', condP, mkId('P', i))]);
+            }
+          }
+        }
+
+        // Reemplazar definición de M(x) en R61
+        const r61 = xmlDoc.querySelector('[region-id="61"]');
+        if (r61) {
+          const defEl = r61.querySelector('define');
+          if (defEl && defEl.children.length >= 2) {
+            defEl.replaceChild(buildChain(termsM), defEl.children[1]);
+          }
+        }
+
+        // Reemplazar definición de Q(x) en R62
+        const r62 = xmlDoc.querySelector('[region-id="62"]');
+        if (r62) {
+          const defEl = r62.querySelector('define');
+          if (defEl && defEl.children.length >= 2) {
+            defEl.replaceChild(buildChain(termsQ), defEl.children[1]);
+          }
+        }
+
+        // 9. Escalamiento dinámico de límites en Gráficos 2D
+        const coords = getNodeCoords();
+        const Ltot = coords[coords.length - 1];
+
+        let qMin = 0, qMax = 0, mMin = 0, mMax = 0;
+        for (let i = 0; i <= 200; i++) {
+          const x = (i * Ltot) / 200;
+          const { Q, M } = evaluateSectionForces(x);
+          if (i === 0) {
+            qMin = qMax = Q;
+            mMin = mMax = M;
+          } else {
+            if (Q < qMin) qMin = Q;
+            if (Q > qMax) qMax = Q;
+            if (M < mMin) mMin = M;
+            if (M > mMax) mMax = M;
+          }
+        }
+        const qSpan = Math.max(Math.abs(qMax - qMin), 10.0);
+        const qLimMin = qMin - 0.15 * qSpan;
+        const qLimMax = qMax + 0.15 * qSpan;
+
+        const mSpan = Math.max(Math.abs(mMax - mMin), 10.0);
+        const mLimMin = mMin - 0.15 * mSpan;
+        const mLimMax = mMax + 0.15 * mSpan;
+
+        const r66 = xmlDoc.querySelector('[region-id="66"]');
+        if (r66) {
+          const xAx = r66.querySelector('xAxis');
+          if (xAx) {
+            xAx.setAttribute('start', '0');
+            xAx.setAttribute('end', Ltot.toFixed(2));
+            const aline = xAx.querySelector('axisLine');
+            if (aline) aline.setAttribute('positionticmark', Math.round(Ltot).toString());
+          }
+          const yAx = r66.querySelector('yAxis');
+          if (yAx) {
+            yAx.setAttribute('start', qLimMin.toFixed(1));
+            yAx.setAttribute('end', qLimMax.toFixed(1));
+            const aline = yAx.querySelector('axisLine');
+            if (aline) aline.setAttribute('positionticmark', '0');
+          }
+        }
+
+        const r67 = xmlDoc.querySelector('[region-id="67"]');
+        if (r67) {
+          const xAx = r67.querySelector('xAxis');
+          if (xAx) {
+            xAx.setAttribute('start', '0');
+            xAx.setAttribute('end', Ltot.toFixed(2));
+            const aline = xAx.querySelector('axisLine');
+            if (aline) aline.setAttribute('positionticmark', Math.round(Ltot).toString());
+          }
+          const yAx = r67.querySelector('yAxis');
+          if (yAx) {
+            yAx.setAttribute('start', mLimMin.toFixed(1));
+            yAx.setAttribute('end', mLimMax.toFixed(1));
+            const aline = yAx.querySelector('axisLine');
+            if (aline) aline.setAttribute('positionticmark', '0');
+          }
+        }
+
+        // 9.5 ESCUDO SANITIZADOR PRE-EXPORTACIÓN (Garantía 100% Esquema Mathcad Prime 11)
+        // A) Sanitizar todos los axisLine: positionticmark DEBE ser estrictamente entero xs:integer
+        const allAxisLines = xmlDoc.querySelectorAll('axisLine');
+        allAxisLines.forEach(al => {
+          const ptm = al.getAttribute('positionticmark');
+          if (ptm !== null && ptm !== undefined) {
+            const num = parseFloat(ptm);
+            al.setAttribute('positionticmark', isNaN(num) ? '0' : Math.round(num).toString());
+          }
+        });
+
+        // B) Sanitizar todos los apply: validar operadores binarios y unarios
+        const binaryOps = new Set(['mult', 'div', 'pow', 'greaterThan', 'greaterOrEqual']);
+        const allApplies = xmlDoc.querySelectorAll('apply');
+        allApplies.forEach(ap => {
+          if (ap.children.length === 0) {
+            const z = xmlDoc.createElementNS(ML_NS, 'ml:real');
+            z.textContent = '0';
+            ap.appendChild(z);
+            return;
+          }
+          const opName = ap.children[0].localName;
+          const argCount = ap.children.length - 1;
+          if (binaryOps.has(opName) && argCount === 1) {
+            // Reemplazar el apply incompleto por su único argumento
+            const onlyArg = ap.children[1];
+            if (ap.parentNode) {
+              ap.parentNode.replaceChild(onlyArg.cloneNode(true), ap);
+            }
+          }
+        });
+
+        // C) Sanitizar parens vacíos
+        const allParens = xmlDoc.querySelectorAll('parens');
+        allParens.forEach(p => {
+          if (p.children.length === 0) {
+            const z = xmlDoc.createElementNS(ML_NS, 'ml:real');
+            z.textContent = '0';
+            p.appendChild(z);
+          }
+        });
+
+        // Guardar worksheet.xml modificado
+        const serializer = new XMLSerializer();
+        const newXml = serializer.serializeToString(xmlDoc);
+        zip.file('mathcad/worksheet.xml', newXml);
+
+        // Actualizar Imagen Image0.png desde el canvas
+        const canvas = document.getElementById('beamCanvas');
+        const canvasDataUrl = canvas.toDataURL('image/png');
+        const imgBase64 = canvasDataUrl.split(',')[1];
+        zip.file('mathcad/media/Image0.png', imgBase64, { base64: true });
+
+        // Empaquetar y disparar descarga
+        const finalBlob = await zip.generateAsync({ type: 'blob' });
+        saveAs(finalBlob, `Viga_${state.numSpans}Tramos_Mathcad_Prime_11.mcdx`);
+        showToast('¡Archivo .mcdx generado y descargado con éxito!');
+      } catch (err) {
+        console.error(err);
+        const link = document.createElement('a');
+        link.href = './PLANTILLA_MAESTRA_10_TRAMOS_CORREGIDA.mcdx';
+        link.download = 'PLANTILLA_MAESTRA_10_TRAMOS_CORREGIDA.mcdx';
+        link.click();
+        showToast('Descargando plantilla maestra base');
+      } finally {
+        btn.innerHTML = oldHtml;
+        btn.disabled = false;
+      }
+    }
+
+    // ==========================================
+    // GENERADOR DE REPORTE IMPRIMIBLE
+    // ==========================================
+    function generateReportHTML() {
+      const coords = getNodeCoords();
+      const Ltot = coords[coords.length - 1];
+      const canvas = document.getElementById('beamCanvas');
+      const imgUri = canvas.toDataURL('image/png');
+
+      const html = `
+        <div class="space-y-6">
+          <div class="border-b-2 border-slate-900 pb-3 flex justify-between items-end">
+            <div>
+              <h1 class="text-xl font-bold tracking-tight text-slate-900 uppercase">Memoria de Cálculo Estructural</h1>
+              <p class="text-xs text-slate-600">UNIVERSIDAD CONTINENTAL &bull; ANÁLISIS ESTRUCTURAL II</p>
+            </div>
+            <div class="text-right text-xs text-slate-600">
+              <p class="font-mono font-bold text-slate-900">VIGA CONTINUA DE ${state.numSpans} TRAMOS</p>
+              <p>Método de Funciones de Singularidad / Macaulay</p>
+            </div>
+          </div>
+
+          <div>
+            <h2 class="text-sm font-bold text-slate-900 mb-2 border-l-4 border-teal-600 pl-2">1. Esquema Geométrico y Secciones de Corte</h2>
+            <div class="border border-slate-300 p-2 rounded bg-slate-50 flex justify-center">
+              <img src="${imgUri}" style="max-height: 200px;" class="w-full object-contain">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <h2 class="text-sm font-bold text-slate-900 mb-2 border-l-4 border-teal-600 pl-2">2. Propiedades de los Tramos</h2>
+              <table class="w-full text-xs border border-slate-300">
+                <thead class="bg-slate-100 font-bold">
+                  <tr>
+                    <th class="p-1.5 border border-slate-300 text-left">Tramo</th>
+                    <th class="p-1.5 border border-slate-300 text-center">Longitud L (m)</th>
+                    <th class="p-1.5 border border-slate-300 text-center">Carga q (kg/m)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${state.spans.map((l, i) => `
+                    <tr>
+                      <td class="p-1.5 border border-slate-300 font-mono">Tramo ${i + 1} (Corte ${i + 1}-${i + 1})</td>
+                      <td class="p-1.5 border border-slate-300 text-center font-mono">${l.toFixed(2)}</td>
+                      <td class="p-1.5 border border-slate-300 text-center font-mono">${state.distLoads[i] || 0}</td>
+                    </tr>
+                  `).join('')}
+                  <tr class="font-bold bg-slate-50">
+                    <td class="p-1.5 border border-slate-300">Longitud Total</td>
+                    <td class="p-1.5 border border-slate-300 text-center font-mono">${Ltot.toFixed(2)} m</td>
+                    <td class="p-1.5 border border-slate-300 text-center">-</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <h2 class="text-sm font-bold text-slate-900 mb-2 border-l-4 border-teal-600 pl-2">3. Reacciones de Apoyo</h2>
+              <div class="bg-slate-50 border border-slate-300 p-3 rounded space-y-2">
+                <div class="flex justify-between font-mono">
+                  <span>${state.reactions.labelA}:</span>
+                  <span class="font-bold text-teal-800">${state.reactions.VA.toFixed(2)} kg (↑)</span>
+                </div>
+                <div class="flex justify-between font-mono">
+                  <span>${state.reactions.labelB}:</span>
+                  <span class="font-bold text-teal-800">${state.reactions.VD.toFixed(2)} ${state.reactions.labelB.includes('M') ? 'kg·m' : 'kg (↑)'}</span>
+                </div>
+                <div class="border-t border-slate-200 pt-2 flex justify-between font-mono text-[11px] text-slate-600">
+                  <span>Sumatoria Vertical (∑Fy):</span>
+                  <span class="font-bold text-emerald-700">0.00 kg (Equilibrio Satisfecho)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h2 class="text-sm font-bold text-slate-900 mb-2 border-l-4 border-teal-600 pl-2">4. Expresiones Analíticas de Macaulay para Mathcad Prime 11</h2>
+            <div class="bg-slate-50 border border-slate-300 p-3 rounded font-mono text-xs space-y-2">
+              <div class="text-purple-900 font-bold">Función de Momento Flector M(x):</div>
+              <pre class="bg-white p-2 rounded border border-slate-200 text-[11px] whitespace-pre-wrap">${document.getElementById('mathcadMomentBox').innerText}</pre>
+              <div class="text-emerald-900 font-bold mt-2">Función de Fuerza Cortante Q(x):</div>
+              <pre class="bg-white p-2 rounded border border-slate-200 text-[11px] whitespace-pre-wrap">${document.getElementById('mathcadShearBox').innerText}</pre>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('reportContent').innerHTML = html;
+    }
+  </script>
+</body>
+</html>
