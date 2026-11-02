@@ -777,7 +777,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
 
                     const filename = `Plantilla_Armaduras_${prefix}_Catedra_Ulianov_${Date.now().toString().slice(-4)}.xlsx`;
-                    await ExcelGenerator.downloadTrussExcel(state.nodes, state.bars, isIsostatic, filename, state.solution);
+                    const trussImg = renderer ? renderer.exportImage() : null;
+                    const trussPngBase64 = trussImg ? trussImg.split(',')[1] : null;
+                    await ExcelGenerator.downloadTrussExcel(state.nodes, state.bars, isIsostatic, filename, state.solution, { trussPngBase64 });
 
                     btnDownloadExcel.innerHTML = `✔ ¡Excel VIP Descargado!`;
                     btnDownloadExcel.style.background = "#047857";

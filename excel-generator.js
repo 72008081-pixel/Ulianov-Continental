@@ -1638,7 +1638,7 @@
      * Genera un libro Excel completo con las hojas Isostática e Hiperestática
      * y retorna el buffer listo para descargar o guardar en disco.
      */
-    async function generateTrussWorkbook(nodesData, barsData, isIsostatic = true, solverResult = null) {
+    async function generateTrussWorkbook(nodesData, barsData, isIsostatic = true, solverResult = null, opts = {}) {
         if (!ExcelJS) {
             throw new Error("La biblioteca ExcelJS no está cargada.");
         }
@@ -1659,14 +1659,39 @@
         const altSheetName = isIsostatic ? "MANUAL_HIPERESTATICA_4R" : "MANUAL_ISOSTATICA_3R";
         buildDynamicWorksheet(wb, altSheetName, nodesData, barsData, !isIsostatic, solverResult);
 
+        // PESTAÑA 3 OPCIONAL: 'GRÁFICA ARMADURA' (Si se proporciona captura del Canvas)
+        if (opts && opts.trussPngBase64) {
+            try {
+                const wsG = wb.addWorksheet('GRÁFICA ARMADURA', {
+                    views: [{ showGridLines: true, zoomScale: 90 }]
+                });
+                wsG.columns = Array.from({ length: 16 }, () => ({ width: 14 }));
+                wsG.getCell('B2').value = 'CEREBRO ESTRUCTURAL — ESQUEMA DE LA ARMADURA 2D';
+                wsG.getCell('B2').font = { bold: true, size: 16, color: { argb: 'FF0F172A' } };
+                wsG.getCell('B3').value = 'Modelo analizado con Método de Nodos/Matricial (Cátedra Ing. Ulianov Cuba Valencia)';
+                wsG.getCell('B3').font = { italic: true, size: 11, color: { argb: 'FF64748B' } };
+
+                const imgId = wb.addImage({
+                    base64: opts.trussPngBase64,
+                    extension: 'png'
+                });
+                wsG.addImage(imgId, {
+                    tl: { col: 1, row: 4 },
+                    ext: { width: 960, height: 500 }
+                });
+            } catch (errImg) {
+                console.warn('No se pudo incrustar imagen de la armadura en Excel:', errImg);
+            }
+        }
+
         return wb;
     }
 
     /**
      * Dispara la descarga directa en el navegador cliente
      */
-    async function downloadTrussExcel(nodesData, barsData, isIsostatic = true, filename = null, solverResult = null) {
-        const wb = await generateTrussWorkbook(nodesData, barsData, isIsostatic, solverResult);
+    async function downloadTrussExcel(nodesData, barsData, isIsostatic = true, filename = null, solverResult = null, opts = {}) {
+        const wb = await generateTrussWorkbook(nodesData, barsData, isIsostatic, solverResult, opts);
         const buffer = await wb.xlsx.writeBuffer();
 
         const defaultFilename = `Armadura_Estructural_${isIsostatic ? 'Isostatica' : 'Hiperestatica'}_Automatizada.xlsx`;

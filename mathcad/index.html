@@ -1499,13 +1499,13 @@
         const q = state.distLoads[i] || 0;
         if (q > 0) {
           if (i === 0) {
-            mLines.push(`- (x1 > x > x0) · q1 · (x² / 2)`);
-            qLines.push(`- (x1 > x > x0) · q1 · x`);
+            mLines.push(`- (x0 < x < x1) · q1 · (x² / 2)`);
+            qLines.push(`- (x0 < x < x1) · q1 · x`);
             mLines.push(`- (x ≥ x1) · q1 · L1 · (x - L1 / 2)`);
             qLines.push(`- (x ≥ x1) · q1 · L1`);
           } else {
-            mLines.push(`- (x${i + 1} > x > x${i}) · q${i + 1} · ((x - x${i})² / 2)`);
-            qLines.push(`- (x${i + 1} > x > x${i}) · q${i + 1} · (x - x${i})`);
+            mLines.push(`- (x${i} < x < x${i + 1}) · q${i + 1} · ((x - x${i})² / 2)`);
+            qLines.push(`- (x${i} < x < x${i + 1}) · q${i + 1} · (x - x${i})`);
             mLines.push(`- (x ≥ x${i + 1}) · q${i + 1} · L${i + 1} · (x - (x${i} + L${i + 1} / 2))`);
             qLines.push(`- (x ≥ x${i + 1}) · q${i + 1} · L${i + 1}`);
           }
@@ -1570,7 +1570,7 @@
     }
 
     // ==========================================
-    // GENERADOR DINÁMICO NATIVO DE .MCDX EN JS
+    // GENERADOR DINÁMICO NATIVO DE .MCDX EN JS (EXACTO N TRAMOS)
     // ==========================================
     async function generateMCDX() {
       const btn = document.getElementById('btnDownloadMcdx');
@@ -1588,8 +1588,17 @@
         const blob = await resp.blob();
 
         const zip = await JSZip.loadAsync(blob);
-        let wsXmlStr = await zip.file('mathcad/worksheet.xml').async('string');
 
+        // Limpiar Typography.Variants de todos los archivos XML en el ZIP
+        for (const fname of Object.keys(zip.files)) {
+          if (fname.endsWith('.xml')) {
+            let content = await zip.file(fname).async('string');
+            content = content.replace(/\s*Typography\.[a-zA-Z0-9]+="[^"]*"/g, '');
+            zip.file(fname, content);
+          }
+        }
+
+        let wsXmlStr = await zip.file('mathcad/worksheet.xml').async('string');
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(wsXmlStr, 'application/xml');
 
@@ -1600,54 +1609,78 @@
           if (el && el.parentNode) el.parentNode.removeChild(el);
         });
 
-        // 2. Modificar valores de longitudes L1..L10 (Regiones 2..11)
+        const N = state.numSpans;
+
+        // 2. Modificar valores de longitudes L1..LN y eliminar LN+1..L10 (Regiones 2..11)
         for (let i = 0; i < 10; i++) {
           const regId = (2 + i).toString();
           const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
           if (reg) {
-            const real = reg.querySelector('real');
-            if (real) {
-              const val = i < state.numSpans ? state.spans[i] : 0.0;
-              real.textContent = val.toString();
+            if (i < N) {
+              const real = reg.querySelector('real');
+              if (real) real.textContent = state.spans[i].toString();
+            } else {
+              if (reg.parentNode) reg.parentNode.removeChild(reg);
             }
           }
         }
 
-        // 3. Modificar Cargas Distribuidas q1..q10 (Regiones 25..34)
+        // 2.5 Eliminar coordenadas nodales x_{N+1}..x_10 (Regiones 12..22)
+        for (let i = 0; i <= 10; i++) {
+          const regId = (12 + i).toString();
+          const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
+          if (reg && i > N) {
+            if (reg.parentNode) reg.parentNode.removeChild(reg);
+          }
+        }
+
+        // 2.6 Modificar Ltot (Region 23) para vincular a x_N
+        const r23 = xmlDoc.querySelector('[region-id="23"]');
+        if (r23) {
+          const defEl = r23.querySelector('define');
+          if (defEl && defEl.children.length >= 2) {
+            defEl.replaceChild(mkId('x', N), defEl.children[1]);
+          }
+        }
+
+        // 3. Modificar Cargas Distribuidas q1..qN y eliminar qN+1..q10 (Regiones 25..34)
         for (let i = 0; i < 10; i++) {
           const regId = (25 + i).toString();
           const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
           if (reg) {
-            const real = reg.querySelector('real');
-            if (real) {
-              const val = i < state.numSpans ? (state.distLoads[i] || 0) : 0;
-              real.textContent = val.toString();
+            if (i < N) {
+              const real = reg.querySelector('real');
+              if (real) real.textContent = (state.distLoads[i] || 0).toString();
+            } else {
+              if (reg.parentNode) reg.parentNode.removeChild(reg);
             }
           }
         }
 
-        // 4. Modificar Cargas Puntuales P0..P10 (Regiones 35..45)
+        // 4. Modificar Cargas Puntuales P0..PN y eliminar PN+1..P10 (Regiones 35..45)
         for (let i = 0; i <= 10; i++) {
           const regId = (35 + i).toString();
           const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
           if (reg) {
-            const real = reg.querySelector('real');
-            if (real) {
-              const val = i <= state.numSpans ? (state.pointLoads[i] || 0) : 0;
-              real.textContent = val.toString();
+            if (i <= N) {
+              const real = reg.querySelector('real');
+              if (real) real.textContent = (state.pointLoads[i] || 0).toString();
+            } else {
+              if (reg.parentNode) reg.parentNode.removeChild(reg);
             }
           }
         }
 
-        // 5. Modificar Momentos M0..M10 (Regiones 46..56)
+        // 5. Modificar Momentos M0..MN y eliminar MN+1..M10 (Regiones 46..56)
         for (let i = 0; i <= 10; i++) {
           const regId = (46 + i).toString();
           const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
           if (reg) {
-            const real = reg.querySelector('real');
-            if (real) {
-              const val = i <= state.numSpans ? (state.appliedMoments[i] || 0) : 0;
-              real.textContent = val.toString();
+            if (i <= N) {
+              const real = reg.querySelector('real');
+              if (real) real.textContent = (state.appliedMoments[i] || 0).toString();
+            } else {
+              if (reg.parentNode) reg.parentNode.removeChild(reg);
             }
           }
         }
@@ -1664,7 +1697,7 @@
           if (real) real.textContent = state.reactions.VA.toFixed(4);
         }
 
-        // 7. Reorganización geométrica estricta anti-colisión
+        // 7. Reorganización geométrica limpia anti-colisión
         const setPos = (rid, top, left, w, h) => {
           const el = xmlDoc.querySelector(`[region-id="${rid}"]`);
           if (el) {
@@ -1678,13 +1711,17 @@
         setPos('2', 35.0, 37.8);  setPos('3', 35.0, 170.0); setPos('4', 35.0, 305.0); setPos('5', 35.0, 440.0); setPos('6', 35.0, 575.0);
         setPos('7', 68.0, 37.8);  setPos('8', 68.0, 170.0); setPos('9', 68.0, 305.0); setPos('10', 68.0, 440.0); setPos('11', 68.0, 575.0);
 
-        setPos('12', 105.0, 37.8); setPos('13', 105.0, 170.0); setPos('14', 105.0, 305.0); setPos('15', 105.0, 440.0); setPos('16', 105.0, 575.0);
-        setPos('17', 140.0, 37.8); setPos('18', 140.0, 150.0); setPos('19', 140.0, 265.0); setPos('20', 140.0, 380.0); setPos('21', 140.0, 495.0); setPos('22', 140.0, 610.0);
-        setPos('23', 175.0, 37.8);
+        const coordTop = (N > 5) ? 105.0 : 72.0;
+        setPos('12', coordTop, 37.8); setPos('13', coordTop, 150.0); setPos('14', coordTop, 265.0); setPos('15', coordTop, 380.0); setPos('16', coordTop, 495.0); setPos('17', coordTop, 610.0);
+        setPos('18', coordTop + 35, 37.8); setPos('19', coordTop + 35, 150.0); setPos('20', coordTop + 35, 265.0); setPos('21', coordTop + 35, 380.0); setPos('22', coordTop + 35, 495.0);
 
+        const ltotTop = coordTop + (N > 5 ? 70.0 : 38.0);
+        setPos('23', ltotTop, 37.8);
+
+        const imgTop = ltotTop + 38.0;
         const r24 = xmlDoc.querySelector('[region-id="24"]');
         if (r24) {
-          r24.setAttribute('top', '210.0');
+          r24.setAttribute('top', imgTop.toFixed(1));
           r24.setAttribute('left', '37.8');
           r24.setAttribute('width', '700');
           r24.setAttribute('height', '145');
@@ -1695,28 +1732,41 @@
           }
         }
 
-        setPos('25', 380.0, 37.8);  setPos('26', 380.0, 170.0); setPos('27', 380.0, 305.0); setPos('28', 380.0, 440.0); setPos('29', 380.0, 575.0);
-        setPos('30', 418.0, 37.8);  setPos('31', 418.0, 170.0); setPos('32', 418.0, 305.0); setPos('33', 418.0, 440.0); setPos('34', 418.0, 575.0);
+        const qTop = imgTop + 160.0;
+        setPos('25', qTop, 37.8);  setPos('26', qTop, 170.0); setPos('27', qTop, 305.0); setPos('28', qTop, 440.0); setPos('29', qTop, 575.0);
+        setPos('30', qTop + 35, 37.8); setPos('31', qTop + 35, 170.0); setPos('32', qTop + 35, 305.0); setPos('33', qTop + 35, 440.0); setPos('34', qTop + 35, 575.0);
 
-        setPos('35', 458.0, 37.8);  setPos('36', 458.0, 150.0); setPos('37', 458.0, 265.0); setPos('38', 458.0, 380.0); setPos('39', 458.0, 495.0); setPos('40', 458.0, 610.0);
-        setPos('41', 495.0, 37.8);  setPos('42', 495.0, 150.0); setPos('43', 495.0, 265.0); setPos('44', 495.0, 380.0); setPos('45', 495.0, 495.0);
+        const pTop = qTop + (N > 5 ? 72.0 : 38.0);
+        setPos('35', pTop, 37.8);  setPos('36', pTop, 150.0); setPos('37', pTop, 265.0); setPos('38', pTop, 380.0); setPos('39', pTop, 495.0); setPos('40', pTop, 610.0);
+        setPos('41', pTop + 35, 37.8); setPos('42', pTop + 35, 150.0); setPos('43', pTop + 35, 265.0); setPos('44', pTop + 35, 380.0); setPos('45', pTop + 35, 495.0);
 
-        setPos('46', 535.0, 37.8);  setPos('47', 535.0, 205.0); setPos('48', 535.0, 375.0); setPos('49', 535.0, 545.0);
-        setPos('50', 570.0, 37.8);  setPos('51', 570.0, 205.0); setPos('52', 570.0, 375.0); setPos('53', 570.0, 545.0);
-        setPos('54', 605.0, 37.8);  setPos('55', 605.0, 205.0); setPos('56', 605.0, 375.0);
+        const mTop = pTop + (N > 5 ? 72.0 : 38.0);
+        setPos('46', mTop, 37.8);  setPos('47', mTop, 205.0); setPos('48', mTop, 375.0); setPos('49', mTop, 545.0);
+        setPos('50', mTop + 35, 37.8); setPos('51', mTop + 35, 205.0); setPos('52', mTop + 35, 375.0); setPos('53', mTop + 35, 545.0);
+        setPos('54', mTop + 70, 37.8); setPos('55', mTop + 70, 205.0); setPos('56', mTop + 70, 375.0);
 
-        setPos('58', 650.0, 37.8);
-        setPos('59', 650.0, 230.0);
+        const reacTop = mTop + (N > 3 ? 75.0 : 40.0);
+        setPos('58', reacTop, 37.8);
+        setPos('59', reacTop, 230.0);
 
-        setPos('61', 695.0, 37.8);
-        setPos('62', 760.0, 37.8);
-        setPos('64', 820.0, 37.8);
+        const rangeXTop = reacTop + 45.0;
+        setPos('64', rangeXTop, 37.8); // x := 0 .. Ltot
 
-        setPos('66', 865.0, 37.8, 650, 230);
-        setPos('67', 1135.0, 37.8, 650, 230);
+        const vFuncTop = rangeXTop + 45.0;
+        setPos('62', vFuncTop, 37.8); // V(x)
 
-        // 8. Construcción de Expresiones Macaulay Dinámicas para M(x) y Q(x)
+        const mFuncTop = vFuncTop + 65.0;
+        setPos('61', mFuncTop, 37.8); // M(x)
+
+        const dfcPlotTop = mFuncTop + 80.0;
+        setPos('66', dfcPlotTop, 37.8, 680, 230); // Gráfico V(x)
+
+        const dmfPlotTop = dfcPlotTop + 260.0;
+        setPos('67', dmfPlotTop, 37.8, 680, 230); // Gráfico M(x)
+
+        // 8. Construcción de Expresiones con intervalos exactos del docente Alain Alanoca
         const ML_NS = 'http://schemas.mathsoft.com/math50';
+        const WS_NS = 'http://schemas.mathsoft.com/worksheet50';
         const P_NS = 'http://schemas.microsoft.com/winfx/2006/xaml/presentation';
         const C_NS = 'clr-namespace:Ptc.Wpf;assembly=Ptc.Core';
 
@@ -1780,97 +1830,84 @@
 
         // Apoyos y Reacciones
         const supNodes = Object.keys(state.supports).map(Number).sort((a,b)=>a-b);
+        let nA = 0, nB = N;
         if (supNodes.length >= 2) {
-          const nA = supNodes[0], nB = supNodes[1];
-          if (nA === 0) {
-            termsM.push(['+', mkApply('mult', mkId('V', 'A'), mkId('x'))]);
-            termsQ.push(['+', mkId('V', 'A')]);
-          } else {
-            const condVA = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', nA)));
-            const armVA = mkParens(mkApply('minus', mkId('x'), mkId('x', nA)));
-            termsM.push(['+', mkApply('mult', mkApply('mult', condVA, mkId('V', 'A')), armVA)]);
-            termsQ.push(['+', mkApply('mult', condVA, mkId('V', 'A'))]);
-          }
+          nA = supNodes[0];
+          nB = supNodes[1];
+        } else if (supNodes.length === 1) {
+          nA = supNodes[0];
+          nB = supNodes[0];
+        }
+
+        // Reacción A
+        if (nA === 0) {
+          termsM.push(['+', mkApply('mult', mkId('V', 'A'), mkId('x'))]);
+          termsQ.push(['+', mkId('V', 'A')]);
+        } else {
+          const condVA = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', nA)));
+          const armVA = mkParens(mkApply('minus', mkId('x'), mkId('x', nA)));
+          termsM.push(['+', mkApply('mult', mkApply('mult', condVA, mkId('V', 'A')), armVA)]);
+          termsQ.push(['+', mkApply('mult', condVA, mkId('V', 'A'))]);
+        }
+
+        // Reacción B (VD) - en nodo nB real
+        if (supNodes.length >= 2 && nB !== nA) {
           const condVB = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', nB)));
           const armVB = mkParens(mkApply('minus', mkId('x'), mkId('x', nB)));
           termsM.push(['+', mkApply('mult', mkApply('mult', condVB, mkId('V', 'D')), armVB)]);
           termsQ.push(['+', mkApply('mult', condVB, mkId('V', 'D'))]);
-        } else if (supNodes.length === 1 && state.supports[supNodes[0]] === 'fixed') {
-          const nFix = supNodes[0];
-          if (nFix === 0) {
-            termsM.push(['+', mkId('V', 'D')]);
-            termsM.push(['+', mkApply('mult', mkId('V', 'A'), mkId('x'))]);
-            termsQ.push(['+', mkId('V', 'A')]);
-          } else {
-            const condFix = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', nFix)));
-            const armFix = mkParens(mkApply('minus', mkId('x'), mkId('x', nFix)));
-            termsM.push(['+', mkApply('mult', condFix, mkId('V', 'D'))]);
-            termsM.push(['+', mkApply('mult', mkApply('mult', condFix, mkId('V', 'A')), armFix)]);
-            termsQ.push(['+', mkApply('mult', condFix, mkId('V', 'A'))]);
-          }
-        } else {
-          termsM.push(['+', mkApply('mult', mkId('V', 'A'), mkId('x'))]);
-          termsQ.push(['+', mkId('V', 'A')]);
         }
 
-        // Cargas Distribuidas
-        for (let k = 0; k < state.numSpans; k++) {
-          const qVal = state.distLoads[k] || 0;
-          if (qVal !== 0) {
-            const condAct = mkParens(mkApply('greaterThan',
-              mkApply('greaterThan', mkId('x', k+1), mkId('x')),
-              mkId('x', k)));
-            let armSq, armV;
-            if (k === 0) {
-              armSq = mkApply('div', mkApply('pow', mkId('x'), mkReal(2)), mkReal(2));
-              armV = mkId('x');
-            } else {
-              const armDiff = mkParens(mkApply('minus', mkId('x'), mkId('x', k)));
-              armSq = mkApply('div', mkApply('pow', armDiff, mkReal(2)), mkReal(2));
-              armV = armDiff;
-            }
-            termsM.push(['-', mkApply('mult', mkApply('mult', condAct, mkId('q', k+1)), armSq)]);
-            termsQ.push(['-', mkApply('mult', mkApply('mult', condAct, mkId('q', k+1)), armV)]);
+        // Tramos 1..N con sintaxis exacta del docente Alain Alanoca: (x_{k-1} < x < x_k)
+        for (let k = 1; k <= N; k++) {
+          const condIn = mkParens(mkApply('lessThan',
+            mkApply('lessThan', mkId('x', k - 1), mkId('x')),
+            mkId('x', k)));
+          const armDiff = mkParens(mkApply('minus', mkId('x'), mkId('x', k - 1)));
+          const loadIn = mkParens(mkApply('mult', mkId('q', k), armDiff));
+          const armIn = mkParens(mkApply('div', armDiff, mkReal(2)));
 
-            const condSup = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', k+1)));
-            let armCg;
-            if (k === 0) {
-              armCg = mkParens(mkApply('minus', mkId('x'), mkApply('div', mkId('L', 1), mkReal(2))));
-            } else {
-              const cgPos = mkParens(mkApply('plus', mkId('x', k), mkApply('div', mkId('L', k+1), mkReal(2))));
-              armCg = mkParens(mkApply('minus', mkId('x'), cgPos));
-            }
-            termsM.push(['-', mkApply('mult', mkApply('mult', mkApply('mult', condSup, mkId('q', k+1)), mkId('L', k+1)), armCg)]);
-            termsQ.push(['-', mkApply('mult', mkApply('mult', condSup, mkId('q', k+1)), mkId('L', k+1))]);
-          }
-        }
+          const condSup = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', k)));
+          const loadSup = mkParens(mkApply('mult', mkId('q', k), mkId('L', k)));
+          const cgPos = mkParens(mkApply('plus', mkId('x', k - 1), mkApply('div', mkId('L', k), mkReal(2))));
+          const armCg = mkParens(mkApply('minus', mkId('x'), cgPos));
 
-        // Momentos Aplicados
-        for (let i = 0; i <= state.numSpans; i++) {
-          const mVal = state.appliedMoments[i] || 0;
-          if (mVal !== 0) {
-            if (i === 0) termsM.push(['+', mkId('M', 0)]);
-            else {
-              const condM = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', i)));
-              termsM.push(['+', mkApply('mult', condM, mkId('M', i))]);
-            }
-          }
-        }
+          // En V(x): Intervalo primero * Carga
+          termsQ.push(['-', mkApply('mult', condIn, loadIn)]);
+          termsQ.push(['-', mkApply('mult', condSup, loadSup)]);
 
-        // Cargas Puntuales
-        for (let i = 0; i <= state.numSpans; i++) {
-          const pVal = state.pointLoads[i] || 0;
+          // En M(x): Intervalo primero * Carga * Brazo explícito
+          termsM.push(['-', mkApply('mult', mkApply('mult', condIn, loadIn), armIn)]);
+          termsM.push(['-', mkApply('mult', mkApply('mult', condSup, loadSup), armCg)]);
+
+          // Carga puntual P_k (solo si P_k != 0)
+          const pVal = state.pointLoads[k] || 0;
           if (pVal !== 0) {
-            if (i === 0) {
-              termsM.push(['-', mkApply('mult', mkId('P', 0), mkId('x'))]);
-              termsQ.push(['-', mkId('P', 0)]);
-            } else {
-              const condP = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', i)));
-              const armP = mkParens(mkApply('minus', mkId('x'), mkId('x', i)));
-              termsM.push(['-', mkApply('mult', mkApply('mult', condP, mkId('P', i)), armP)]);
-              termsQ.push(['-', mkApply('mult', condP, mkId('P', i))]);
-            }
+            const condPk = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', k)));
+            const armPk = mkParens(mkApply('minus', mkId('x'), mkId('x', k)));
+            termsQ.push(['-', mkApply('mult', condPk, mkId('P', k))]);
+            termsM.push(['-', mkApply('mult', mkApply('mult', condPk, mkId('P', k)), armPk)]);
           }
+
+          // Momento concentrado M_k (solo si M_k != 0)
+          const mVal = state.appliedMoments[k] || 0;
+          if (mVal !== 0) {
+            const condMk = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', k)));
+            termsM.push(['+', mkApply('mult', condMk, mkId('M', k))]);
+          }
+        }
+
+        // Carga puntual P0 y Momento M0 en x=0 (solo si existen y son no nulos)
+        const p0Val = state.pointLoads[0] || 0;
+        if (p0Val !== 0) {
+          const condP0 = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', 0)));
+          termsQ.push(['-', mkApply('mult', condP0, mkId('P', 0))]);
+          termsM.push(['-', mkApply('mult', mkApply('mult', condP0, mkId('P', 0)), mkId('x'))]);
+        }
+        const m0Val = state.appliedMoments[0] || 0;
+        if (m0Val !== 0) {
+          const condM0 = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', 0)));
+          termsM.push(['+', mkApply('mult', condM0, mkId('M', 0))]);
         }
 
         // Reemplazar definición de M(x) en R61
@@ -1882,11 +1919,16 @@
           }
         }
 
-        // Reemplazar definición de Q(x) en R62
+        // Reemplazar definición de V(x) en R62
         const r62 = xmlDoc.querySelector('[region-id="62"]');
         if (r62) {
           const defEl = r62.querySelector('define');
           if (defEl && defEl.children.length >= 2) {
+            const fnEl = defEl.querySelector('function');
+            if (fnEl) {
+              const fnId = fnEl.querySelector('id');
+              if (fnId) fnId.textContent = 'V';
+            }
             defEl.replaceChild(buildChain(termsQ), defEl.children[1]);
           }
         }
@@ -1895,103 +1937,64 @@
         const coords = getNodeCoords();
         const Ltot = coords[coords.length - 1];
 
-        let qMin = 0, qMax = 0, mMin = 0, mMax = 0;
-        for (let i = 0; i <= 200; i++) {
-          const x = (i * Ltot) / 200;
-          const { Q, M } = evaluateSectionForces(x);
-          if (i === 0) {
-            qMin = qMax = Q;
-            mMin = mMax = M;
+        // 9.5 Secuencia estricta de esquema XSD para gráficos 2D (numberFormat antes de plotEquations)
+        function fixAxis(ax, maxVal) {
+          const nfs = ax.querySelectorAll('numberFormat');
+          nfs.forEach(nf => nf.parentNode.removeChild(nf));
+
+          const nf = xmlDoc.createElementNS(WS_NS, 'numberFormat');
+          const dec = xmlDoc.createElementNS(WS_NS, 'decimal');
+          dec.setAttribute('precision', '3');
+          dec.setAttribute('show-trailing-zeros', 'false');
+          dec.setAttribute('radix', 'dec');
+          dec.setAttribute('imaginary-value', 'i');
+          nf.appendChild(dec);
+
+          const peq = ax.querySelector('plotEquations');
+          if (peq) {
+            ax.insertBefore(nf, peq);
           } else {
-            if (Q < qMin) qMin = Q;
-            if (Q > qMax) qMax = Q;
-            if (M < mMin) mMin = M;
-            if (M > mMax) mMax = M;
+            ax.appendChild(nf);
+          }
+
+          const aline = ax.querySelector('axisLine');
+          if (aline) {
+            aline.setAttribute('positionticmark', Math.round(maxVal).toString());
           }
         }
-        const qSpan = Math.max(Math.abs(qMax - qMin), 10.0);
-        const qLimMin = qMin - 0.15 * qSpan;
-        const qLimMax = qMax + 0.15 * qSpan;
-
-        const mSpan = Math.max(Math.abs(mMax - mMin), 10.0);
-        const mLimMin = mMin - 0.15 * mSpan;
-        const mLimMax = mMax + 0.15 * mSpan;
 
         const r66 = xmlDoc.querySelector('[region-id="66"]');
         if (r66) {
-          const xAx = r66.querySelector('xAxis');
-          if (xAx) {
-            xAx.setAttribute('start', '0');
-            xAx.setAttribute('end', Ltot.toFixed(2));
-            const aline = xAx.querySelector('axisLine');
-            if (aline) aline.setAttribute('positionticmark', Math.round(Ltot).toString());
-          }
-          const yAx = r66.querySelector('yAxis');
-          if (yAx) {
-            yAx.setAttribute('start', qLimMin.toFixed(1));
-            yAx.setAttribute('end', qLimMax.toFixed(1));
-            const aline = yAx.querySelector('axisLine');
-            if (aline) aline.setAttribute('positionticmark', '0');
+          const plot = r66.querySelector('plot');
+          if (plot) {
+            for (const peq of plot.querySelectorAll('yAxis plotEquation id')) {
+              if (peq.textContent === 'Q') peq.textContent = 'V';
+            }
+            const xAx = plot.querySelector('xAxis');
+            if (xAx) fixAxis(xAx, Ltot);
+            const yAx = plot.querySelector('yAxis');
+            if (yAx) fixAxis(yAx, 0);
           }
         }
 
         const r67 = xmlDoc.querySelector('[region-id="67"]');
         if (r67) {
-          const xAx = r67.querySelector('xAxis');
-          if (xAx) {
-            xAx.setAttribute('start', '0');
-            xAx.setAttribute('end', Ltot.toFixed(2));
-            const aline = xAx.querySelector('axisLine');
-            if (aline) aline.setAttribute('positionticmark', Math.round(Ltot).toString());
-          }
-          const yAx = r67.querySelector('yAxis');
-          if (yAx) {
-            yAx.setAttribute('start', mLimMin.toFixed(1));
-            yAx.setAttribute('end', mLimMax.toFixed(1));
-            const aline = yAx.querySelector('axisLine');
-            if (aline) aline.setAttribute('positionticmark', '0');
+          const plot = r67.querySelector('plot');
+          if (plot) {
+            const xAx = plot.querySelector('xAxis');
+            if (xAx) fixAxis(xAx, Ltot);
+            const yAx = plot.querySelector('yAxis');
+            if (yAx) fixAxis(yAx, 0);
           }
         }
 
-        // 9.5 ESCUDO SANITIZADOR PRE-EXPORTACIÓN (Garantía 100% Esquema Mathcad Prime 11)
-        // A) Sanitizar todos los axisLine: positionticmark DEBE ser estrictamente entero xs:integer
+        // Sanitizar todos los axisLine
         const allAxisLines = xmlDoc.querySelectorAll('axisLine');
         allAxisLines.forEach(al => {
           const ptm = al.getAttribute('positionticmark');
           if (ptm !== null && ptm !== undefined) {
             const num = parseFloat(ptm);
             al.setAttribute('positionticmark', isNaN(num) ? '0' : Math.round(num).toString());
-          }
-        });
-
-        // B) Sanitizar todos los apply: validar operadores binarios y unarios
-        const binaryOps = new Set(['mult', 'div', 'pow', 'greaterThan', 'greaterOrEqual']);
-        const allApplies = xmlDoc.querySelectorAll('apply');
-        allApplies.forEach(ap => {
-          if (ap.children.length === 0) {
-            const z = xmlDoc.createElementNS(ML_NS, 'ml:real');
-            z.textContent = '0';
-            ap.appendChild(z);
-            return;
-          }
-          const opName = ap.children[0].localName;
-          const argCount = ap.children.length - 1;
-          if (binaryOps.has(opName) && argCount === 1) {
-            // Reemplazar el apply incompleto por su único argumento
-            const onlyArg = ap.children[1];
-            if (ap.parentNode) {
-              ap.parentNode.replaceChild(onlyArg.cloneNode(true), ap);
-            }
-          }
-        });
-
-        // C) Sanitizar parens vacíos
-        const allParens = xmlDoc.querySelectorAll('parens');
-        allParens.forEach(p => {
-          if (p.children.length === 0) {
-            const z = xmlDoc.createElementNS(ML_NS, 'ml:real');
-            z.textContent = '0';
-            p.appendChild(z);
           }
         });
 

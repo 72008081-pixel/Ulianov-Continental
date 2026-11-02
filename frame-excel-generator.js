@@ -113,7 +113,7 @@
     /**
      * Construye el libro de trabajo con las dos pestañas oficiales
      */
-    async function buildMasterFrameWorkbook(model, result){
+    async function buildMasterFrameWorkbook(model, result, opts = {}){
         if(!result){
             result = FrameSolver.compute(model);
         }
@@ -1029,6 +1029,32 @@
         await ws1.protect('miau', protectOptions);
         await ws2.protect('miau', protectOptions);
 
+        // PESTAÑA 3 OPCIONAL: 'GRÁFICA PÓRTICO' (Si se proporciona captura del Canvas)
+        if (opts && opts.framePngBase64) {
+            try {
+                const wsG = wb.addWorksheet('GRÁFICA PÓRTICO', {
+                    views: [{ showGridLines: true, zoomScale: 90 }]
+                });
+                wsG.columns = Array.from({ length: 16 }, () => ({ width: 14 }));
+                wsG.getCell('B2').value = 'CEREBRO ESTRUCTURAL — ESQUEMA GRÁFICO DEL PÓRTICO PLANO 2D';
+                wsG.getCell('B2').font = { bold: true, size: 16, color: { argb: 'FF0F172A' } };
+                wsG.getCell('B3').value = 'Modelo matricial con grados de libertad, cargas nodales, distribuidas y reacciones (Cátedra Ing. Ulianov Cuba Valencia)';
+                wsG.getCell('B3').font = { italic: true, size: 11, color: { argb: 'FF64748B' } };
+
+                const imageId = wb.addImage({
+                    base64: opts.framePngBase64,
+                    extension: 'png'
+                });
+                wsG.addImage(imageId, {
+                    tl: { col: 1, row: 4 },
+                    ext: { width: 960, height: 500 }
+                });
+                await wsG.protect('miau', protectOptions);
+            } catch (errImg) {
+                console.warn('No se pudo incrustar imagen del pórtico en Excel:', errImg);
+            }
+        }
+
         return wb;
     }
 
@@ -1040,7 +1066,7 @@
         if(typeof opts === 'string' && opts.trim()) filename = opts.trim();
         else if(opts && typeof opts.filename === 'string') filename = opts.filename.trim();
         try {
-            const wb = await buildMasterFrameWorkbook(model, result);
+            const wb = await buildMasterFrameWorkbook(model, result, (typeof opts === 'object') ? opts : {});
             const buffer = await wb.xlsx.writeBuffer();
 
             if(typeof window !== 'undefined' && typeof document !== 'undefined'){
