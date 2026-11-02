@@ -6,6 +6,8 @@
   <title>CEREBRO ESTRUCTURAL v11.0 | Suite y Generador de Vigas para Mathcad Prime 11</title>
   
   <!-- CDNs: Tailwind CSS, Chart.js, JSZip, FileSaver -->
+
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -95,9 +97,9 @@
       <button onclick="generateMCDX()" id="btnDownloadMcdx" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-teal-500 to-sky-500 hover:from-teal-400 hover:to-sky-400 text-slate-950 flex items-center gap-1.5 shadow-md transition transform active:scale-95">
         💾 Descargar .mcdx
       </button>
-      <a href="./PLANTILLA_UNIVERSAL_10_TRAMOS_DESDE_CERO.mcdx" download id="btnDownloadNuevaPlantilla" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 flex items-center gap-1.5 shadow-md transition transform active:scale-95">
+      <button onclick="generateNewPlantillaMCDX()" id="btnDownloadNuevaPlantilla" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 flex items-center gap-1.5 shadow-md transition transform active:scale-95">
         📥 Descargar nueva plantilla
-      </a>
+      </button>
       <a href="https://github.com/72008081-pixel/diagramas-en-MATHCAD" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5 transition">
         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
         GitHub
@@ -385,9 +387,9 @@
           <a href="./PLANTILLA_MAESTRA_10_TRAMOS_VIGAS.mcdx" download class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 transition">
             📥 Plantilla Maestra 10 Tramos (.mcdx)
           </a>
-          <a href="./PLANTILLA_UNIVERSAL_10_TRAMOS_DESDE_CERO.mcdx" download class="px-2.5 py-1 text-xs rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 font-semibold transition flex items-center gap-1 shadow-sm">
+          <button onclick="generateNewPlantillaMCDX()" class="px-2.5 py-1 text-xs rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 font-semibold transition flex items-center gap-1 shadow-sm">
             📥 Descargar nueva plantilla
-          </a>
+          </button>
           <a href="./EJERCICIO-01.mcdx" download class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-teal-300 border border-slate-700 transition">
             📥 Ejercicio 01 Examen Oficial (.mcdx)
           </a>
@@ -399,6 +401,26 @@
     </div>
 
   </main>
+
+
+  <!-- ========================================== -->
+  <!-- MOTOR DE VERIFICACIÓN PYTHON (PYODIDE)     -->
+  <!-- ========================================== -->
+  <section id="pythonEngineSection" class="px-4 lg:px-8 py-6">
+    <div class="bg-slate-900/80 border border-emerald-500/30 rounded-2xl p-4 lg:p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+          <span>🐍</span>
+          <span>Motor de Verificación Python (Pyodide)</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">In-Browser</span>
+        </h2>
+        <button onclick="runPyodideVerification()" id="btnRunPython" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center gap-1.5 shadow-md transition transform active:scale-95">
+          ▶ Ejecutar Verificación
+        </button>
+      </div>
+      <pre id="pythonOutput" class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-[11px] font-mono text-emerald-300 max-h-[400px] overflow-auto whitespace-pre-wrap leading-relaxed">Presiona "Ejecutar Verificación" para calcular V(x), M(x) y comparar resultados...</pre>
+    </div>
+  </section>
 
   <!-- ========================================== -->
   <!-- FOOTER                                     -->
@@ -1602,6 +1624,67 @@
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(wsXmlStr, 'application/xml');
 
+        const ML_NS = 'http://schemas.mathsoft.com/math50';
+        const WS_NS = 'http://schemas.mathsoft.com/worksheet50';
+        const P_NS = 'http://schemas.microsoft.com/winfx/2006/xaml/presentation';
+        const C_NS = 'clr-namespace:Ptc.Wpf;assembly=Ptc.Core';
+
+        function mkId(name, subscript) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:id');
+          el.setAttribute('labels', 'VARIABLE');
+          el.setAttribute('label-is-contextual', 'true');
+          el.setAttribute('xml:space', 'preserve');
+          if (subscript !== undefined && subscript !== null) {
+            const span = xmlDoc.createElementNS(P_NS, 'p:Span');
+            span.textContent = name;
+            const sub = xmlDoc.createElementNS(C_NS, 'c:Subscript');
+            sub.textContent = subscript.toString();
+            span.appendChild(sub);
+            el.appendChild(span);
+          } else {
+            el.textContent = name;
+          }
+          return el;
+        }
+
+        function mkReal(val) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:real');
+          el.textContent = (typeof val === 'number') ? val.toString() : val;
+          return el;
+        }
+
+        function mkParens(child) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:parens');
+          el.appendChild(child.cloneNode(true));
+          return el;
+        }
+
+        function mkApply(opName, ...args) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:apply');
+          const op = xmlDoc.createElementNS(ML_NS, `ml:${opName}`);
+          el.appendChild(op);
+          for (const a of args) {
+            el.appendChild(a.cloneNode(true));
+          }
+          return el;
+        }
+
+        function buildChain(terms) {
+          let acc = null;
+          for (const [sign, el] of terms) {
+            const elClone = el.cloneNode(true);
+            if (!acc) {
+              if (sign === '+') acc = elClone;
+              else acc = mkApply('minus', elClone);
+            } else {
+              const op = (sign === '+') ? 'plus' : 'minus';
+              acc = mkApply(op, acc, elClone);
+            }
+          }
+          return acc || mkReal(0);
+        }
+
+
         // 1. Eliminar regiones parásitas o repetidas
         const unwantedIds = new Set(['0', '1', '57', '60', '63', '65']);
         unwantedIds.forEach(id => {
@@ -1765,67 +1848,7 @@
         setPos('67', dmfPlotTop, 37.8, 680, 230); // Gráfico M(x)
 
         // 8. Construcción de Expresiones con intervalos exactos del docente Alain Alanoca
-        const ML_NS = 'http://schemas.mathsoft.com/math50';
-        const WS_NS = 'http://schemas.mathsoft.com/worksheet50';
-        const P_NS = 'http://schemas.microsoft.com/winfx/2006/xaml/presentation';
-        const C_NS = 'clr-namespace:Ptc.Wpf;assembly=Ptc.Core';
-
-        function mkId(name, subscript) {
-          const el = xmlDoc.createElementNS(ML_NS, 'ml:id');
-          el.setAttribute('labels', 'VARIABLE');
-          el.setAttribute('label-is-contextual', 'true');
-          el.setAttribute('xml:space', 'preserve');
-          if (subscript !== undefined && subscript !== null) {
-            const span = xmlDoc.createElementNS(P_NS, 'p:Span');
-            span.textContent = name;
-            const sub = xmlDoc.createElementNS(C_NS, 'c:Subscript');
-            sub.textContent = subscript.toString();
-            span.appendChild(sub);
-            el.appendChild(span);
-          } else {
-            el.textContent = name;
-          }
-          return el;
-        }
-
-        function mkReal(val) {
-          const el = xmlDoc.createElementNS(ML_NS, 'ml:real');
-          el.textContent = (typeof val === 'number') ? val.toString() : val;
-          return el;
-        }
-
-        function mkParens(child) {
-          const el = xmlDoc.createElementNS(ML_NS, 'ml:parens');
-          el.appendChild(child.cloneNode(true));
-          return el;
-        }
-
-        function mkApply(opName, ...args) {
-          const el = xmlDoc.createElementNS(ML_NS, 'ml:apply');
-          const op = xmlDoc.createElementNS(ML_NS, `ml:${opName}`);
-          el.appendChild(op);
-          for (const a of args) {
-            el.appendChild(a.cloneNode(true));
-          }
-          return el;
-        }
-
-        function buildChain(terms) {
-          let acc = null;
-          for (const [sign, el] of terms) {
-            const elClone = el.cloneNode(true);
-            if (!acc) {
-              if (sign === '+') acc = elClone;
-              else acc = mkApply('minus', elClone);
-            } else {
-              const op = (sign === '+') ? 'plus' : 'minus';
-              acc = mkApply(op, acc, elClone);
-            }
-          }
-          return acc || mkReal(0);
-        }
-
-        const termsM = [];
+const termsM = [];
         const termsQ = [];
 
         // Apoyos y Reacciones
@@ -2026,6 +2049,445 @@
       }
     }
 
+
+    // ==========================================
+    // GENERADOR DINÁMICO NUEVA PLANTILLA (Estilo Profesor Alain Alanoca)
+    // ==========================================
+    async function generateNewPlantillaMCDX() {
+      const btn = document.getElementById('btnDownloadNuevaPlantilla');
+      const oldHtml = btn.innerHTML;
+      btn.innerHTML = `<span class="animate-spin">⏳</span> Generando nueva plantilla...`;
+      btn.disabled = true;
+
+      try {
+        // Cargar la plantilla universal como base
+        let resp = await fetch('./PLANTILLA_UNIVERSAL_10_TRAMOS_DESDE_CERO.mcdx');
+        if (!resp.ok) {
+          resp = await fetch('./PLANTILLA_MAESTRA_10_TRAMOS_CORREGIDA.mcdx');
+        }
+        if (!resp.ok) throw new Error('No se pudo cargar la plantilla base universal');
+        const blob = await resp.blob();
+
+        const zip = await JSZip.loadAsync(blob);
+
+        // Limpiar Typography.Variants de todos los archivos XML en el ZIP
+        for (const fname of Object.keys(zip.files)) {
+          if (fname.endsWith('.xml')) {
+            let content = await zip.file(fname).async('string');
+            content = content.replace(/\s*Typography\.[a-zA-Z0-9]+="[^"]*"/g, '');
+            zip.file(fname, content);
+          }
+        }
+
+        let wsXmlStr = await zip.file('mathcad/worksheet.xml').async('string');
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(wsXmlStr, 'application/xml');
+
+        const N = state.numSpans;
+
+        // Reutilizar la misma lógica de inyección de datos
+        const ML_NS = 'http://schemas.mathsoft.com/math50';
+        const WS_NS = 'http://schemas.mathsoft.com/worksheet50';
+        const P_NS = 'http://schemas.microsoft.com/winfx/2006/xaml/presentation';
+        const C_NS = 'clr-namespace:Ptc.Wpf;assembly=Ptc.Core';
+
+        function mkId(name, subscript) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:id');
+          el.setAttribute('labels', 'VARIABLE');
+          el.setAttribute('label-is-contextual', 'true');
+          el.setAttribute('xml:space', 'preserve');
+          if (subscript !== undefined && subscript !== null) {
+            const span = xmlDoc.createElementNS(P_NS, 'p:Span');
+            span.textContent = name;
+            const sub = xmlDoc.createElementNS(C_NS, 'c:Subscript');
+            sub.textContent = subscript.toString();
+            span.appendChild(sub);
+            el.appendChild(span);
+          } else {
+            el.textContent = name;
+          }
+          return el;
+        }
+
+        function mkReal(val) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:real');
+          el.textContent = (typeof val === 'number') ? val.toString() : val;
+          return el;
+        }
+
+        function mkParens(child) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:parens');
+          el.appendChild(child.cloneNode(true));
+          return el;
+        }
+
+        function mkApply(opName, ...args) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:apply');
+          const op = xmlDoc.createElementNS(ML_NS, `ml:${opName}`);
+          el.appendChild(op);
+          for (const a of args) {
+            el.appendChild(a.cloneNode(true));
+          }
+          return el;
+        }
+
+        function buildChain(terms) {
+          let acc = null;
+          for (const [sign, el] of terms) {
+            const elClone = el.cloneNode(true);
+            if (!acc) {
+              if (sign === '+') acc = elClone;
+              else acc = mkApply('minus', elClone);
+            } else {
+              const op = (sign === '+') ? 'plus' : 'minus';
+              acc = mkApply(op, acc, elClone);
+            }
+          }
+          return acc || mkReal(0);
+        }
+
+        // 1. Eliminar regiones parasitas
+        const unwantedIds = new Set(['0', '1', '57', '60', '63', '65']);
+        unwantedIds.forEach(id => {
+          const el = xmlDoc.querySelector(`[region-id="${id}"]`);
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        });
+
+        // 2. Modificar longitudes L1..LN y eliminar LN+1..L10
+        for (let i = 0; i < 10; i++) {
+          const regId = (2 + i).toString();
+          const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
+          if (reg) {
+            if (i < N) {
+              const real = reg.querySelector('real');
+              if (real) real.textContent = state.spans[i].toString();
+            } else {
+              if (reg.parentNode) reg.parentNode.removeChild(reg);
+            }
+          }
+        }
+
+        // 2.5 Eliminar coordenadas nodales sobrantes
+        for (let i = 0; i <= 10; i++) {
+          const regId = (12 + i).toString();
+          const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
+          if (reg && i > N) {
+            if (reg.parentNode) reg.parentNode.removeChild(reg);
+          }
+        }
+
+        // 2.6 Modificar Ltot para vincular a x_N
+        const r23 = xmlDoc.querySelector('[region-id="23"]');
+        if (r23) {
+          const defEl = r23.querySelector('define');
+          if (defEl && defEl.children.length >= 2) {
+            defEl.replaceChild(mkId('x', N), defEl.children[1]);
+          }
+        }
+
+        // 3. Cargas distribuidas
+        for (let i = 0; i < 10; i++) {
+          const regId = (25 + i).toString();
+          const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
+          if (reg) {
+            if (i < N) {
+              const real = reg.querySelector('real');
+              if (real) real.textContent = (state.distLoads[i] || 0).toString();
+            } else {
+              if (reg.parentNode) reg.parentNode.removeChild(reg);
+            }
+          }
+        }
+
+        // 4. Cargas puntuales
+        for (let i = 0; i <= 10; i++) {
+          const regId = (35 + i).toString();
+          const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
+          if (reg) {
+            if (i <= N) {
+              const real = reg.querySelector('real');
+              if (real) real.textContent = (state.pointLoads[i] || 0).toString();
+            } else {
+              if (reg.parentNode) reg.parentNode.removeChild(reg);
+            }
+          }
+        }
+
+        // 5. Momentos
+        for (let i = 0; i <= 10; i++) {
+          const regId = (46 + i).toString();
+          const reg = xmlDoc.querySelector(`[region-id="${regId}"]`);
+          if (reg) {
+            if (i <= N) {
+              const real = reg.querySelector('real');
+              if (real) real.textContent = (state.appliedMoments[i] || 0).toString();
+            } else {
+              if (reg.parentNode) reg.parentNode.removeChild(reg);
+            }
+          }
+        }
+
+        // 6. Reacciones
+        const r58 = xmlDoc.querySelector('[region-id="58"]');
+        if (r58) {
+          const real = r58.querySelector('real');
+          if (real) real.textContent = state.reactions.VD.toFixed(4);
+        }
+        const r59 = xmlDoc.querySelector('[region-id="59"]');
+        if (r59) {
+          const real = r59.querySelector('real');
+          if (real) real.textContent = state.reactions.VA.toFixed(4);
+        }
+
+        // 7. Layout geométrico
+        const setPos = (rid, top, left, w, h) => {
+          const el = xmlDoc.querySelector(`[region-id="${rid}"]`);
+          if (el) {
+            el.setAttribute('top', top.toFixed(1));
+            el.setAttribute('left', left.toFixed(1));
+            if (w !== undefined) el.setAttribute('width', w.toString());
+            if (h !== undefined) el.setAttribute('height', h.toString());
+          }
+        };
+
+        setPos('2', 35.0, 37.8);  setPos('3', 35.0, 170.0); setPos('4', 35.0, 305.0); setPos('5', 35.0, 440.0); setPos('6', 35.0, 575.0);
+        setPos('7', 68.0, 37.8);  setPos('8', 68.0, 170.0); setPos('9', 68.0, 305.0); setPos('10', 68.0, 440.0); setPos('11', 68.0, 575.0);
+
+        const coordTop = (N > 5) ? 105.0 : 72.0;
+        setPos('12', coordTop, 37.8); setPos('13', coordTop, 150.0); setPos('14', coordTop, 265.0); setPos('15', coordTop, 380.0); setPos('16', coordTop, 495.0); setPos('17', coordTop, 610.0);
+        setPos('18', coordTop + 35, 37.8); setPos('19', coordTop + 35, 150.0); setPos('20', coordTop + 35, 265.0); setPos('21', coordTop + 35, 380.0); setPos('22', coordTop + 35, 495.0);
+
+        const ltotTop = coordTop + (N > 5 ? 70.0 : 38.0);
+        setPos('23', ltotTop, 37.8);
+
+        const imgTop = ltotTop + 38.0;
+        const r24 = xmlDoc.querySelector('[region-id="24"]');
+        if (r24) {
+          r24.setAttribute('top', imgTop.toFixed(1));
+          r24.setAttribute('left', '37.8');
+          r24.setAttribute('width', '700');
+          r24.setAttribute('height', '145');
+          const png = r24.querySelector('png');
+          if (png) {
+            png.setAttribute('display-width', '700');
+            png.setAttribute('display-height', '145');
+          }
+        }
+
+        const qTop = imgTop + 160.0;
+        setPos('25', qTop, 37.8);  setPos('26', qTop, 170.0); setPos('27', qTop, 305.0); setPos('28', qTop, 440.0); setPos('29', qTop, 575.0);
+        setPos('30', qTop + 35, 37.8); setPos('31', qTop + 35, 170.0); setPos('32', qTop + 35, 305.0); setPos('33', qTop + 35, 440.0); setPos('34', qTop + 35, 575.0);
+
+        const pTop = qTop + (N > 5 ? 72.0 : 38.0);
+        setPos('35', pTop, 37.8);  setPos('36', pTop, 150.0); setPos('37', pTop, 265.0); setPos('38', pTop, 380.0); setPos('39', pTop, 495.0); setPos('40', pTop, 610.0);
+        setPos('41', pTop + 35, 37.8); setPos('42', pTop + 35, 150.0); setPos('43', pTop + 35, 265.0); setPos('44', pTop + 35, 380.0); setPos('45', pTop + 35, 495.0);
+
+        const mTop = pTop + (N > 5 ? 72.0 : 38.0);
+        setPos('46', mTop, 37.8);  setPos('47', mTop, 205.0); setPos('48', mTop, 375.0); setPos('49', mTop, 545.0);
+        setPos('50', mTop + 35, 37.8); setPos('51', mTop + 35, 205.0); setPos('52', mTop + 35, 375.0); setPos('53', mTop + 35, 545.0);
+        setPos('54', mTop + 70, 37.8); setPos('55', mTop + 70, 205.0); setPos('56', mTop + 70, 375.0);
+
+        const reacTop = mTop + (N > 3 ? 75.0 : 40.0);
+        setPos('58', reacTop, 37.8);
+        setPos('59', reacTop, 230.0);
+
+        const rangeXTop = reacTop + 45.0;
+        setPos('64', rangeXTop, 37.8);
+
+        const vFuncTop = rangeXTop + 45.0;
+        setPos('62', vFuncTop, 37.8);
+
+        const mFuncTop = vFuncTop + 65.0;
+        setPos('61', mFuncTop, 37.8);
+
+        const dfcPlotTop = mFuncTop + 80.0;
+        setPos('66', dfcPlotTop, 37.8, 680, 230);
+
+        const dmfPlotTop = dfcPlotTop + 260.0;
+        setPos('67', dmfPlotTop, 37.8, 680, 230);
+
+        // 8. Construir V(x) y M(x) con intervalos del docente
+        const termsM = [];
+        const termsQ = [];
+
+        const supNodes = Object.keys(state.supports).map(Number).sort((a,b)=>a-b);
+        let nA = 0, nB = N;
+        if (supNodes.length >= 2) { nA = supNodes[0]; nB = supNodes[1]; }
+        else if (supNodes.length === 1) { nA = supNodes[0]; nB = supNodes[0]; }
+
+        // Reacción A
+        if (nA === 0) {
+          termsM.push(['+', mkApply('mult', mkId('V', 'A'), mkId('x'))]);
+          termsQ.push(['+', mkId('V', 'A')]);
+        } else {
+          const condVA = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', nA)));
+          const armVA = mkParens(mkApply('minus', mkId('x'), mkId('x', nA)));
+          termsM.push(['+', mkApply('mult', mkApply('mult', condVA, mkId('V', 'A')), armVA)]);
+          termsQ.push(['+', mkApply('mult', condVA, mkId('V', 'A'))]);
+        }
+
+        // Reacción B (VD)
+        if (supNodes.length >= 2 && nB !== nA) {
+          const condVB = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', nB)));
+          const armVB = mkParens(mkApply('minus', mkId('x'), mkId('x', nB)));
+          termsM.push(['+', mkApply('mult', mkApply('mult', condVB, mkId('V', 'D')), armVB)]);
+          termsQ.push(['+', mkApply('mult', condVB, mkId('V', 'D'))]);
+        }
+
+        // Tramos con sintaxis docente: (x_{k-1} < x < x_k)
+        for (let k = 1; k <= N; k++) {
+          const condIn = mkParens(mkApply('lessThan',
+            mkApply('lessThan', mkId('x', k - 1), mkId('x')),
+            mkId('x', k)));
+          const armDiff = mkParens(mkApply('minus', mkId('x'), mkId('x', k - 1)));
+          const loadIn = mkParens(mkApply('mult', mkId('q', k), armDiff));
+          const armIn = mkParens(mkApply('div', armDiff, mkReal(2)));
+
+          const condSup = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', k)));
+          const loadSup = mkParens(mkApply('mult', mkId('q', k), mkId('L', k)));
+          const cgPos = mkParens(mkApply('plus', mkId('x', k - 1), mkApply('div', mkId('L', k), mkReal(2))));
+          const armCg = mkParens(mkApply('minus', mkId('x'), cgPos));
+
+          termsQ.push(['-', mkApply('mult', condIn, loadIn)]);
+          termsQ.push(['-', mkApply('mult', condSup, loadSup)]);
+          termsM.push(['-', mkApply('mult', mkApply('mult', condIn, loadIn), armIn)]);
+          termsM.push(['-', mkApply('mult', mkApply('mult', condSup, loadSup), armCg)]);
+
+          const pVal = state.pointLoads[k] || 0;
+          if (pVal !== 0) {
+            const condPk = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', k)));
+            const armPk = mkParens(mkApply('minus', mkId('x'), mkId('x', k)));
+            termsQ.push(['-', mkApply('mult', condPk, mkId('P', k))]);
+            termsM.push(['-', mkApply('mult', mkApply('mult', condPk, mkId('P', k)), armPk)]);
+          }
+
+          const mVal = state.appliedMoments[k] || 0;
+          if (mVal !== 0) {
+            const condMk = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', k)));
+            termsM.push(['+', mkApply('mult', condMk, mkId('M', k))]);
+          }
+        }
+
+        // P0 y M0
+        const p0Val = state.pointLoads[0] || 0;
+        if (p0Val !== 0) {
+          const condP0 = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', 0)));
+          termsQ.push(['-', mkApply('mult', condP0, mkId('P', 0))]);
+          termsM.push(['-', mkApply('mult', mkApply('mult', condP0, mkId('P', 0)), mkId('x'))]);
+        }
+        const m0Val = state.appliedMoments[0] || 0;
+        if (m0Val !== 0) {
+          const condM0 = mkParens(mkApply('greaterOrEqual', mkId('x'), mkId('x', 0)));
+          termsM.push(['+', mkApply('mult', condM0, mkId('M', 0))]);
+        }
+
+        // Reemplazar M(x) en R61
+        const r61 = xmlDoc.querySelector('[region-id="61"]');
+        if (r61) {
+          const defEl = r61.querySelector('define');
+          if (defEl && defEl.children.length >= 2) {
+            defEl.replaceChild(buildChain(termsM), defEl.children[1]);
+          }
+        }
+
+        // Reemplazar V(x) en R62
+        const r62 = xmlDoc.querySelector('[region-id="62"]');
+        if (r62) {
+          const defEl = r62.querySelector('define');
+          if (defEl && defEl.children.length >= 2) {
+            const fnEl = defEl.querySelector('function');
+            if (fnEl) {
+              const fnId = fnEl.querySelector('id');
+              if (fnId) fnId.textContent = 'V';
+            }
+            defEl.replaceChild(buildChain(termsQ), defEl.children[1]);
+          }
+        }
+
+        // 9. Escalar gráficos
+        const coords = getNodeCoords();
+        const Ltot = coords[coords.length - 1];
+
+        function fixAxis(ax, maxVal) {
+          const nfs = ax.querySelectorAll('numberFormat');
+          nfs.forEach(nf => nf.parentNode.removeChild(nf));
+          const nf = xmlDoc.createElementNS(WS_NS, 'numberFormat');
+          const dec = xmlDoc.createElementNS(WS_NS, 'decimal');
+          dec.setAttribute('precision', '3');
+          dec.setAttribute('show-trailing-zeros', 'false');
+          dec.setAttribute('radix', 'dec');
+          dec.setAttribute('imaginary-value', 'i');
+          nf.appendChild(dec);
+          const peq = ax.querySelector('plotEquations');
+          if (peq) { ax.insertBefore(nf, peq); }
+          else { ax.appendChild(nf); }
+          const aline = ax.querySelector('axisLine');
+          if (aline) { aline.setAttribute('positionticmark', Math.round(maxVal).toString()); }
+        }
+
+        const r66 = xmlDoc.querySelector('[region-id="66"]');
+        if (r66) {
+          const plot = r66.querySelector('plot');
+          if (plot) {
+            for (const peq of plot.querySelectorAll('yAxis plotEquation id')) {
+              if (peq.textContent === 'Q') peq.textContent = 'V';
+            }
+            const xAx = plot.querySelector('xAxis');
+            if (xAx) fixAxis(xAx, Ltot);
+            const yAx = plot.querySelector('yAxis');
+            if (yAx) fixAxis(yAx, 0);
+          }
+        }
+
+        const r67 = xmlDoc.querySelector('[region-id="67"]');
+        if (r67) {
+          const plot = r67.querySelector('plot');
+          if (plot) {
+            const xAx = plot.querySelector('xAxis');
+            if (xAx) fixAxis(xAx, Ltot);
+            const yAx = plot.querySelector('yAxis');
+            if (yAx) fixAxis(yAx, 0);
+          }
+        }
+
+        // Sanitizar axisLine
+        const allAxisLines = xmlDoc.querySelectorAll('axisLine');
+        allAxisLines.forEach(al => {
+          const ptm = al.getAttribute('positionticmark');
+          if (ptm !== null && ptm !== undefined) {
+            const num = parseFloat(ptm);
+            al.setAttribute('positionticmark', isNaN(num) ? '0' : Math.round(num).toString());
+          }
+        });
+
+        // Guardar XML
+        const serializer = new XMLSerializer();
+        const newXml = serializer.serializeToString(xmlDoc);
+        zip.file('mathcad/worksheet.xml', newXml);
+
+        // Imagen del canvas
+        const canvas = document.getElementById('beamCanvas');
+        const canvasDataUrl = canvas.toDataURL('image/png');
+        const imgBase64 = canvasDataUrl.split(',')[1];
+        zip.file('mathcad/media/Image0.png', imgBase64, { base64: true });
+
+        // Descargar
+        const finalBlob = await zip.generateAsync({ type: 'blob' });
+        saveAs(finalBlob, `Nueva_Plantilla_Viga_${state.numSpans}Tramos_Mathcad_Prime_11.mcdx`);
+        showToast('¡Nueva plantilla .mcdx generada con datos actuales!');
+      } catch (err) {
+        console.error(err);
+        const link = document.createElement('a');
+        link.href = './PLANTILLA_UNIVERSAL_10_TRAMOS_DESDE_CERO.mcdx';
+        link.download = 'PLANTILLA_UNIVERSAL_10_TRAMOS_DESDE_CERO.mcdx';
+        link.click();
+        showToast('Descargando plantilla universal base');
+      } finally {
+        btn.innerHTML = oldHtml;
+        btn.disabled = false;
+      }
+    }
+
     // ==========================================
     // GENERADOR DE REPORTE IMPRIMIBLE
     // ==========================================
@@ -2115,6 +2577,285 @@
       `;
 
       document.getElementById('reportContent').innerHTML = html;
+    }
+
+    // ==========================================
+    // MOTOR PYODIDE - VERIFICACIÓN PYTHON
+    // ==========================================
+    let pyodideReady = false;
+    let pyodideInstance = null;
+
+    async function initPyodide() {
+      if (pyodideReady) return pyodideInstance;
+      const out = document.getElementById('pythonOutput');
+      out.textContent = '⏳ Cargando Python (Pyodide)... Esto puede tomar unos segundos la primera vez.';
+      try {
+        pyodideInstance = await loadPyodide();
+        pyodideReady = true;
+        return pyodideInstance;
+      } catch(e) {
+        out.textContent = '❌ Error cargando Pyodide: ' + e.message + '\n\nNota: Requiere conexión a Internet para cargar el runtime de Python.';
+        throw e;
+      }
+    }
+
+    async function runPyodideVerification() {
+      const btn = document.getElementById('btnRunPython');
+      const out = document.getElementById('pythonOutput');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="animate-spin">⏳</span> Calculando...';
+
+      try {
+        const py = await initPyodide();
+
+        // Preparar datos del estado actual
+        const N = state.numSpans;
+        const coords = getNodeCoords();
+        const Ltot = coords[coords.length - 1];
+        const supNodes = Object.keys(state.supports).map(Number).sort((a,b)=>a-b);
+
+        const pyCode = `
+import sys
+from io import StringIO
+
+# Redirigir stdout
+_out = StringIO()
+sys.stdout = _out
+
+N = ${N}
+spans = ${JSON.stringify(state.spans.slice(0, N))}
+x_nodes = ${JSON.stringify(coords)}
+Ltot = ${Ltot}
+
+# Cargas
+q = {}
+for i in range(N):
+    q[i+1] = ${JSON.stringify(Array.from({length: N}, (_, i) => state.distLoads[i] || 0))}[i]
+
+P = {}
+for i in range(N+1):
+    val = ${JSON.stringify(Array.from({length: N+1}, (_, i) => state.pointLoads[i] || 0))}[i]
+    if val != 0:
+        P[i] = val
+
+M_ext = {}
+for i in range(N+1):
+    val = ${JSON.stringify(Array.from({length: N+1}, (_, i) => state.appliedMoments[i] || 0))}[i]
+    if val != 0:
+        M_ext[i] = val
+
+sup_nodes = ${JSON.stringify(supNodes)}
+nA = sup_nodes[0] if len(sup_nodes) >= 1 else 0
+nB = sup_nodes[1] if len(sup_nodes) >= 2 else N
+
+print("=" * 70)
+print("  MOTOR DE VERIFICACION PYTHON - ANALISIS ESTRUCTURAL II")
+print("  Universidad Continental - Cerebro Estructural v11.0")
+print("=" * 70)
+print()
+print(f"  Viga continua de {N} tramos")
+print(f"  Longitud total: {Ltot:.4f} m")
+print()
+
+# Datos de entrada
+print("  DATOS DE ENTRADA")
+print("  " + "-" * 50)
+for i in range(N):
+    print(f"  L{i+1} = {spans[i]:.4f} m    q{i+1} = {q[i+1]:.2f} kg/m")
+print()
+
+for k, v in P.items():
+    print(f"  P{k} = {v:.2f} kg  (en x{k} = {x_nodes[k]:.4f} m)")
+for k, v in M_ext.items():
+    print(f"  M{k} = {v:.2f} kg.m  (en x{k} = {x_nodes[k]:.4f} m)")
+print()
+
+print(f"  Apoyo A (nodo {nA}): x_A = {x_nodes[nA]:.4f} m")
+print(f"  Apoyo B (nodo {nB}): x_B = {x_nodes[nB]:.4f} m")
+print()
+
+# Coordenadas nodales
+print("  COORDENADAS NODALES")
+print("  " + "-" * 50)
+for i in range(N+1):
+    print(f"  x{i} = {x_nodes[i]:.4f} m")
+print()
+
+# Cálculo de reacciones por equilibrio estático
+# Sum Fy = 0: VA + VB = sum(q_k * L_k) + sum(P_k)
+# Sum M_A = 0 (respecto al apoyo A):
+total_vert = sum(q[k+1] * spans[k] for k in range(N)) + sum(P.values())
+sum_moment_A = 0.0
+
+# Momentos de cargas distribuidas respecto a A
+for k in range(N):
+    qk = q[k+1]
+    if qk != 0:
+        cg = x_nodes[k] + spans[k] / 2.0
+        sum_moment_A += qk * spans[k] * (cg - x_nodes[nA])
+
+# Momentos de cargas puntuales respecto a A
+for node_idx, pval in P.items():
+    sum_moment_A += pval * (x_nodes[node_idx] - x_nodes[nA])
+
+# Momentos concentrados
+for node_idx, mval in M_ext.items():
+    sum_moment_A += mval  # Convención horaria (+M aumenta reacción en B)
+
+# VB * (x_B - x_A) = sum_moment_A
+arm_AB = x_nodes[nB] - x_nodes[nA]
+if abs(arm_AB) > 1e-10:
+    VB = sum_moment_A / arm_AB
+else:
+    VB = 0.0
+VA = total_vert - VB
+
+print("  REACCIONES DE APOYO")
+print("  " + "-" * 50)
+print(f"  VA = {VA:.4f} kg")
+print(f"  VB = {VB:.4f} kg")
+print(f"  Sum Fy = VA + VB - cargas = {VA + VB - total_vert:.6f} kg (debe ser 0)")
+print()
+
+# Funciones V(x) y M(x)
+def V(x):
+    v = 0.0
+    # Reacción A
+    if x >= x_nodes[nA]:
+        v += VA
+    # Reacción B
+    if len(sup_nodes) >= 2 and nB != nA:
+        if x >= x_nodes[nB]:
+            v += VB
+    # Cargas distribuidas
+    for k in range(1, N+1):
+        xk0 = x_nodes[k-1]
+        xk1 = x_nodes[k]
+        qk = q[k]
+        if xk0 < x < xk1:
+            v -= qk * (x - xk0)
+        elif x >= xk1:
+            v -= qk * spans[k-1]
+    # Cargas puntuales
+    for node_idx, pval in P.items():
+        if x >= x_nodes[node_idx]:
+            v -= pval
+    return v
+
+def M_func(x):
+    m = 0.0
+    # Reacción A
+    if nA == 0:
+        m += VA * x
+    elif x >= x_nodes[nA]:
+        m += VA * (x - x_nodes[nA])
+    # Reacción B
+    if len(sup_nodes) >= 2 and nB != nA:
+        if x >= x_nodes[nB]:
+            m += VB * (x - x_nodes[nB])
+    # Cargas distribuidas
+    for k in range(1, N+1):
+        xk0 = x_nodes[k-1]
+        xk1 = x_nodes[k]
+        qk = q[k]
+        if xk0 < x < xk1:
+            dx = x - xk0
+            m -= qk * dx * (dx / 2.0)
+        elif x >= xk1:
+            Lk = spans[k-1]
+            cg = xk0 + Lk / 2.0
+            m -= qk * Lk * (x - cg)
+    # Cargas puntuales
+    for node_idx, pval in P.items():
+        if x >= x_nodes[node_idx]:
+            m -= pval * (x - x_nodes[node_idx])
+    # Momentos concentrados
+    for node_idx, mval in M_ext.items():
+        if x >= x_nodes[node_idx]:
+            m += mval
+    return m
+
+# Tabla de valores
+print("  TABLA DE V(x) Y M(x)")
+print("  " + "-" * 50)
+print(f"  {'x (m)':>10}  {'V(x) (kg)':>14}  {'M(x) (kg.m)':>14}")
+print("  " + "-" * 50)
+
+dx = Ltot / 100.0
+v_max = 0
+v_min = 0
+m_max = 0
+m_min = 0
+x_vmax = 0
+x_mmax = 0
+
+# Evaluar en puntos críticos y cada 1/20 de Ltot
+eval_points = set()
+for i in range(21):
+    eval_points.add(round(i * Ltot / 20.0, 6))
+for xn in x_nodes:
+    eval_points.add(round(xn, 6))
+    eval_points.add(round(xn - 0.001, 6))
+    eval_points.add(round(xn + 0.001, 6))
+
+eval_points = sorted([x for x in eval_points if 0 <= x <= Ltot])
+
+for x in eval_points:
+    vx = V(x)
+    mx = M_func(x)
+    if abs(vx) > abs(v_max):
+        v_max = vx
+        x_vmax = x
+    if abs(mx) > abs(m_max):
+        m_max = mx
+        x_mmax = x
+    # Solo imprimir los de cada 1/20 y nodos
+    if x in [round(xn, 6) for xn in x_nodes] or x in [round(i * Ltot / 20.0, 6) for i in range(21)]:
+        print(f"  {x:10.4f}  {vx:14.4f}  {mx:14.4f}")
+
+print("  " + "-" * 50)
+print()
+print("  VALORES EXTREMOS")
+print("  " + "-" * 50)
+print(f"  V_max = {v_max:.4f} kg  en x = {x_vmax:.4f} m")
+print(f"  M_max = {m_max:.4f} kg.m  en x = {x_mmax:.4f} m")
+print()
+
+# Verificación con valores del navegador
+VA_web = ${JSON.stringify(state.reactions.VA)}
+VB_web = ${JSON.stringify(state.reactions.VD)}
+print("  COMPARACION CON VALORES WEB")
+print("  " + "-" * 50)
+print(f"  VA (Python): {VA:.4f} kg  |  VA (Web): {VA_web:.4f} kg  |  Diff: {abs(VA - VA_web):.6f}")
+print(f"  VB (Python): {VB:.4f} kg  |  VB (Web): {VB_web:.4f} kg  |  Diff: {abs(VB - VB_web):.6f}")
+
+tol = 0.01
+ok_va = abs(VA - VA_web) < tol
+ok_vb = abs(VB - VB_web) < tol
+status = "APROBADO" if (ok_va and ok_vb) else "FALLIDO"
+print(f"\\n  RESULTADO: {status}")
+if ok_va and ok_vb:
+    print("  Los calculos del navegador coinciden con el motor Python.")
+else:
+    print("  ADVERTENCIA: Hay diferencias significativas en las reacciones.")
+
+print()
+print("=" * 70)
+
+result = _out.getvalue()
+sys.stdout = sys.__stdout__
+result
+`;
+
+        const result = await py.runPythonAsync(pyCode);
+        out.textContent = result;
+      } catch (err) {
+        out.textContent = '❌ Error: ' + err.message;
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '▶ Ejecutar Verificación';
+      }
     }
   </script>
 </body>
