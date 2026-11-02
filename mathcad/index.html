@@ -94,9 +94,13 @@
       <button onclick="openModal('reportModal')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-900/50 flex items-center gap-1.5 transition">
         🖨️ Memoria Imprimible
       </button>
-            <button onclick="generateUlianovMCDX()" id="btnDownloadUlianov" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-slate-950 flex items-center gap-1.5 shadow-md transition transform active:scale-95 border border-yellow-200">
-        ⭐ Descargar Formato Ulianov (.mcdx)
+                  <button onclick="generateUlianovProMCDX()" id="btnDownloadUlianovPro" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 flex items-center gap-1.5 shadow-md transition transform active:scale-95 border border-teal-200">
+        💎 Descargar Formato Ulianov PRO (+ DCL Reacciones) (.mcdx)
       </button>
+      <button onclick="generateUlianovMCDX()" id="btnDownloadUlianov" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-slate-950 flex items-center gap-1.5 shadow-md transition transform active:scale-95 border border-yellow-200">
+        ⭐ Descargar Formato Ulianov (.mcdx)
+      </button>
+
       <button onclick="generateMCDX()" id="btnDownloadMcdx" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-teal-500 to-sky-500 hover:from-teal-400 hover:to-sky-400 text-slate-950 flex items-center gap-1.5 shadow-md transition transform active:scale-95">
         💾 Descargar .mcdx
       </button>
@@ -284,6 +288,9 @@
                 <span class="inline-block w-2.5 h-0.5 border-t border-dashed border-amber-400"></span>
                 Cortes Formales (Corte 1-1 .. n-n)
               </span>
+                            <button onclick="toggleCanvasViewMode()" id="btnToggleDCL" title="Alternar entre Esquema Físico y DCL de Reacciones" class="text-xs bg-slate-800 hover:bg-slate-700 text-teal-300 px-2 py-1 rounded border border-teal-500/40 transition flex items-center gap-1 font-semibold">
+                🔄 Ver DCL Reacciones
+              </button>
               <button onclick="downloadCanvasImage()" title="Descargar esquema en PNG" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 p-1.5 rounded border border-slate-700 transition">
                 📷 PNG
               </button>
@@ -386,7 +393,8 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
           Archivos oficiales listos para Mathcad Prime 11 y PDF:
         </span>
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+
           <button onclick="generateUlianovMCDX()" class="px-2.5 py-1 text-xs rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 font-bold transition flex items-center gap-1 shadow-sm">
             ⭐ Formato Único Ulianov (.mcdx)
           </button>
@@ -422,7 +430,8 @@
         </h2>
                 <button onclick="generateUlianovMCDX()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 flex items-center gap-1.5 shadow-md transition transform active:scale-95">
           ⭐ Descargar .mcdx con Python / Web
-        </button>
+        </button>
+
         <button onclick="runPyodideVerification()" id="btnRunPython" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center gap-1.5 shadow-md transition transform active:scale-95">
           ▶ Ejecutar Verificación
         </button>
@@ -1066,6 +1075,11 @@
     // ==========================================
     function renderBeamCanvas() {
       const canvas = document.getElementById('beamCanvas');
+      if (window.canvasViewMode === 'dcl' && typeof renderDCLCanvas === 'function') {
+        const ctx = canvas.getContext('2d');
+        renderDCLCanvas(ctx, canvas.width, canvas.height);
+        return;
+      }
       const ctx = canvas.getContext('2d');
       const w = canvas.width;
       const h = canvas.height;
@@ -1603,15 +1617,246 @@
     // ==========================================
     // GENERADOR DINÁMICO NATIVO DE .MCDX EN JS (EXACTO N TRAMOS)
     // ==========================================
+
+
+    // ==========================================
+
+    // GENERADOR FORMATO ÚNICO ULIANOV SABATH CUBA VALENCIA
+
+    // ==========================================
+
 
     // ==========================================
-    // GENERADOR FORMATO ÚNICO ULIANOV SABATH CUBA VALENCIA
+    // EXTENSIÓN BIFURCADA PRO: DCL Y FORMATO ULIANOV PRO
     // ==========================================
-    async function generateUlianovMCDX() {
-      const btn = document.getElementById('btnDownloadUlianov') || event?.target;
+    window.canvasViewMode = 'beam'; // 'beam' o 'dcl'
+
+    function toggleCanvasViewMode() {
+      window.canvasViewMode = (window.canvasViewMode === 'dcl') ? 'beam' : 'dcl';
+      const btn = document.getElementById('btnToggleDCL');
+      if (btn) {
+        btn.innerHTML = (window.canvasViewMode === 'dcl') 
+          ? '📐 Ver Esquema Físico' 
+          : '🔄 Ver DCL Reacciones';
+        btn.classList.toggle('text-amber-300', window.canvasViewMode === 'dcl');
+        btn.classList.toggle('text-teal-300', window.canvasViewMode !== 'dcl');
+      }
+      renderBeamCanvas();
+    }
+
+    function renderDCLCanvas(ctx, w, h) {
+      // Limpiar fondo
+      ctx.fillStyle = '#090e17';
+      ctx.fillRect(0, 0, w, h);
+
+      const coords = getNodeCoords();
+      const Ltot = coords[coords.length - 1];
+      if (Ltot <= 0) return;
+
+      const padX = 70;
+      const beamY = 150;
+      const beamLen = w - padX * 2;
+      const scaleX = beamLen / Ltot;
+
+      function toCanvasX(xVal) {
+        return padX + xVal * scaleX;
+      }
+
+      // 1. Badge DCL
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(padX, 12, 330, 24);
+      ctx.strokeStyle = '#059669';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(padX, 12, 330, 24);
+      ctx.fillStyle = '#34d399';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('DCL - EQUILIBRIO ESTÁTICO (REACCIONES Y RESULTANTES)', padX + 8, 28);
+
+      // 2. Viga
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 7;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(0), beamY);
+      ctx.lineTo(toCanvasX(Ltot), beamY);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(0), beamY);
+      ctx.lineTo(toCanvasX(Ltot), beamY);
+      ctx.stroke();
+
+      const supNodes = Object.keys(state.supports).map(Number).sort((a,b)=>a-b);
+      const idxA = supNodes.length > 0 ? supNodes[0] : 0;
+      const idxB = supNodes.length > 1 ? supNodes[1] : state.numSpans;
+      const xA = coords[idxA];
+      const xB = coords[idxB];
+      const dAB = xB - xA;
+
+      // Calcular reacciones
+      let momVal = 0.0;
+      let totalDown = 0.0;
+      for (let i = 0; i < state.numSpans; i++) {
+        const qv = state.distLoads[i] || 0.0;
+        if (qv > 0) {
+          const len_i = state.spans[i];
+          const xcg_i = coords[i] + len_i / 2.0;
+          momVal += qv * len_i * (xcg_i - xA);
+          totalDown += qv * len_i;
+        }
+      }
+      for (let i = 0; i <= state.numSpans; i++) {
+        const pval = state.pointLoads[i] || 0;
+        if (pval > 0) {
+          momVal += pval * (coords[i] - xA);
+          totalDown += pval;
+        }
+        const mval = state.appliedMoments[i] || 0;
+        if (mval !== 0) momVal += mval;
+      }
+      const By_val = dAB !== 0 ? momVal / dAB : 0.0;
+      const Ay_val = totalDown - By_val;
+
+      // 3. Cargas distribuidas con Resultantes Equivalentes
+      for (let i = 0; i < state.numSpans; i++) {
+        const qv = state.distLoads[i] || 0;
+        if (qv > 0) {
+          const x1 = toCanvasX(coords[i]);
+          const x2 = toCanvasX(coords[i + 1]);
+          const blockH = 30;
+          const topY = beamY - blockH;
+
+          // Área suave
+          ctx.fillStyle = 'rgba(30, 58, 138, 0.25)';
+          ctx.fillRect(x1, topY, x2 - x1, blockH);
+          ctx.strokeStyle = '#2563eb';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 3]);
+          ctx.strokeRect(x1, topY, x2 - x1, blockH);
+          ctx.setLineDash([]);
+
+          // Resultante R en baricentro
+          const xcg = coords[i] + state.spans[i] / 2.0;
+          const cxG = toCanvasX(xcg);
+          const R_val = qv * state.spans[i];
+          const dToA = xcg - xA;
+
+          drawThickArrowDown(ctx, cxG, beamY - 65, beamY, '#eab308');
+          ctx.fillStyle = '#fef08a';
+          ctx.font = 'bold 11px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`R${i+1}=${R_val.toFixed(0)} kg`, cxG, beamY - 72);
+          ctx.fillStyle = '#fde047';
+          ctx.font = '10px monospace';
+          ctx.fillText(`(d=${Math.abs(dToA).toFixed(1)}m)`, cxG, beamY - 45);
+        }
+      }
+
+      // 4. Cargas puntuales
+      for (let i = 0; i <= state.numSpans; i++) {
+        const P = state.pointLoads[i] || 0;
+        if (P > 0) {
+          const px = toCanvasX(coords[i]);
+          drawThickArrowDown(ctx, px, beamY - 55, beamY, '#f43f5e');
+          ctx.fillStyle = '#fecdd3';
+          ctx.font = 'bold 11px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`P${i}=${P} kg`, px, beamY - 62);
+        }
+      }
+
+      // 5. Momentos
+      for (let i = 0; i <= state.numSpans; i++) {
+        const M = state.appliedMoments[i] || 0;
+        if (M !== 0) {
+          const mx = toCanvasX(coords[i]);
+          drawMomentArc(ctx, mx, beamY, 22, M > 0, '#c084fc');
+          ctx.fillStyle = '#e9d5ff';
+          ctx.font = 'bold 11px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`M${i}=${M} kg·m`, mx, beamY - 30);
+        }
+      }
+
+      // 6. FLECHAS DE REACCIÓN EN APOYOS (HACIA ARRIBA)
+      // Ay
+      const cxA = toCanvasX(xA);
+      ctx.strokeStyle = '#10b981';
+      ctx.fillStyle = '#10b981';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(cxA, beamY + 65);
+      ctx.lineTo(cxA, beamY + 5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cxA, beamY);
+      ctx.lineTo(cxA - 6, beamY + 12);
+      ctx.lineTo(cxA + 6, beamY + 12);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#6ee7b7';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Ay = ${Ay_val.toFixed(1)} kg`, cxA, beamY + 78);
+
+      // By
+      const cxB = toCanvasX(xB);
+      ctx.strokeStyle = '#06b6d4';
+      ctx.fillStyle = '#06b6d4';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(cxB, beamY + 65);
+      ctx.lineTo(cxB, beamY + 5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cxB, beamY);
+      ctx.lineTo(cxB - 6, beamY + 12);
+      ctx.lineTo(cxB + 6, beamY + 12);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#67e8f9';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`By = ${By_val.toFixed(1)} kg`, cxB, beamY + 78);
+
+      // Círculos de nudos
+      ctx.fillStyle = '#10b981';
+      ctx.beginPath(); ctx.arc(cxA, beamY, 4, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.2; ctx.stroke();
+
+      ctx.fillStyle = '#06b6d4';
+      ctx.beginPath(); ctx.arc(cxB, beamY, 4, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.2; ctx.stroke();
+
+      // Cotas inferiores
+      const dimY = beamY + 95;
+      for (let i = 0; i < state.numSpans; i++) {
+        const x1 = toCanvasX(coords[i]);
+        const x2 = toCanvasX(coords[i + 1]);
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x1, dimY); ctx.lineTo(x2, dimY);
+        ctx.moveTo(x1, dimY - 3); ctx.lineTo(x1, dimY + 3);
+        ctx.moveTo(x2, dimY - 3); ctx.lineTo(x2, dimY + 3);
+        ctx.stroke();
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`L${i+1}=${state.spans[i]}m`, (x1 + x2) / 2, dimY - 3);
+      }
+    }
+
+    async function generateUlianovProMCDX() {
+      const btn = document.getElementById('btnDownloadUlianovPro') || event?.target;
       const oldHtml = btn ? btn.innerHTML : '';
       if (btn) {
-        btn.innerHTML = `<span class="animate-spin">⏳</span> Generando Formato Ulianov...`;
+        btn.innerHTML = `<span class="animate-spin">⏳</span> Generando Formato Ulianov PRO...`;
         btn.disabled = true;
       }
 
@@ -1619,9 +1864,6 @@
         let resp = await fetch('./EJERCICIO_ULIANOV_FORMATO_UNICO.mcdx');
         if (!resp.ok) {
           resp = await fetch('./03.ULTIMA ACTUALIZACION/EJERCICIO ULIANOV SABATH CUBA V - FORMATO UNICO.mcdx');
-        }
-        if (!resp.ok) {
-          resp = await fetch('./PLANTILLA_UNIVERSAL_10_TRAMOS_DESDE_CERO.mcdx');
         }
         if (!resp.ok) throw new Error('No se pudo cargar la plantilla base de formato único');
         const blob = await resp.blob();
@@ -1640,7 +1882,6 @@
         const xmlDoc = parser.parseFromString(wsXmlStr, 'application/xml');
 
         const ML_NS = 'http://schemas.mathsoft.com/math50';
-        const WS_NS = 'http://schemas.mathsoft.com/worksheet50';
         const P_NS = 'http://schemas.microsoft.com/winfx/2006/xaml/presentation';
         const C_NS = 'clr-namespace:Ptc.Wpf;assembly=Ptc.Core';
 
@@ -1717,7 +1958,7 @@
         const xB = coords[idxB];
         const dAB = xB - xA;
 
-        // Consolidar bloques de carga continua
+        // Consolidar bloques continuos
         const blocksQ = [];
         let curQ = null;
         for (let i = 0; i < N; i++) {
@@ -1910,22 +2151,39 @@
         const serializer = new XMLSerializer();
         zip.file('mathcad/worksheet.xml', serializer.serializeToString(xmlDoc));
 
-        const canvas = document.getElementById('beamCanvas');
-        if (canvas) {
-          const canvasUri = canvas.toDataURL('image/png');
-          const imgB64 = canvasUri.split(',')[1];
-          ['mathcad/media/Image2.png', 'mathcad/media/Image3.png', 'mathcad/media/Image12.png'].forEach(name => {
-            if (zip.file(name)) zip.file(name, imgB64, { base64: true });
-          });
-        }
+        // RENDERIZAR LAS DOS IMÁGENES DISTINTAS:
+        // 1. Image2.png: Esquema físico normal
+        // 2. Image3.png: DCL con reacciones y resultantes
+        // 3. Image12.png: Esquema físico con cortes
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = 900;
+        offCanvas.height = 280;
+        const offCtx = offCanvas.getContext('2d');
+
+        // Esquema físico normal
+        const origMode = window.canvasViewMode;
+        window.canvasViewMode = 'beam';
+        renderBeamCanvas(); // Asegura canvas principal actualizado
+        const mainCanvas = document.getElementById('beamCanvas');
+        const imgPhysB64 = mainCanvas ? mainCanvas.toDataURL('image/png').split(',')[1] : '';
+
+        // DCL en offCanvas
+        renderDCLCanvas(offCtx, 900, 280);
+        const imgDclB64 = offCanvas.toDataURL('image/png').split(',')[1];
+        window.canvasViewMode = origMode;
+        renderBeamCanvas(); // Restaurar estado previo
+
+        if (zip.file('mathcad/media/Image2.png')) zip.file('mathcad/media/Image2.png', imgPhysB64, { base64: true });
+        if (zip.file('mathcad/media/Image3.png')) zip.file('mathcad/media/Image3.png', imgDclB64, { base64: true });
+        if (zip.file('mathcad/media/Image12.png')) zip.file('mathcad/media/Image12.png', imgPhysB64, { base64: true });
 
         const finalBlob = await zip.generateAsync({ type: 'blob' });
-        saveAs(finalBlob, `EJERCICIO_01_ULIANOV_SABATH_CUBA_VALENCIA_${state.numSpans}Tramos.mcdx`);
-        showToast('⭐ ¡Plantilla Formato Único Ulianov descargada con éxito!');
+        saveAs(finalBlob, `EJERCICIO_01_ULIANOV_PRO_DCL_${state.numSpans}Tramos.mcdx`);
+        showToast('💎 ¡Formato Ulianov PRO con DCL de Reacciones descargado con éxito!');
       } catch (err) {
-        console.error('Error generando formato Ulianov:', err);
-        showToast('Error al generar formato Ulianov, descargando plantilla maestra...');
-        generateMCDX();
+        console.error('Error generando formato Ulianov PRO:', err);
+        showToast('Error generando formato PRO, descargando plantilla base...');
+        generateUlianovMCDX();
       } finally {
         if (btn) {
           btn.innerHTML = oldHtml;
@@ -1935,6 +2193,662 @@
     }
 
 
+    async function generateUlianovMCDX() {
+
+      const btn = document.getElementById('btnDownloadUlianov') || event?.target;
+
+      const oldHtml = btn ? btn.innerHTML : '';
+
+      if (btn) {
+
+        btn.innerHTML = `<span class="animate-spin">⏳</span> Generando Formato Ulianov...`;
+
+        btn.disabled = true;
+
+      }
+
+
+
+      try {
+
+        let resp = await fetch('./EJERCICIO_ULIANOV_FORMATO_UNICO.mcdx');
+
+        if (!resp.ok) {
+
+          resp = await fetch('./03.ULTIMA ACTUALIZACION/EJERCICIO ULIANOV SABATH CUBA V - FORMATO UNICO.mcdx');
+
+        }
+
+        if (!resp.ok) {
+
+          resp = await fetch('./PLANTILLA_UNIVERSAL_10_TRAMOS_DESDE_CERO.mcdx');
+
+        }
+
+        if (!resp.ok) throw new Error('No se pudo cargar la plantilla base de formato único');
+
+        const blob = await resp.blob();
+
+        const zip = await JSZip.loadAsync(blob);
+
+
+
+        for (const fname of Object.keys(zip.files)) {
+
+          if (fname.endsWith('.xml')) {
+
+            let content = await zip.file(fname).async('string');
+
+            content = content.replace(/\s*Typography\.[a-zA-Z0-9]+="[^"]*"/g, '');
+
+            zip.file(fname, content);
+
+          }
+
+        }
+
+
+
+        let wsXmlStr = await zip.file('mathcad/worksheet.xml').async('string');
+
+        const parser = new DOMParser();
+
+        const xmlDoc = parser.parseFromString(wsXmlStr, 'application/xml');
+
+
+
+        const ML_NS = 'http://schemas.mathsoft.com/math50';
+
+        const WS_NS = 'http://schemas.mathsoft.com/worksheet50';
+
+        const P_NS = 'http://schemas.microsoft.com/winfx/2006/xaml/presentation';
+
+        const C_NS = 'clr-namespace:Ptc.Wpf;assembly=Ptc.Core';
+
+
+
+        function mkId(name, subscript, labels, isContextual) {
+
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:id');
+
+          el.setAttribute('labels', labels || 'VARIABLE');
+
+          if (isContextual !== false) el.setAttribute('label-is-contextual', 'true');
+
+          el.setAttribute('xml:space', 'preserve');
+
+          if (subscript !== undefined && subscript !== null) {
+
+            const span = xmlDoc.createElementNS(P_NS, 'p:Span');
+
+            span.textContent = name;
+
+            const sub = xmlDoc.createElementNS(C_NS, 'c:Subscript');
+
+            sub.textContent = subscript.toString();
+
+            span.appendChild(sub);
+
+            el.appendChild(span);
+
+          } else {
+
+            el.textContent = name;
+
+          }
+
+          return el;
+
+        }
+
+
+
+        function mkReal(val) {
+
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:real');
+
+          const num = parseFloat(val);
+
+          if (num === parseInt(num, 10)) {
+
+            el.textContent = parseInt(num, 10).toString();
+
+          } else {
+
+            el.textContent = num.toFixed(4).replace(/\.?0+$/, '');
+
+          }
+
+          return el;
+
+        }
+
+
+
+        function mkParens(child) {
+
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:parens');
+
+          el.appendChild(child.cloneNode(true));
+
+          return el;
+
+        }
+
+
+
+        function mkApply(opName, ...args) {
+
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:apply');
+
+          const op = xmlDoc.createElementNS(ML_NS, 'ml:' + opName);
+
+          el.appendChild(op);
+
+          for (let i = 0; i < args.length; i++) {
+
+            el.appendChild(args[i].cloneNode(true));
+
+          }
+
+          return el;
+
+        }
+
+
+
+        function buildChain(terms) {
+
+          let acc = null;
+
+          for (let i = 0; i < terms.length; i++) {
+
+            const sign = terms[i][0];
+
+            const el = terms[i][1];
+
+            const elClone = el.cloneNode(true);
+
+            if (!acc) {
+
+              if (sign === '+') acc = elClone;
+
+              else acc = mkApply('minus', elClone);
+
+            } else {
+
+              const op = (sign === '+') ? 'plus' : 'minus';
+
+              acc = mkApply(op, acc, elClone);
+
+            }
+
+          }
+
+          return acc || mkReal(0);
+
+        }
+
+
+
+        const N = state.numSpans;
+
+        const coords = getNodeCoords();
+
+        const Ltot = coords[coords.length - 1];
+
+
+
+        const supNodes = Object.keys(state.supports).map(Number).sort((a,b)=>a-b);
+
+        const idxA = supNodes.length > 0 ? supNodes[0] : 0;
+
+        const idxB = supNodes.length > 1 ? supNodes[1] : N;
+
+        const xA = coords[idxA];
+
+        const xB = coords[idxB];
+
+        const dAB = xB - xA;
+
+
+
+        // Consolidar bloques de carga continua
+
+        const blocksQ = [];
+
+        let curQ = null;
+
+        for (let i = 0; i < N; i++) {
+
+          const qv = state.distLoads[i] || 0.0;
+
+          const xs = coords[i];
+
+          const xe = coords[i+1];
+
+          if (qv !== 0) {
+
+            if (curQ === qv && blocksQ.length > 0) {
+
+              blocksQ[blocksQ.length - 1].len += state.spans[i];
+
+              blocksQ[blocksQ.length - 1].xe = xe;
+
+            } else {
+
+              blocksQ.push({ q: qv, xs: xs, len: state.spans[i], xe: xe });
+
+              curQ = qv;
+
+            }
+
+          } else {
+
+            curQ = null;
+
+          }
+
+        }
+
+
+
+        let momentTermsVal = 0.0;
+
+        const momentEqAstTerms = [];
+
+
+
+        for (let i = 0; i < blocksQ.length; i++) {
+
+          const b = blocksQ[i];
+
+          const totalF = b.q * b.len;
+
+          const xcg = b.xs + b.len / 2.0;
+
+          const distToA = xcg - xA;
+
+          momentTermsVal += totalF * distToA;
+
+          const sign = distToA >= 0 ? '-' : '+';
+
+          const absD = Math.abs(distToA);
+
+          const termAst = mkApply('mult', mkApply('mult', mkReal(sign === '-' ? -b.q : b.q), mkParens(mkReal(b.len))), mkParens(mkReal(absD)));
+
+          momentEqAstTerms.push(['+', termAst]);
+
+        }
+
+
+
+        for (let i = 0; i <= N; i++) {
+
+          const pval = state.pointLoads[i] || 0;
+
+          if (pval !== 0) {
+
+            const xp = coords[i];
+
+            const distToA = xp - xA;
+
+            momentTermsVal += pval * distToA;
+
+            const sign = distToA >= 0 ? '-' : '+';
+
+            const absD = Math.abs(distToA);
+
+            const termAst = mkApply('mult', mkReal(sign === '-' ? -pval : pval), mkParens(mkReal(absD)));
+
+            momentEqAstTerms.push(['+', termAst]);
+
+          }
+
+        }
+
+
+
+        const termByAst = mkApply('mult', mkId('B', 'y', 'VARIABLE', false), mkReal(dAB));
+
+        momentEqAstTerms.push(['+', termByAst]);
+
+
+
+        for (let i = 0; i <= N; i++) {
+
+          const mval = state.appliedMoments[i] || 0;
+
+          if (mval !== 0) {
+
+            momentTermsVal += mval;
+
+            momentEqAstTerms.push(['+', mkReal(-mval)]);
+
+          }
+
+        }
+
+
+
+        const ByVal = dAB !== 0 ? momentTermsVal / dAB : 0.0;
+
+        let totalDownLoads = 0.0;
+
+        for (let i = 0; i < blocksQ.length; i++) totalDownLoads += blocksQ[i].q * blocksQ[i].len;
+
+        for (let i = 0; i <= N; i++) totalDownLoads += (state.pointLoads[i] || 0);
+
+        const AyVal = totalDownLoads - ByVal;
+
+
+
+        const fyEqAstTerms = [];
+
+        for (let i = 0; i < blocksQ.length; i++) {
+
+          fyEqAstTerms.push(['+', mkApply('mult', mkReal(-blocksQ[i].q), mkParens(mkReal(blocksQ[i].len)))]);
+
+        }
+
+        fyEqAstTerms.push(['+', mkId('A', 'y', 'VARIABLE', false)]);
+
+        for (let i = 0; i <= N; i++) {
+
+          const pval = state.pointLoads[i] || 0;
+
+          if (pval !== 0) fyEqAstTerms.push(['+', mkReal(-pval)]);
+
+          if (i === idxB) fyEqAstTerms.push(['+', mkParens(mkId('B', 'y', 'VARIABLE', true))]);
+
+        }
+
+
+
+        const termsV = [];
+
+        const termsM = [];
+
+
+
+        for (let i = 0; i < blocksQ.length; i++) {
+
+          const b = blocksQ[i];
+
+          if (b.xs === 0) {
+
+            termsV.push(['+', mkApply('mult', mkReal(-b.q), mkId('x'))]);
+
+            termsM.push(['+', mkApply('mult', mkReal(-b.q), mkParens(mkApply('div', mkApply('pow', mkId('x'), mkReal(2)), mkReal(2))))]);
+
+          } else {
+
+            const condXs = mkParens(mkApply('greaterOrEqual', mkId('x'), mkReal(b.xs)));
+
+            const dxXs = mkParens(mkApply('minus', mkId('x'), mkReal(b.xs)));
+
+            termsV.push(['+', mkApply('mult', mkApply('mult', mkReal(-b.q), dxXs), condXs)]);
+
+            termsM.push(['+', mkApply('mult', mkApply('mult', mkReal(-b.q), mkApply('div', mkApply('pow', dxXs, mkReal(2)), mkReal(2))), condXs)]);
+
+          }
+
+          if (b.xe < Ltot) {
+
+            const condXe = mkParens(mkApply('greaterOrEqual', mkId('x'), mkReal(b.xe)));
+
+            const dxXe = mkParens(mkApply('minus', mkId('x'), mkReal(b.xe)));
+
+            termsV.push(['+', mkApply('mult', mkApply('mult', mkReal(b.q), dxXe), condXe)]);
+
+            termsM.push(['+', mkApply('mult', mkApply('mult', mkReal(b.q), mkApply('div', mkApply('pow', dxXe, mkReal(2)), mkReal(2))), condXe)]);
+
+          }
+
+        }
+
+
+
+        const condXA = mkParens(mkApply('greaterOrEqual', mkId('x'), mkReal(xA)));
+
+        termsV.push(['+', mkApply('mult', mkId('A', 'y'), condXA)]);
+
+        const dxXA = mkParens(mkApply('minus', mkId('x'), mkReal(xA)));
+
+        termsM.push(['+', mkApply('mult', mkApply('mult', mkId('A', 'y'), dxXA), condXA)]);
+
+
+
+        const condXB = mkParens(mkApply('greaterOrEqual', mkId('x'), mkReal(xB)));
+
+        termsV.push(['+', mkApply('mult', mkId('B', 'y'), condXB)]);
+
+        const dxXB = mkParens(mkApply('minus', mkId('x'), mkReal(xB)));
+
+        termsM.push(['+', mkApply('mult', mkApply('mult', mkId('B', 'y'), dxXB), condXB)]);
+
+
+
+        for (let i = 0; i <= N; i++) {
+
+          const pval = state.pointLoads[i] || 0;
+
+          if (pval !== 0) {
+
+            const xp = coords[i];
+
+            const condXp = mkParens(mkApply('greaterOrEqual', mkId('x'), mkReal(xp)));
+
+            termsV.push(['-', mkApply('mult', mkReal(pval), condXp)]);
+
+            const dxXp = mkParens(mkApply('minus', mkId('x'), mkReal(xp)));
+
+            termsM.push(['-', mkApply('mult', mkApply('mult', mkReal(pval), dxXp), condXp)]);
+
+          }
+
+        }
+
+
+
+        for (let i = 0; i <= N; i++) {
+
+          const mval = state.appliedMoments[i] || 0;
+
+          if (mval !== 0) {
+
+            const xm = coords[i];
+
+            if (Math.abs(xm - Ltot) < 1e-9) {
+
+              termsM.push(['+', mkReal(mval)]);
+
+            } else {
+
+              const condXm = mkParens(mkApply('greaterOrEqual', mkId('x'), mkReal(xm)));
+
+              termsM.push(['+', mkApply('mult', mkReal(mval), condXm)]);
+
+            }
+
+          }
+
+        }
+
+
+
+        const r7 = xmlDoc.querySelector('[region-id="7"]');
+
+        if (r7) {
+
+          const parent = r7.querySelector('symEval > apply');
+
+          if (parent && parent.children.length >= 2) {
+
+            parent.replaceChild(buildChain(momentEqAstTerms), parent.children[1]);
+
+          }
+
+          const symRes = r7.querySelector('symResult real');
+
+          if (symRes) symRes.textContent = ByVal.toFixed(1);
+
+        }
+
+
+
+        const r8 = xmlDoc.querySelector('[region-id="8"]');
+
+        if (r8) {
+
+          const parent = r8.querySelector('symEval > apply');
+
+          if (parent && parent.children.length >= 2) {
+
+            parent.replaceChild(buildChain(fyEqAstTerms), parent.children[1]);
+
+          }
+
+          const symRes = r8.querySelector('symResult real');
+
+          if (symRes) symRes.textContent = AyVal.toFixed(1);
+
+        }
+
+
+
+        const r13 = xmlDoc.querySelector('[region-id="13"]');
+
+        if (r13) {
+
+          const defEl = r13.querySelector('define');
+
+          if (defEl && defEl.children.length >= 2) {
+
+            defEl.replaceChild(buildChain(termsV), defEl.children[1]);
+
+          }
+
+        }
+
+
+
+        const r14 = xmlDoc.querySelector('[region-id="14"]');
+
+        if (r14) {
+
+          const defEl = r14.querySelector('define');
+
+          if (defEl && defEl.children.length >= 2) {
+
+            defEl.replaceChild(buildChain(termsM), defEl.children[1]);
+
+          }
+
+        }
+
+
+
+        const r16 = xmlDoc.querySelector('[region-id="16"]');
+
+        if (r16) {
+
+          const rangeEl = r16.querySelector('range');
+
+          if (rangeEl && rangeEl.children.length >= 2) {
+
+            rangeEl.replaceChild(mkReal(Ltot), rangeEl.children[1]);
+
+          }
+
+        }
+
+
+
+        const xEndVal = Math.ceil(Ltot + 1.0).toString();
+
+        ['17', '18'].forEach(rid => {
+
+          const rPlot = xmlDoc.querySelector(`[region-id="${rid}"]`);
+
+          if (rPlot) {
+
+            const xAxis = rPlot.querySelector('xAxis');
+
+            if (xAxis) {
+
+              xAxis.setAttribute('start', '0');
+
+              xAxis.setAttribute('end', xEndVal);
+
+              const aline = xAxis.querySelector('axisLine');
+
+              if (aline) aline.setAttribute('positionticmark', Math.ceil(Ltot / 3.0).toString());
+
+            }
+
+          }
+
+        });
+
+
+
+        const serializer = new XMLSerializer();
+
+        zip.file('mathcad/worksheet.xml', serializer.serializeToString(xmlDoc));
+
+
+
+        const canvas = document.getElementById('beamCanvas');
+
+        if (canvas) {
+
+          const canvasUri = canvas.toDataURL('image/png');
+
+          const imgB64 = canvasUri.split(',')[1];
+
+          ['mathcad/media/Image2.png', 'mathcad/media/Image3.png', 'mathcad/media/Image12.png'].forEach(name => {
+
+            if (zip.file(name)) zip.file(name, imgB64, { base64: true });
+
+          });
+
+        }
+
+
+
+        const finalBlob = await zip.generateAsync({ type: 'blob' });
+
+        saveAs(finalBlob, `EJERCICIO_01_ULIANOV_SABATH_CUBA_VALENCIA_${state.numSpans}Tramos.mcdx`);
+
+        showToast('⭐ ¡Plantilla Formato Único Ulianov descargada con éxito!');
+
+      } catch (err) {
+
+        console.error('Error generando formato Ulianov:', err);
+
+        showToast('Error al generar formato Ulianov, descargando plantilla maestra...');
+
+        generateMCDX();
+
+      } finally {
+
+        if (btn) {
+
+          btn.innerHTML = oldHtml;
+
+          btn.disabled = false;
+
+        }
+
+      }
+
+    }
+
+
+
+
+
     async function generateMCDX() {
       const btn = document.getElementById('btnDownloadMcdx');
       const oldHtml = btn.innerHTML;
