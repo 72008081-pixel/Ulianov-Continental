@@ -94,6 +94,9 @@
       <button onclick="openModal('reportModal')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-900/50 flex items-center gap-1.5 transition">
         🖨️ Memoria Imprimible
       </button>
+            <button onclick="generateUlianovMCDX()" id="btnDownloadUlianov" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-slate-950 flex items-center gap-1.5 shadow-md transition transform active:scale-95 border border-yellow-200">
+        ⭐ Descargar Formato Ulianov (.mcdx)
+      </button>
       <button onclick="generateMCDX()" id="btnDownloadMcdx" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-teal-500 to-sky-500 hover:from-teal-400 hover:to-sky-400 text-slate-950 flex items-center gap-1.5 shadow-md transition transform active:scale-95">
         💾 Descargar .mcdx
       </button>
@@ -383,7 +386,10 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
           Archivos oficiales listos para Mathcad Prime 11 y PDF:
         </span>
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="generateUlianovMCDX()" class="px-2.5 py-1 text-xs rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 font-bold transition flex items-center gap-1 shadow-sm">
+            ⭐ Formato Único Ulianov (.mcdx)
+          </button>
           <a href="./PLANTILLA_MAESTRA_10_TRAMOS_VIGAS.mcdx" download class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 transition">
             📥 Plantilla Maestra 10 Tramos (.mcdx)
           </a>
@@ -414,6 +420,9 @@
           <span>Motor de Verificación Python (Pyodide)</span>
           <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">In-Browser</span>
         </h2>
+                <button onclick="generateUlianovMCDX()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 flex items-center gap-1.5 shadow-md transition transform active:scale-95">
+          ⭐ Descargar .mcdx con Python / Web
+        </button>
         <button onclick="runPyodideVerification()" id="btnRunPython" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center gap-1.5 shadow-md transition transform active:scale-95">
           ▶ Ejecutar Verificación
         </button>
@@ -1594,6 +1603,338 @@
     // ==========================================
     // GENERADOR DINÁMICO NATIVO DE .MCDX EN JS (EXACTO N TRAMOS)
     // ==========================================
+
+    // ==========================================
+    // GENERADOR FORMATO ÚNICO ULIANOV SABATH CUBA VALENCIA
+    // ==========================================
+    async function generateUlianovMCDX() {
+      const btn = document.getElementById('btnDownloadUlianov') || event?.target;
+      const oldHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.innerHTML = `<span class="animate-spin">⏳</span> Generando Formato Ulianov...`;
+        btn.disabled = true;
+      }
+
+      try {
+        let resp = await fetch('./EJERCICIO_ULIANOV_FORMATO_UNICO.mcdx');
+        if (!resp.ok) {
+          resp = await fetch('./03.ULTIMA ACTUALIZACION/EJERCICIO ULIANOV SABATH CUBA V - FORMATO UNICO.mcdx');
+        }
+        if (!resp.ok) {
+          resp = await fetch('./PLANTILLA_UNIVERSAL_10_TRAMOS_DESDE_CERO.mcdx');
+        }
+        if (!resp.ok) throw new Error('No se pudo cargar la plantilla base de formato único');
+        const blob = await resp.blob();
+        const zip = await JSZip.loadAsync(blob);
+
+        for (const fname of Object.keys(zip.files)) {
+          if (fname.endsWith('.xml')) {
+            let content = await zip.file(fname).async('string');
+            content = content.replace(/\s*Typography\.[a-zA-Z0-9]+="[^"]*"/g, '');
+            zip.file(fname, content);
+          }
+        }
+
+        let wsXmlStr = await zip.file('mathcad/worksheet.xml').async('string');
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(wsXmlStr, 'application/xml');
+
+        const ML_NS = 'http://schemas.mathsoft.com/math50';
+        const WS_NS = 'http://schemas.mathsoft.com/worksheet50';
+        const P_NS = 'http://schemas.microsoft.com/winfx/2006/xaml/presentation';
+        const C_NS = 'clr-namespace:Ptc.Wpf;assembly=Ptc.Core';
+
+        function mkId(name, subscript, labels, isContextual) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:id');
+          el.setAttribute('labels', labels || 'VARIABLE');
+          if (isContextual !== false) el.setAttribute('label-is-contextual', 'true');
+          el.setAttribute('xml:space', 'preserve');
+          if (subscript !== undefined && subscript !== null) {
+            const span = xmlDoc.createElementNS(P_NS, 'p:Span');
+            span.textContent = name;
+            const sub = xmlDoc.createElementNS(C_NS, 'c:Subscript');
+            sub.textContent = subscript.toString();
+            span.appendChild(sub);
+            el.appendChild(span);
+          } else {
+            el.textContent = name;
+          }
+          return el;
+        }
+
+        function mkReal(val) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:real');
+          const num = parseFloat(val);
+          if (num === parseInt(num, 10)) {
+            el.textContent = parseInt(num, 10).toString();
+          } else {
+            el.textContent = num.toFixed(4).replace(/\.?0+$/, '');
+          }
+          return el;
+        }
+
+        function mkParens(child) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:parens');
+          el.appendChild(child.cloneNode(true));
+          return el;
+        }
+
+        function mkApply(opName, ...args) {
+          const el = xmlDoc.createElementNS(ML_NS, 'ml:apply');
+          const op = xmlDoc.createElementNS(ML_NS, 'ml:' + opName);
+          el.appendChild(op);
+          for (let i = 0; i < args.length; i++) {
+            el.appendChild(args[i].cloneNode(true));
+          }
+          return el;
+        }
+
+        function buildChain(terms) {
+          let acc = null;
+          for (let i = 0; i < terms.length; i++) {
+            const sign = terms[i][0];
+            const el = terms[i][1];
+            const elClone = el.cloneNode(true);
+            if (!acc) {
+              if (sign === '+') acc = elClone;
+              else acc = mkApply('minus', elClone);
+            } else {
+              const op = (sign === '+') ? 'plus' : 'minus';
+              acc = mkApply(op, acc, elClone);
+            }
+          }
+          return acc || mkReal(0);
+        }
+
+        const N = state.numSpans;
+        const coords = getNodeCoords();
+        const Ltot = coords[coords.length - 1];
+
+        const supNodes = Object.keys(state.supports).map(Number).sort((a,b)=>a-b);
+        const idxA = supNodes.length > 0 ? supNodes[0] : 0;
+        const idxB = supNodes.length > 1 ? supNodes[1] : N;
+        const xA = coords[idxA];
+        const xB = coords[idxB];
+        const dAB = xB - xA;
+
+        // Consolidar bloques de carga continua
+        const blocksQ = [];
+        let curQ = null;
+        for (let i = 0; i < N; i++) {
+          const qv = state.distLoads[i] || 0.0;
+          const xs = coords[i];
+          const xe = coords[i+1];
+          if (qv !== 0) {
+            if (curQ === qv && blocksQ.length > 0) {
+              blocksQ[blocksQ.length - 1].len += state.spans[i];
+              blocksQ[blocksQ.length - 1].xe = xe;
+            } else {
+              blocksQ.push({ q: qv, xs: xs, len: state.spans[i], xe: xe });
+              curQ = qv;
+            }
+          } else {
+            curQ = null;
+          }
+        }
+
+        let momentTermsVal = 0.0;
+        const momentEqAstTerms = [];
+
+        for (let i = 0; i < blocksQ.length; i++) {
+          const b = blocksQ[i];
+          const totalF = b.q * b.len;
+          const xcg = b.xs + b.len / 2.0;
+          const distToA = xcg - xA;
+          momentTermsVal += totalF * distToA;
+          const sign = distToA >= 0 ? '-' : '+';
+          const absD = Math.abs(distToA);
+          const termAst = mkApply('mult', mkApply('mult', mkReal(sign === '-' ? -b.q : b.q), mkParens(mkReal(b.len))), mkParens(mkReal(absD)));
+          momentEqAstTerms.push(['+', termAst]);
+        }
+
+        for (let i = 0; i <= N; i++) {
+          const pval = state.pointLoads[i] || 0;
+          if (pval !== 0) {
+            const xp = coords[i];
+            const distToA = xp - xA;
+            momentTermsVal += pval * distToA;
+            const sign = distToA >= 0 ? '-' : '+';
+            const absD = Math.abs(distToA);
+            const termAst = mkApply('mult', mkReal(sign === '-' ? -pval : pval), mkParens(mkReal(absD)));
+            momentEqAstTerms.push(['+', termAst]);
+          }
+        }
+
+        const termByAst = mkApply('mult', mkId('B', 'y', 'VARIABLE', false), mkReal(dAB));
+        momentEqAstTerms.push(['+', termByAst]);
+
+        for (let i = 0; i <= N; i++) {
+          const mval = state.appliedMoments[i] || 0;
+          if (mval !== 0) {
+            momentTermsVal += mval;
+            momentEqAstTerms.push(['+', mkReal(-mval)]);
+          }
+        }
+
+        const ByVal = dAB !== 0 ? momentTermsVal / dAB : 0.0;
+        let totalDownLoads = 0.0;
+        for (let i = 0; i < blocksQ.length; i++) totalDownLoads += blocksQ[i].q * blocksQ[i].len;
+        for (let i = 0; i <= N; i++) totalDownLoads += (state.pointLoads[i] || 0);
+        const AyVal = totalDownLoads - ByVal;
+
+        const fyEqAstTerms = [];
+        for (let i = 0; i < blocksQ.length; i++) {
+          fyEqAstTerms.push(['+', mkApply('mult', mkReal(-blocksQ[i].q), mkParens(mkReal(blocksQ[i].len)))]);
+        }
+        fyEqAstTerms.push(['+', mkId('A', 'y', 'VARIABLE', false)]);
+        for (let i = 0; i <= N; i++) {
+          const pval = state.pointLoads[i] || 0;
+          if (pval !== 0) fyEqAstTerms.push(['+', mkReal(-pval)]);
+          if (i === idxB) fyEqAstTerms.push(['+', mkParens(mkId('B', 'y', 'VARIABLE', true))]);
+        }
+
+        const termsV = [];
+        const termsM = [];
+
+        for (let i = 0; i < blocksQ.length; i++) {
+          const b = blocksQ[i];
+          if (b.xs === 0) {
+            termsV.push(['+', mkApply('mult', mkReal(-b.q), mkId('x'))]);
+            termsM.push(['+', mkApply('mult', mkReal(-b.q), mkParens(mkApply('div', mkApply('pow', mkId('x'), mkReal(2)), mkReal(2))))]);
+          } else {
+            const condXs = mkParens(mkApply('greaterOrEqual', mkId('x'), mkReal(b.xs)));
+            const dxXs = mkParens(mkApply('minus', mkId('x'), mkReal(b.xs)));
+            termsV.push(['+', mkApply('mult', mkApply('mult', mkReal(-b.q), dxXs), condXs)]);
+            termsM.push(['+', mkApply('mult', mkApply('mult', mkReal(-b.q), mkApply('div', mkApply('pow', dxXs, mkReal(2)), mkReal(2))), condXs)]);
+          }
+          if (b.xe < Ltot) {
+            const condXe = mkParens(mkApply('greaterOrEqual', mkId('x'), mkReal(b.xe)));
+            const dxXe = mkParens(mkApply('minus', mkId('x'), mkReal(b.xe)));
+            termsV.push(['+', mkApply('mult', mkApply('mult', mkReal(b.q), dxXe), condXe)]);
+            termsM.push(['+', mkApply('mult', mkApply('mult', mkReal(b.q), mkApply('div', mkApply('pow', dxXe, mkReal(2)), mkReal(2))), condXe)]);
+          }
+        }
+
+        const condXA = mkParens(mkApply('greaterOrEqual', mkId('x'), mkReal(xA)));
+        termsV.push(['+', mkApply('mult', mkId('A', 'y'), condXA)]);
+        const dxXA = mkParens(mkApply('minus', mkId('x'), mkReal(xA)));
+        termsM.push(['+', mkApply('mult', mkApply('mult', mkId('A', 'y'), dxXA), condXA)]);
+
+        const condXB = mkParens(mkApply('greaterOrEqual', mkId('x'), mkReal(xB)));
+        termsV.push(['+', mkApply('mult', mkId('B', 'y'), condXB)]);
+        const dxXB = mkParens(mkApply('minus', mkId('x'), mkReal(xB)));
+        termsM.push(['+', mkApply('mult', mkApply('mult', mkId('B', 'y'), dxXB), condXB)]);
+
+        for (let i = 0; i <= N; i++) {
+          const pval = state.pointLoads[i] || 0;
+          if (pval !== 0) {
+            const xp = coords[i];
+            const condXp = mkParens(mkApply('greaterOrEqual', mkId('x'), mkReal(xp)));
+            termsV.push(['-', mkApply('mult', mkReal(pval), condXp)]);
+            const dxXp = mkParens(mkApply('minus', mkId('x'), mkReal(xp)));
+            termsM.push(['-', mkApply('mult', mkApply('mult', mkReal(pval), dxXp), condXp)]);
+          }
+        }
+
+        for (let i = 0; i <= N; i++) {
+          const mval = state.appliedMoments[i] || 0;
+          if (mval !== 0) {
+            const xm = coords[i];
+            if (Math.abs(xm - Ltot) < 1e-9) {
+              termsM.push(['+', mkReal(mval)]);
+            } else {
+              const condXm = mkParens(mkApply('greaterOrEqual', mkId('x'), mkReal(xm)));
+              termsM.push(['+', mkApply('mult', mkReal(mval), condXm)]);
+            }
+          }
+        }
+
+        const r7 = xmlDoc.querySelector('[region-id="7"]');
+        if (r7) {
+          const parent = r7.querySelector('symEval > apply');
+          if (parent && parent.children.length >= 2) {
+            parent.replaceChild(buildChain(momentEqAstTerms), parent.children[1]);
+          }
+          const symRes = r7.querySelector('symResult real');
+          if (symRes) symRes.textContent = ByVal.toFixed(1);
+        }
+
+        const r8 = xmlDoc.querySelector('[region-id="8"]');
+        if (r8) {
+          const parent = r8.querySelector('symEval > apply');
+          if (parent && parent.children.length >= 2) {
+            parent.replaceChild(buildChain(fyEqAstTerms), parent.children[1]);
+          }
+          const symRes = r8.querySelector('symResult real');
+          if (symRes) symRes.textContent = AyVal.toFixed(1);
+        }
+
+        const r13 = xmlDoc.querySelector('[region-id="13"]');
+        if (r13) {
+          const defEl = r13.querySelector('define');
+          if (defEl && defEl.children.length >= 2) {
+            defEl.replaceChild(buildChain(termsV), defEl.children[1]);
+          }
+        }
+
+        const r14 = xmlDoc.querySelector('[region-id="14"]');
+        if (r14) {
+          const defEl = r14.querySelector('define');
+          if (defEl && defEl.children.length >= 2) {
+            defEl.replaceChild(buildChain(termsM), defEl.children[1]);
+          }
+        }
+
+        const r16 = xmlDoc.querySelector('[region-id="16"]');
+        if (r16) {
+          const rangeEl = r16.querySelector('range');
+          if (rangeEl && rangeEl.children.length >= 2) {
+            rangeEl.replaceChild(mkReal(Ltot), rangeEl.children[1]);
+          }
+        }
+
+        const xEndVal = Math.ceil(Ltot + 1.0).toString();
+        ['17', '18'].forEach(rid => {
+          const rPlot = xmlDoc.querySelector(`[region-id="${rid}"]`);
+          if (rPlot) {
+            const xAxis = rPlot.querySelector('xAxis');
+            if (xAxis) {
+              xAxis.setAttribute('start', '0');
+              xAxis.setAttribute('end', xEndVal);
+              const aline = xAxis.querySelector('axisLine');
+              if (aline) aline.setAttribute('positionticmark', Math.ceil(Ltot / 3.0).toString());
+            }
+          }
+        });
+
+        const serializer = new XMLSerializer();
+        zip.file('mathcad/worksheet.xml', serializer.serializeToString(xmlDoc));
+
+        const canvas = document.getElementById('beamCanvas');
+        if (canvas) {
+          const canvasUri = canvas.toDataURL('image/png');
+          const imgB64 = canvasUri.split(',')[1];
+          ['mathcad/media/Image2.png', 'mathcad/media/Image3.png', 'mathcad/media/Image12.png'].forEach(name => {
+            if (zip.file(name)) zip.file(name, imgB64, { base64: true });
+          });
+        }
+
+        const finalBlob = await zip.generateAsync({ type: 'blob' });
+        saveAs(finalBlob, `EJERCICIO_01_ULIANOV_SABATH_CUBA_VALENCIA_${state.numSpans}Tramos.mcdx`);
+        showToast('⭐ ¡Plantilla Formato Único Ulianov descargada con éxito!');
+      } catch (err) {
+        console.error('Error generando formato Ulianov:', err);
+        showToast('Error al generar formato Ulianov, descargando plantilla maestra...');
+        generateMCDX();
+      } finally {
+        if (btn) {
+          btn.innerHTML = oldHtml;
+          btn.disabled = false;
+        }
+      }
+    }
+
+
     async function generateMCDX() {
       const btn = document.getElementById('btnDownloadMcdx');
       const oldHtml = btn.innerHTML;
