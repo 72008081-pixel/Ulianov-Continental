@@ -49,9 +49,9 @@ def repair_mcdx_file(mcdx_path, is_viga3=True):
     # Si es la viga de 3 tramos del usuario, reconstruir el modelo
     if is_viga3:
         b = BeamModel()
-        b.spans = [2.0, 4.0, 2.0]
+        b.spans = [5.0, 4.0, 1.0]
         b.supports = {0: 'pin', 3: 'roller'}
-        b.distributed_loads = {1: 500.0} # tramo 2: q2 = 500 kg/m
+        b.distributed_loads = {1: 700.0} # tramo 2: q2 = 700 kg/m (Viga 2)
         b.point_loads = {}
         b.applied_moments = {}
         # Primero generamos con beam engine
@@ -191,17 +191,17 @@ def repair_mcdx_file(mcdx_path, is_viga3=True):
     set_pos('59', 650.0, 230.0)
 
     # -------------------------------------------------------------
-    # SECCIÓN 4: ECUACIONES M(x) Y Q(x) (top: 695 a 790)
+    # SECCIÓN 4: ECUACIONES V(x) Y M(x) ESTILO VIGA 2 (top: 690 a 820)
     # -------------------------------------------------------------
-    set_pos('61', 695.0, 37.8)  # M(x)
-    set_pos('62', 760.0, 37.8)  # Q(x)
-    set_pos('64', 820.0, 37.8)  # x := 0..
+    set_pos('64', 690.0, 37.8)  # x := 0, 0.01 .. Ltot (DEFINIDO PRIMERO)
+    set_pos('62', 730.0, 37.8)  # V(x) (Cortante definido segundo)
+    set_pos('61', 785.0, 37.8)  # M(x) (Momento definido tercero)
 
     # -------------------------------------------------------------
-    # SECCIÓN 5: DIAGRAMAS DFC Y DMF (top: 865 a 1400)
+    # SECCIÓN 5: DIAGRAMAS DFC Y DMF (top: 860 a 1400)
     # -------------------------------------------------------------
-    set_pos('66', 865.0, 37.8, w=650, h=230)   # Plot Q(x) DFC
-    set_pos('67', 1135.0, 37.8, w=650, h=230)  # Plot M(x) DMF
+    set_pos('66', 860.0, 37.8, w=650, h=230)   # Plot V(x) DFC
+    set_pos('67', 1130.0, 37.8, w=650, h=230)  # Plot M(x) DMF
 
     # 3. Guardar el archivo corregido
     files['mathcad/worksheet.xml'] = ET.tostring(root, encoding='utf-8', xml_declaration=True)
