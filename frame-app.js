@@ -11,6 +11,31 @@
 
     // ── BIBLIOTECA DE PRESETS ACADÉMICOS ───────────────────────────
     const PRESETS = {
+        examen: {
+            E: 85000,
+            section: { shape: 'rect', b: 6, h: 6 },
+            nodes: [
+                { id: 1, x: 0, y: 0, support: 'fixed' },
+                { id: 2, x: 0, y: 200, support: 'free' },
+                { id: 3, x: 350, y: 0, support: 'fixed' },
+                { id: 4, x: 350, y: 200, support: 'free' },
+                { id: 5, x: 350, y: 500, support: 'free' },
+                { id: 6, x: 800, y: 0, support: 'fixed' },
+                { id: 7, x: 800, y: 200, support: 'free' },
+                { id: 8, x: 800, y: 500, support: 'free' }
+            ],
+            bars: [
+                { from: 1, to: 2, q0: 2.0, q1: 2.0, dir: 'globalX' },
+                { from: 2, to: 4, q0: 4.0, q1: 4.0, dir: 'globalDown' },
+                { from: 3, to: 4, q0: 2.5, q1: 2.5, dir: 'globalX' },
+                { from: 4, to: 5, q0: 2.5, q1: 2.5, dir: 'globalX' },
+                { from: 4, to: 7, q0: 8.0, q1: 8.0, dir: 'globalDown' },
+                { from: 6, to: 7, q0: 2.3, q1: 2.3, dir: 'globalX' },
+                { from: 7, to: 8, q0: 2.3, q1: 2.3, dir: 'globalX' },
+                { from: 5, to: 8, q0: 6.0, q1: 6.0, dir: 'globalDown' }
+            ]
+        },
+
         master: {
             E: 2100000,
             section: { shape: 'rect', b: 5, h: 5 },
@@ -109,7 +134,9 @@
         }
     };
 
-    let activeModel = JSON.parse(JSON.stringify(PRESETS.master));
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialPresetKey = urlParams.get('preset') || urlParams.get('ejemplo') || 'examen';
+    let activeModel = JSON.parse(JSON.stringify(PRESETS[initialPresetKey] || PRESETS.examen || PRESETS.master));
     let currentResult = null;
     let selectedBar = 1;
     let unitMode = 'm'; // 'm' o 'cm'
@@ -1404,7 +1431,8 @@ I_z &= ${p.I.toFixed(4)} \\text{ cm}^4
                 const cycle = { free: 'fixed', fixed: 'pin', pin: 'rollerY', rollerY: 'rollerX', rollerX: 'free' };
                 clickedNode.support = cycle[clickedNode.support || 'free'] || 'free';
                 showToast(`Nudo (${clickedNode.id}): Apoyo cambiado a ${getSupportSpanish(clickedNode.support)}`);
-                populateTablesFromModel(activeModel);
+                $('presetSelect').value = (PRESETS[initialPresetKey] ? initialPresetKey : 'examen');
+        populateTablesFromModel(activeModel);
                 recompute();
                 return;
             }
