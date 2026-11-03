@@ -429,7 +429,12 @@
                         else drawLineArrow(ctx, ax, ayBot, ax, ayTop, qColor, 1.6, 7);
                     }
 
-                    const qDisp = b.q_unit === 'kgf/m' ? fmtClean(b.q_input, 2) + ' kgf/m' : (unitMode === 'm' ? fmtClean(b.q * 100, 2) + ' kgf/m' : fmtClean(b.q, 2) + ' kgf/cm');
+                    const qNominal = (b.q_input !== undefined && b.q_input !== null && b.q_input !== '' && !isNaN(parseFloat(b.q_input)) && Math.abs(parseFloat(b.q_input)) > 1e-9)
+                        ? parseFloat(b.q_input)
+                        : (b.q_unit === 'kgf/m' ? (b.q * 100.0) : b.q);
+                    const qDisp = (b.q_unit === 'kgf/m')
+                        ? fmtClean(qNominal, 2) + ' kgf/m'
+                        : fmtClean(b.q, 2) + ' kgf/cm';
                     const lenDisp = (L_dist_eff < L_span) ? ` (L=${fmtClean(L_dist_eff, 0)}cm)` : '';
                     ctx.font = 'bold 12.5px "Calibri", "Segoe UI", sans-serif';
                     ctx.fillStyle = qColor;

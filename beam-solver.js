@@ -402,9 +402,20 @@
             const kEA = (E * A) / L;
 
             // El motor calcula exclusivamente en cm: q [kgf/cm].
-            // Los valores ingresados en kgf/m se convierten antes de ensamblar las cargas.
-            const qInput = parseFloat(bd.q) || 0;
-            const q = bd.q_unit === 'kgf/m' ? qInput / 100 : qInput;
+            // bd.q_input almacena el valor nominal ingresado por el usuario (ej: 670 kgf/m).
+            // bd.q_unit define la unidad de entrada ('kgf/m' o 'kgf/cm').
+            let qInput = 0;
+            let q = 0;
+            const qUnit = bd.q_unit || 'kgf/cm';
+
+            if (bd.q_input !== undefined && bd.q_input !== null && bd.q_input !== '' && !isNaN(parseFloat(bd.q_input))) {
+                qInput = parseFloat(bd.q_input);
+                q = (qUnit === 'kgf/m') ? (qInput / 100.0) : qInput;
+            } else if (bd.q !== undefined && bd.q !== null && bd.q !== '' && !isNaN(parseFloat(bd.q))) {
+                const rawQ = parseFloat(bd.q);
+                qInput = rawQ;
+                q = (qUnit === 'kgf/m') ? (rawQ / 100.0) : rawQ;
+            }
             const P_tramo = parseFloat(bd.P_tramo) || 0;
             const a_raw = parseFloat(bd.a_dist) || 0;
             const a_eff = a_raw > 0 ? a_raw : (L / 2.0);
@@ -440,7 +451,7 @@
                 Dx, Dy, L, Cosx, Cosy,
                 A, E, I,
                 k12, k6, k4, k2, kEA,
-                q, q_input: qInput, q_unit: bd.q_unit || 'kgf/cm', L_dist: c_load, P_tramo, a_dist: a_raw,
+                q, q_input: qInput, q_unit: qUnit, L_dist: c_load, P_tramo, a_dist: a_raw,
                 V_ini, M_ini, V_fin, M_fin
             });
 

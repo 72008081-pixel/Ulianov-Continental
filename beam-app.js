@@ -396,8 +396,12 @@
         // 2. Sincronizar Asistente Rápido de Tramos
         refreshQuickSpansUI();
 
-        // 3. Forzar sincronización de Cargas Distribuidas en Tabla 3.1
-        syncDistLoadsFromBars(true);
+        // 3. Sincronizar Cargas Distribuidas en Tabla 3.1
+        if (currentState.dist_loads && currentState.dist_loads.length > 0) {
+            applyDistLoadsToBars();
+        } else {
+            syncDistLoadsFromBars(false);
+        }
 
         // 4. Renderizar todas las tablas de datos
         renderSteinerTable();
@@ -857,6 +861,20 @@
             inp.addEventListener('change', readSpansLoadsInputs);
         });
 
+        tbody.querySelectorAll('[data-field="barIdx"]').forEach(sel => {
+            sel.addEventListener('change', (e) => {
+                const tr = e.target.closest('tr');
+                if (tr) {
+                    const bIdx = parseInt(e.target.value, 10) || 0;
+                    const tb = currentState.bars && currentState.bars[bIdx];
+                    const sLen = tb ? Math.abs((tb.xf || 0) - (tb.xi || 0)) : 200;
+                    const lInp = tr.querySelector('[data-field="L_dist"]');
+                    if (lInp) lInp.value = sLen;
+                    readSpansLoadsInputs();
+                }
+            });
+        });
+
         // Binds de botones eliminar
         tbody.querySelectorAll('.dist-del-btn').forEach(btn => {
             btn.onclick = () => {
@@ -901,10 +919,14 @@
             const barIdx = parseInt(barSelect.value, 10) || 0;
             const wVal = wInput.value;
             const unit = unitSelect ? unitSelect.value : 'kgf/m';
-            const lDistVal = lDistInput ? lDistInput.value : '';
+            let lDistVal = lDistInput ? lDistInput.value : '';
 
             const targetBar = currentState.bars && currentState.bars[barIdx];
             const spanLen = targetBar ? Math.abs((targetBar.xf || 0) - (targetBar.xi || 0)) : 200;
+            if (lDistVal !== '' && !isNaN(parseFloat(lDistVal)) && parseFloat(lDistVal) > spanLen) {
+                lDistVal = spanLen;
+                if (lDistInput) lDistInput.value = spanLen;
+            }
             const lLoaded = (lDistVal !== '' && !isNaN(parseFloat(lDistVal))) ? parseFloat(lDistVal) : spanLen;
             const wNum = (wVal !== '' && !isNaN(parseFloat(wVal))) ? parseFloat(wVal) : 0;
             const wCm = unit === 'kgf/m' ? (wNum / 100.0) : wNum;
