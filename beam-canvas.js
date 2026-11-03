@@ -1,17 +1,18 @@
 /**
  * beam-canvas.js — CEREBRO ESTRUCTURAL v4.0 (Edición Vigas - Plantilla Ulianov)
- * Renderizador Gráfico de Alta Precisión en HTML5 Canvas:
- *  1) "6° Gráfica Final" idéntica al formato oficial de cátedra del Ing. Ulianov:
- *     - Enumeración de barras en recuadros rojos [1]..[11] + flechas moradas de dirección
- *     - Enumeración de nudos en círculos verdes (1)..(12)
- *     - Coordenadas en morado (0;0), (2;0), (4;0)...
- *     - Símbolos de apoyos en verde (Fijo Δ, Rodillo Δ+o, Empotrado)
- *     - Grados de libertad globales por nudo (UnX, UnY, Unθ) con flechas de bloque 3D
- *     - Cargas puntuales verticales, cargas oblicuas con triángulo de pendiente (3, 4),
- *       momentos concentrados curvos (800 Kgf.m) y cargas distribuidas q
- *     - Línea de cotas inferior con longitudes de cada tramo (2 m | 2 m | 4 m ...)
- *     - Exportación en 1 clic a imagen PNG de Ultra-Alta Resolución (Fondo Blanco)
- *  2) Visor Geométrico de Sección Transversal Universal y Teorema de Steiner en vivo.
+ * Motor Gráfico de Alta Precisión Arquitectónica para la "6° Gráfica Final":
+ *  1) Fondo blanco técnico (#ffffff) con dibujo vectorial estratificado en 5 franjas:
+ *     - FRANJA 1 (Top, Y ≈ 65 px): Clústeres de Grados de Libertad (UnX, UnY, Unθ) alineados arriba.
+ *     - FRANJA 2 (Cargas, Y ≈ 115-215 px): Cargas distribuidas q (sombreado, flechas y badge), cargas P y momentos.
+ *     - FRANJA 3 (Eje y Viga, Y ≈ 220-305 px):
+ *         * Badges de tramo [m] en rojo con flechas moradas de dirección.
+ *         * Viga continua de acero (#1e293b) con nudos verdes (1)..(N) centrados en el eje.
+ *         * Apoyos estructurales (Fijo, Rodillo, Empotrado) dibujados debajo de los nudos.
+ *     - FRANJA 4 (Coordenadas, Y ≈ 335 px): Coordenadas en morado (0;0), (300;0)... en fila uniforme.
+ *     - FRANJA 5 (Cotas, Y ≈ 390-440 px): Líneas de cota arquitectónicas por tramo y longitud total.
+ *  2) Cero superposiciones, cero saltos aleatorios, sin colisiones de texto.
+ *  3) Exportación en 1 clic a imagen PNG de Ultra-Alta Resolución.
+ *  4) Visor de Sección Transversal Universal y Steiner en vivo.
  */
 
 (function (root, factory) {
@@ -63,7 +64,7 @@
         }
         if (strokeStyle) {
             ctx.strokeStyle = strokeStyle;
-            ctx.lineWidth = 1.4;
+            ctx.lineWidth = 1.3;
             ctx.stroke();
         }
         ctx.restore();
@@ -71,7 +72,7 @@
 
     /**
      * Dibuja el clúster de 3 Grados de Libertad (UnX, UnY, Unθ) de un nudo nNum
-     * exactamente con el estilo de flechas de bloque y cinta curva 3D de la diapositiva del ingeniero
+     * en la franja superior (Y ≈ 65), limpio, nítido y perfectamente alineado.
      */
     function drawNodeDOFCluster(ctx, cx, cy, nNum) {
         ctx.save();
@@ -80,10 +81,10 @@
         const fillCurveDark = '#95b3d7';
         const strokeBlue = '#385d8a';
 
-        // 1. Flecha vertical UnY (a la izquierda del clúster, apuntando hacia arriba)
-        const vx = cx - 22;
+        // 1. Flecha vertical UnY (a la izquierda, apuntando hacia arriba)
+        const vx = cx - 20;
         const vy1 = cy + 16;
-        const vy2 = cy - 30;
+        const vy2 = cy - 26;
         drawBlockArrow(ctx, vx, vy1, vx, vy2, 5, 11, 9, fillArrow, strokeBlue);
 
         ctx.font = 'bold 11px "Segoe UI", Calibri, sans-serif';
@@ -91,22 +92,21 @@
         ctx.textAlign = 'center';
         ctx.fillText(`U${nNum}Y`, vx, vy2 - 5);
 
-        // 2. Flecha horizontal UnX (en la base del clúster, apuntando a la derecha)
-        const hx1 = cx - 14;
+        // 2. Flecha horizontal UnX (en la base, apuntando a la derecha)
+        const hx1 = cx - 12;
         const hx2 = cx + 22;
-        const hy = cy + 25;
+        const hy = cy + 22;
         drawBlockArrow(ctx, hx1, hy, hx2, hy, 5, 11, 9, fillArrow, strokeBlue);
 
         ctx.textAlign = 'left';
         ctx.fillText(`U${nNum}X`, hx2 + 4, hy + 4);
 
-        // 3. Flecha curva 3D Unθ (en el centro-derecha del clúster, giro antihorario hacia arriba-izquierda)
+        // 3. Flecha curva 3D Unθ (giro antihorario)
         const rIn = 11;
         const rOut = 17;
-        const arcCx = cx - 2;
-        const arcCy = cy - 5;
+        const arcCx = cx - 1;
+        const arcCy = cy - 4;
 
-        // Parte inferior de la cinta curva
         ctx.beginPath();
         ctx.arc(arcCx, arcCy, rOut, 0.45 * Math.PI, -0.15 * Math.PI, true);
         ctx.arc(arcCx, arcCy + 4, rIn, -0.15 * Math.PI, 0.45 * Math.PI, false);
@@ -117,7 +117,6 @@
         ctx.lineWidth = 1.3;
         ctx.stroke();
 
-        // Parte superior de la cinta curva con punta de flecha hacia la izquierda-arriba
         ctx.beginPath();
         ctx.arc(arcCx, arcCy, rOut, 0.05 * Math.PI, -0.58 * Math.PI, true);
         const tipAngle = -0.78 * Math.PI;
@@ -136,15 +135,15 @@
 
         ctx.textAlign = 'left';
         ctx.fillStyle = '#0f172a';
-        ctx.fillText(`U${nNum}θ`, arcCx + 10, vy2 - 2);
+        ctx.fillText(`U${nNum}θ`, arcCx + 11, vy2 - 2);
 
         ctx.restore();
     }
 
     /**
-     * Dibuja una línea con punta de flecha abierta o rellena
+     * Dibuja una línea con punta de flecha rellena
      */
-    function drawLineArrow(ctx, x1, y1, x2, y2, color, lineWidth = 2.5, headLen = 11) {
+    function drawLineArrow(ctx, x1, y1, x2, y2, color, lineWidth = 2.4, headLen = 10) {
         const dx = x2 - x1;
         const dy = y2 - y1;
         const angle = Math.atan2(dy, dx);
@@ -170,28 +169,21 @@
     }
 
     /**
-     * Dibuja el apoyo de un nudo (FIJO, RODILLO, EMPOTRADO, RODILLO_V) en verde (#00994d)
+     * Dibuja el apoyo de un nudo (FIJO, RODILLO, EMPOTRADO) debajo de la viga
      */
     function drawSupportSymbol(ctx, x, y, cond) {
         if (!cond || cond === 'LIBRE') return;
         ctx.save();
-        const greenStroke = '#00994d';
+        const greenStroke = '#16a34a';
         ctx.strokeStyle = greenStroke;
         ctx.fillStyle = '#ffffff';
         ctx.lineWidth = 2.0;
 
-        const triH = 24;
-        const triHalfB = 13;
+        const triH = 22;
+        const triHalfB = 14;
 
         if (cond === 'FIJO') {
-            ctx.beginPath();
-            ctx.moveTo(x, y + 2);
-            ctx.lineTo(x - triHalfB, y + 2 + triH);
-            ctx.lineTo(x + triHalfB, y + 2 + triH);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-        } else if (cond === 'RODILLO') {
+            // Triángulo de apoyo
             ctx.beginPath();
             ctx.moveTo(x, y + 2);
             ctx.lineTo(x - triHalfB, y + 2 + triH);
@@ -200,55 +192,137 @@
             ctx.fill();
             ctx.stroke();
 
-            // Círculo verde debajo del triángulo (exactamente como Nudo 3 del ingeniero)
-            const rCirc = 7.5;
+            // Línea de base y achurado a tierra
+            const baseY = y + 2 + triH;
             ctx.beginPath();
-            ctx.arc(x, y + 2 + triH + rCirc + 1, rCirc, 0, Math.PI * 2);
+            ctx.moveTo(x - triHalfB - 6, baseY);
+            ctx.lineTo(x + triHalfB + 6, baseY);
+            ctx.stroke();
+
+            ctx.lineWidth = 1.4;
+            for (let hx = x - triHalfB - 4; hx <= x + triHalfB + 4; hx += 5) {
+                ctx.beginPath();
+                ctx.moveTo(hx, baseY);
+                ctx.lineTo(hx - 5, baseY + 6);
+                ctx.stroke();
+            }
+        } else if (cond === 'RODILLO') {
+            // Triángulo superior
+            ctx.beginPath();
+            ctx.moveTo(x, y + 2);
+            ctx.lineTo(x - triHalfB, y + 2 + triH - 8);
+            ctx.lineTo(x + triHalfB, y + 2 + triH - 8);
+            ctx.closePath();
             ctx.fill();
             ctx.stroke();
+
+            // Dos rodillos (círculos) debajo
+            const rY = y + 2 + triH - 4;
+            const rCirc = 4.5;
+            ctx.beginPath();
+            ctx.arc(x - 6, rY, rCirc, 0, Math.PI * 2);
+            ctx.arc(x + 6, rY, rCirc, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Línea de base del rodillo
+            const baseY = rY + rCirc + 1;
+            ctx.beginPath();
+            ctx.moveTo(x - triHalfB - 6, baseY);
+            ctx.lineTo(x + triHalfB + 6, baseY);
+            ctx.stroke();
+
+            ctx.lineWidth = 1.4;
+            for (let hx = x - triHalfB - 4; hx <= x + triHalfB + 4; hx += 5) {
+                ctx.beginPath();
+                ctx.moveTo(hx, baseY);
+                ctx.lineTo(hx - 5, baseY + 6);
+                ctx.stroke();
+            }
         } else if (cond === 'EMPOTRADO') {
             // Muro vertical verde con achurado
             ctx.lineWidth = 3.0;
             ctx.beginPath();
-            ctx.moveTo(x, y - 26);
-            ctx.lineTo(x, y + 26);
+            ctx.moveTo(x, y - 24);
+            ctx.lineTo(x, y + 24);
             ctx.stroke();
-            ctx.lineWidth = 1.6;
-            for (let sy = y - 22; sy <= y + 22; sy += 8) {
+            ctx.lineWidth = 1.5;
+            for (let sy = y - 20; sy <= y + 20; sy += 7) {
                 ctx.beginPath();
                 ctx.moveTo(x, sy);
-                ctx.lineTo(x - 10, sy + 7);
+                ctx.lineTo(x - 9, sy + 6);
                 ctx.stroke();
             }
-        } else if (cond === 'RODILLO_V') {
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x - 20, y - 11);
-            ctx.lineTo(x - 20, y + 11);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(x - 26, y, 5, 0, Math.PI * 2);
-            ctx.stroke();
         }
         ctx.restore();
     }
 
     /**
+     * Dibuja un badge tipo píldora blanca con borde de color
+     */
+    function drawPillBadge(ctx, text, cx, cy, strokeColor, textColor, fontSize = 12) {
+        ctx.save();
+        ctx.font = `bold ${fontSize}px "Segoe UI", Calibri, sans-serif`;
+        const metrics = ctx.measureText(text);
+        const padX = 8;
+        const padY = 4;
+        const w = metrics.width + padX * 2;
+        const h = fontSize + padY * 2;
+        const rx = cx - w / 2;
+        const ry = cy - h / 2;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 1.5;
+
+        // Rectángulo redondeado
+        ctx.beginPath();
+        const rad = 4;
+        ctx.moveTo(rx + rad, ry);
+        ctx.lineTo(rx + w - rad, ry);
+        ctx.quadraticCurveTo(rx + w, ry, rx + w, ry + rad);
+        ctx.lineTo(rx + w, ry + h - rad);
+        ctx.quadraticCurveTo(rx + w, ry + h, rx + w - rad, ry + h);
+        ctx.lineTo(rx + rad, ry + h);
+        ctx.quadraticCurveTo(rx, ry + h, rx, ry + h - rad);
+        ctx.lineTo(rx, ry + rad);
+        ctx.quadraticCurveTo(rx, ry, rx + rad, ry);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = textColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, cx, cy);
+        ctx.restore();
+    }
+
+    /**
      * Renderiza la "6° Gráfica Final" completa en el canvas indicado
-     * options: { unitMode: 'm' | 'cm', showDOFs: true, showLoads: true, showDimensions: true }
+     * Motor Gráfico Arquitectónico Estratificado en 5 Franjas de Alta Precisión.
      */
     function renderGraficaFinal(canvas, solverResult, options = {}) {
         if (!canvas || !solverResult) return;
-        const unitMode = options.unitMode || 'm'; // 'm' muestra (2;0) y 2 m como en el PDF; 'cm' muestra (200;0) y 200 cm
+        const unitMode = options.unitMode || 'm';
         const scaleUnit = unitMode === 'm' ? 0.01 : 1.0;
         const unitSuffix = unitMode === 'm' ? 'm' : 'cm';
 
-        const dpr = window.devicePixelRatio || 2;
-        const logicalW = options.width || 1180;
-        const logicalH = options.height || 540;
+        const activeBars = solverResult.barsTable ? solverResult.barsTable.filter(b => b.active) : [];
+        const activeNodes = solverResult.nodesTable ? solverResult.nodesTable.filter(n => n.active) : [];
 
+        const numSpans = activeBars.length;
+        const numNodes = activeNodes.length;
+
+        // Dimensiones dinámicas con espacio garantizado por tramo
+        const minSpanPx = Math.max(160, Math.min(240, Math.floor(1000 / Math.max(numSpans, 1))));
+        const padLeft = 140;
+        const padRight = 140;
+        const neededW = padLeft + padRight + Math.max(numSpans, 1) * minSpanPx;
+        const logicalW = options.width || Math.max(1280, neededW);
+        const logicalH = options.height || 500;
+
+        const dpr = window.devicePixelRatio || 2;
         canvas.width = logicalW * dpr;
         canvas.height = logicalH * dpr;
         canvas._logicalW = logicalW;
@@ -261,45 +335,11 @@
         ctx.save();
         ctx.scale(dpr, dpr);
 
-        // 1. Fondo blanco limpio para dibujo técnico sin marcas ajenas
+        // 1. Fondo blanco limpio de dibujo técnico
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, logicalW, logicalH);
 
-        // Distribuidor anticolisiones: recoloca textos sin alterar geometría ni resultados.
-        const baseFillText = ctx.fillText.bind(ctx);
-        const occupiedLabels = [];
-        ctx.fillText = function (value, x, y, maxWidth) {
-            const label = String(value);
-            const metrics = ctx.measureText(label);
-            const w = Math.max(1, Math.min(metrics.width, typeof maxWidth === 'number' ? maxWidth : metrics.width));
-            const fs = parseFloat(ctx.font.match(/([0-9.]+)px/)?.[1] || '15');
-            const hh = fs * 1.28;
-            const align = ctx.textAlign;
-            const estimate = (px, py) => ({
-                x: px - (align === 'center' ? w / 2 : align === 'right' || align === 'end' ? w : 0) - 3,
-                y: py - hh * .88 - 3, w: w + 6, h: hh + 6
-            });
-            const overlaps = (a,b) => a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
-            const offsets = [[0,0],[0,-24],[0,24],[0,-48],[0,48],[-36,-24],[36,-24],[-36,24],[36,24],[0,-72],[0,72],[-70,0],[70,0],[-70,-48],[70,-48],[-105,24],[105,24]];
-            let chosen = null, cost = Infinity;
-            for (const [dx,dy] of offsets) {
-                const p=estimate(x+dx,y+dy);
-                const collision=occupiedLabels.reduce((n,b)=>n+(overlaps(p,b)?1:0),0);
-                const outside=p.x<8||p.x+p.w>logicalW-8||p.y<78||p.y+p.h>logicalH-8;
-                const score=collision*10000+(outside?20000:0)+Math.abs(dx)+Math.abs(dy);
-                if(score<cost){cost=score;chosen={dx,dy,p};}
-                if(score===0)break;
-            }
-            if(chosen){
-                occupiedLabels.push(chosen.p);
-                return maxWidth === undefined ? baseFillText(label,x+chosen.dx,y+chosen.dy) :
-                    baseFillText(label,x+chosen.dx,y+chosen.dy,maxWidth);
-            }
-        };
-        const activeBars = solverResult.barsTable.filter(b => b.active);
-        const activeNodes = solverResult.nodesTable.filter(n => n.active);
-
-        if (activeBars.length === 0 || activeNodes.length === 0) {
+        if (numSpans === 0 || numNodes === 0) {
             ctx.font = 'bold 16px "Segoe UI", sans-serif';
             ctx.fillStyle = '#64748b';
             ctx.textAlign = 'center';
@@ -308,7 +348,7 @@
             return;
         }
 
-        // Construir coordenadas (x, y) de cada nudo activo a partir de las barras activas
+        // Construir coordenadas (x, y) de cada nudo activo
         const nodeCoords = {};
         activeBars.forEach((b, idx) => {
             if (idx === 0) {
@@ -318,117 +358,74 @@
         });
 
         const xs = Object.values(nodeCoords).map(p => p.x);
-        const ys = Object.values(nodeCoords).map(p => p.y);
         const minX = Math.min(...xs);
         const maxX = Math.max(...xs);
-        const minY = Math.min(...ys);
-        const maxY = Math.max(...ys);
-
         const spanX = Math.max(1.0, maxX - minX);
-        const spanY = maxY - minY;
-
-        // Región de dibujo de la viga
-        const padLeft = 205;
-        const padRight = 185;
         const drawW = logicalW - padLeft - padRight;
-        const beamBaseY = 278;
+
+        // Cota Y base del eje de la viga
+        const beamY = 250;
 
         function toScreen(xVal, yVal) {
             const sx = padLeft + ((xVal - minX) / spanX) * drawW;
-            const sy = spanY > 1e-3
-                ? (beamBaseY + 40 - ((yVal - minY) / Math.max(spanX, spanY)) * (drawW * 0.45))
-                : beamBaseY;
-            return { x: sx, y: sy };
+            return { x: sx, y: beamY };
         }
 
-                // ── CAPA A: SÍMBOLOS DE APOYOS EN NUDOS ────────────────────────
-        activeNodes.forEach(nd => {
-            const coord = nodeCoords[nd.nodeNum] || { x: 0, y: 0 };
-            const pt = toScreen(coord.x, coord.y);
-            drawSupportSymbol(ctx, pt.x, pt.y, nd.cond);
-        });
-
-        // ── CAPA B: CLÚSTER DE GRADOS DE LIBERTAD (CON MÁXIMO DESPEJE Y SIN SUPERPOSICIONES) ────
+        // =====================================================================
+        // FRANJA 1: GRADOS DE LIBERTAD GLOBALES (Y ≈ 65 px)
+        // Todos los nudos tienen su clúster GDL alineado uniformemente arriba
+        // =====================================================================
         if (options.showDOFs !== false) {
-            const totalN = activeNodes.length;
-            activeNodes.forEach((nd, idx) => {
-                const nNum = nd.nodeNum;
-                const coord = nodeCoords[nNum] || { x: 0, y: 0 };
+            const dofY = 65;
+            activeNodes.forEach(nd => {
+                const coord = nodeCoords[nd.nodeNum] || { x: 0, y: 0 };
                 const pt = toScreen(coord.x, coord.y);
-                const isFirst = idx === 0;
-                const isLast = idx === totalN - 1;
-                const hasSupport = nd.cond && nd.cond !== 'LIBRE';
-                const hasDownLoad = (nd.Py_dir !== undefined && nd.Py_dir < -1e-9);
-                const placeCircleAbove = hasSupport || (!hasDownLoad && (isFirst || isLast || (nNum % 2 === 1)));
-
-                // Despeje amplio para evitar cualquier colisión con cotas, apoyos o coordenadas
-                let dofCx = pt.x;
-                let dofCy = pt.y;
-                if (isFirst) {
-                    dofCx = pt.x - 120;
-                    dofCy = pt.y - 12;
-                } else if (isLast) {
-                    dofCx = pt.x + 105;
-                    dofCy = pt.y - 12;
-                } else if (placeCircleAbove) {
-                    dofCx = pt.x + 18;
-                    dofCy = pt.y - 148;
-                } else {
-                    dofCx = pt.x - 12;
-                    dofCy = pt.y + 144;
-                }
-                drawNodeDOFCluster(ctx, dofCx, dofCy, nNum);
+                drawNodeDOFCluster(ctx, pt.x, dofY, nd.nodeNum);
             });
         }
 
-        // ── CAPA C: CARGAS DISTRIBUIDAS (ZONA CARGADA Y FLECHAS DE q) ────
+        // =====================================================================
+        // FRANJA 2: CORREDOR DE CARGAS (Y ≈ 115 a 215 px)
+        // Cargas distribuidas q, puntuales P, momentos y oblicuas
+        // =====================================================================
         if (options.showLoads !== false) {
+            // 2A. Cargas distribuidas q
             activeBars.forEach(b => {
-                const p1 = toScreen(b.xi, b.yi);
-                const p2 = toScreen(b.xf, b.yf);
                 if (Math.abs(b.q) > 1e-9) {
-                    ctx.save();
-                    const qColor = '#0070c0';
-                    const qH = 38 * Math.sign(b.q);
+                    const p1 = toScreen(b.xi, b.yi);
+                    const p2 = toScreen(b.xf, b.yf);
 
                     const L_span = Math.hypot(b.xf - b.xi, b.yf - b.yi);
                     const L_dist_eff = (b.L_dist !== undefined && b.L_dist !== null && b.L_dist > 0) ? Math.min(b.L_dist, L_span) : L_span;
                     const t_dist = L_span > 0 ? (L_dist_eff / L_span) : 1;
 
-                    const p2_load = {
-                        x: p1.x + t_dist * (p2.x - p1.x),
-                        y: p1.y + t_dist * (p2.y - p1.y)
-                    };
+                    const p2_load_x = p1.x + t_dist * (p2.x - p1.x);
+                    const qTopY = 175;
+                    const qBotY = beamY - 6;
 
-                    const topY1 = p1.y - qH;
-                    const topY2 = p2_load.y - qH;
+                    ctx.save();
+                    // Sombreado celeste suave en la zona cargada
+                    ctx.fillStyle = 'rgba(2, 132, 199, 0.08)';
+                    ctx.fillRect(p1.x, qTopY, p2_load_x - p1.x, qBotY - qTopY);
 
-                    ctx.fillStyle = 'rgba(0, 112, 192, 0.08)';
-                    ctx.beginPath();
-                    ctx.moveTo(p1.x, p1.y - 3);
-                    ctx.lineTo(p1.x, topY1);
-                    ctx.lineTo(p2_load.x, topY2);
-                    ctx.lineTo(p2_load.x, p2_load.y - 3);
-                    ctx.closePath();
-                    ctx.fill();
-
-                    ctx.strokeStyle = qColor;
+                    // Línea superior de la carga distribuida
+                    ctx.strokeStyle = '#0284c7';
                     ctx.lineWidth = 2.0;
                     ctx.beginPath();
-                    ctx.moveTo(p1.x, topY1);
-                    ctx.lineTo(p2_load.x, topY2);
+                    ctx.moveTo(p1.x, qTopY);
+                    ctx.lineTo(p2_load_x, qTopY);
                     ctx.stroke();
 
-                    const numArrows = Math.max(3, Math.min(9, Math.floor(Math.abs(p2_load.x - p1.x) / 22)));
+                    // Flechas verticales hacia abajo en la carga distribuida
+                    const spanDistW = Math.abs(p2_load_x - p1.x);
+                    const numArrows = Math.max(3, Math.min(10, Math.floor(spanDistW / 24)));
                     for (let k = 0; k <= numArrows; k++) {
                         const t = k / (numArrows || 1);
-                        const ax = p1.x + t * (p2_load.x - p1.x);
-                        const ayTop = topY1 + t * (topY2 - topY1);
-                        const ayBot = p1.y + t * (p2_load.y - p1.y) - 4;
-                        if (b.q > 0) drawLineArrow(ctx, ax, ayTop, ax, ayBot, qColor, 1.6, 7);
-                        else drawLineArrow(ctx, ax, ayBot, ax, ayTop, qColor, 1.6, 7);
+                        const ax = p1.x + t * (p2_load_x - p1.x);
+                        drawLineArrow(ctx, ax, qTopY, ax, qBotY, '#0284c7', 1.5, 6);
                     }
 
+                    // Badge de valor de la carga distribuida
                     const qNominal = (b.q_input !== undefined && b.q_input !== null && b.q_input !== '' && !isNaN(parseFloat(b.q_input)) && Math.abs(parseFloat(b.q_input)) > 1e-9)
                         ? parseFloat(b.q_input)
                         : (b.q_unit === 'kgf/m' ? (b.q * 100.0) : b.q);
@@ -436,75 +433,61 @@
                         ? fmtClean(qNominal, 2) + ' kgf/m'
                         : fmtClean(b.q, 2) + ' kgf/cm';
                     const lenDisp = (L_dist_eff < L_span) ? ` (L=${fmtClean(L_dist_eff, 0)}cm)` : '';
-                    ctx.font = 'bold 12.5px "Calibri", "Segoe UI", sans-serif';
-                    ctx.fillStyle = qColor;
-                    ctx.textAlign = 'center';
-                    ctx.fillText(`q = ${qDisp}${lenDisp}`, (p1.x + p2_load.x) / 2, (b.q > 0 ? Math.min(topY1, topY2) - 7 : Math.max(topY1, topY2) + 18));
+
+                    drawPillBadge(ctx, `q = ${qDisp}${lenDisp}`, (p1.x + p2_load_x) / 2, qTopY - 14, '#0284c7', '#0284c7', 11.5);
                     ctx.restore();
                 }
 
-                // Carga puntual en el interior del tramo (P_tramo != 0)
+                // 2B. Carga puntual en el interior del tramo (P_tramo != 0)
                 if (Math.abs(b.P_tramo) > 1e-9) {
+                    const p1 = toScreen(b.xi, b.yi);
+                    const p2 = toScreen(b.xf, b.yf);
                     const a_eff = b.a_dist > 0 ? b.a_dist : (b.L / 2.0);
                     const ratio = Math.min(1, Math.max(0, a_eff / b.L));
                     const px = p1.x + ratio * (p2.x - p1.x);
-                    const py = p1.y + ratio * (p2.y - p1.y);
-                    drawLineArrow(ctx, px, py - 95, px, py - 4, '#0070c0', 2.4, 11);
-                    ctx.font = 'bold 13.5px "Calibri", "Segoe UI", sans-serif';
-                    ctx.fillStyle = '#0070c0';
-                    ctx.textAlign = 'left';
-                    ctx.fillText(`${fmtClean(Math.abs(b.P_tramo))} Kgf`, px + 6, py - 72);
+
+                    const pTopY = 145;
+                    const pBotY = beamY - 6;
+                    drawLineArrow(ctx, px, pTopY, px, pBotY, '#0284c7', 2.4, 10);
+                    drawPillBadge(ctx, `${fmtClean(Math.abs(b.P_tramo))} Kgf`, px, pTopY - 12, '#0284c7', '#0284c7', 12);
                 }
             });
-        }
 
-        // ── CAPA D: CARGAS PUNTUALES DIRECTAS EN NUDOS (Py, Px, Mz) ──────────
-        if (options.showLoads !== false) {
+            // 2C. Cargas directas en nudos (Py, Px, Mz)
             activeNodes.forEach(nd => {
                 const coord = nodeCoords[nd.nodeNum] || { x: 0, y: 0 };
                 const pt = toScreen(coord.x, coord.y);
 
-                // Carga vertical directa Py_dir
+                // Carga vertical puntual Py_dir
                 if (Math.abs(nd.Py_dir) > 1e-9) {
                     const isDown = nd.Py_dir < 0;
-                    const startY = isDown ? (pt.y - 122) : (pt.y + 110);
-                    const endY = isDown ? (pt.y - 4) : (pt.y + 4);
-                    drawLineArrow(ctx, pt.x, startY, pt.x, endY, '#0070c0', 2.5, 11);
-
-                    ctx.save();
-                    ctx.font = 'bold 14.5px "Calibri", "Segoe UI", sans-serif';
-                    ctx.fillStyle = '#0070c0';
-                    ctx.textAlign = 'left';
-                    ctx.fillText(`${fmtClean(Math.abs(nd.Py_dir))} Kgf`, pt.x + 7, startY + 26);
-                    ctx.restore();
+                    const startY = isDown ? 145 : (beamY + 50);
+                    const endY = isDown ? (beamY - 16) : (beamY + 16);
+                    drawLineArrow(ctx, pt.x, startY, pt.x, endY, '#0284c7', 2.5, 10);
+                    drawPillBadge(ctx, `${fmtClean(Math.abs(nd.Py_dir))} Kgf`, pt.x, startY - 12, '#0284c7', '#0284c7', 12);
                 }
 
                 // Carga horizontal directa Px_dir
                 if (Math.abs(nd.Px_dir) > 1e-9) {
                     const isRight = nd.Px_dir > 0;
-                    const startX = isRight ? (pt.x - 75) : (pt.x + 75);
-                    drawLineArrow(ctx, startX, pt.y - 12, pt.x, pt.y - 12, '#0070c0', 2.4, 10);
-                    ctx.save();
-                    ctx.font = 'bold 13.5px "Calibri", "Segoe UI", sans-serif';
-                    ctx.fillStyle = '#0070c0';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(`${fmtClean(Math.abs(nd.Px_dir))} Kgf`, (startX + pt.x) / 2, pt.y - 20);
-                    ctx.restore();
+                    const startX = isRight ? (pt.x - 55) : (pt.x + 55);
+                    drawLineArrow(ctx, startX, beamY, pt.x - (isRight ? 16 : -16), beamY, '#0284c7', 2.2, 9);
+                    drawPillBadge(ctx, `${fmtClean(Math.abs(nd.Px_dir))} Kgf`, (startX + pt.x) / 2, beamY - 16, '#0284c7', '#0284c7', 11);
                 }
 
                 // Momento concentrado Mz_dir
                 if (Math.abs(nd.Mz_dir) > 1e-9) {
                     ctx.save();
-                    const mColor = '#0070c0';
-                    const mRadius = 46;
-                    const mCenterX = pt.x + 4;
-                    const mCenterY = pt.y + 4;
+                    const mColor = '#0284c7';
+                    const mRadius = 32;
+                    const mCenterX = pt.x;
+                    const mCenterY = beamY;
 
                     ctx.strokeStyle = mColor;
-                    ctx.lineWidth = 2.4;
+                    ctx.lineWidth = 2.2;
                     ctx.beginPath();
-                    const startAng = -0.78 * Math.PI;
-                    const endAng = 0.72 * Math.PI;
+                    const startAng = -0.75 * Math.PI;
+                    const endAng = 0.65 * Math.PI;
                     ctx.arc(mCenterX, mCenterY, mRadius, startAng, endAng, false);
                     ctx.stroke();
 
@@ -514,249 +497,257 @@
                     ctx.fillStyle = mColor;
                     ctx.beginPath();
                     ctx.moveTo(tipX, tipY);
-                    ctx.lineTo(tipX - 11 * Math.cos(tangAngle - Math.PI / 6), tipY - 11 * Math.sin(tangAngle - Math.PI / 6));
-                    ctx.lineTo(tipX - 11 * Math.cos(tangAngle + Math.PI / 6), tipY - 11 * Math.sin(tangAngle + Math.PI / 6));
+                    ctx.lineTo(tipX - 9 * Math.cos(tangAngle - Math.PI / 6), tipY - 9 * Math.sin(tangAngle - Math.PI / 6));
+                    ctx.lineTo(tipX - 9 * Math.cos(tangAngle + Math.PI / 6), tipY - 9 * Math.sin(tangAngle + Math.PI / 6));
                     ctx.closePath();
                     ctx.fill();
 
                     const mValDisp = unitMode === 'm'
-                        ? `${fmtClean(Math.abs(nd.Mz_dir) / 100.0, 2)} Kgf.m`
-                        : `${fmtClean(Math.abs(nd.Mz_dir), 2)} Kgf.cm`;
+                        ? `${fmtClean(Math.abs(nd.Mz_dir) / 100.0, 2)} Kgf·m`
+                        : `${fmtClean(Math.abs(nd.Mz_dir), 2)} Kgf·cm`;
 
-                    ctx.font = 'bold 14.5px "Calibri", "Segoe UI", sans-serif';
-                    ctx.fillStyle = mColor;
-                    ctx.textAlign = 'center';
-                    ctx.fillText(mValDisp, mCenterX + 8, mCenterY - mRadius - 10);
+                    drawPillBadge(ctx, mValDisp, mCenterX, beamY - mRadius - 12, mColor, mColor, 11);
                     ctx.restore();
                 }
             });
+
+            // 2D. Cargas oblicuas con triángulo de pendiente
+            if (solverResult.obliqueTable) {
+                solverResult.obliqueTable.filter(ob => ob.active).forEach(ob => {
+                    const coord = nodeCoords[ob.nudo];
+                    if (!coord) return;
+                    const pt = toScreen(coord.x, coord.y);
+
+                    const lenArrow = 95;
+                    const ux = ob.cosA * (ob.dir_x.includes('-X') ? -1 : 1);
+                    const uy = ob.sinA * (ob.dir_y.includes('-Y') ? 1 : -1);
+
+                    const startX = pt.x - ux * lenArrow;
+                    const startY = beamY - uy * lenArrow;
+                    const endX = pt.x - ux * 16;
+                    const endY = beamY - uy * 16;
+
+                    drawLineArrow(ctx, startX, startY, endX, endY, '#0284c7', 2.4, 10);
+                    drawPillBadge(ctx, `${fmtClean(Math.abs(ob.P))} Kgf`, startX, startY - 12, '#0284c7', '#0284c7', 12);
+                });
+            }
         }
 
-        // ── CAPA E: CARGAS PUNTUALES OBLICUAS (CON TRIÁNGULO DE PENDIENTE) ────
-        if (options.showLoads !== false && solverResult.obliqueTable) {
-            solverResult.obliqueTable.filter(ob => ob.active).forEach(ob => {
-                const coord = nodeCoords[ob.nudo];
-                if (!coord) return;
-                const pt = toScreen(coord.x, coord.y);
-
-                const lenArrow = 128;
-                const ux = ob.cosA * (ob.dir_x.includes('-X') ? -1 : 1);
-                const uy = ob.sinA * (ob.dir_y.includes('-Y') ? 1 : -1);
-
-                const startX = pt.x - ux * lenArrow;
-                const startY = pt.y - uy * lenArrow;
-                const endX = pt.x - ux * 3;
-                const endY = pt.y - uy * 3;
-
-                drawLineArrow(ctx, startX, startY, endX, endY, '#0070c0', 2.5, 11);
-
-                ctx.save();
-                ctx.font = 'bold 15px "Calibri", "Segoe UI", sans-serif';
-                ctx.fillStyle = '#0070c0';
-                ctx.textAlign = 'left';
-                ctx.fillText(`${fmtClean(Math.abs(ob.P))} Kgf`, startX - 18, startY - 10);
-
-                const tFrac = 0.52;
-                const pA_x = endX + (startX - endX) * 0.25;
-                const pA_y = endY + (startY - endY) * 0.25;
-                const pB_x = endX + (startX - endX) * (0.25 + tFrac * 0.45);
-                const pB_y = endY + (startY - endY) * (0.25 + tFrac * 0.45);
-
-                ctx.beginPath();
-                ctx.moveTo(pA_x, pA_y);
-                ctx.lineTo(pB_x, pA_y);
-                ctx.lineTo(pB_x, pB_y);
-                ctx.closePath();
-                ctx.fillStyle = '#4f81bd';
-                ctx.fill();
-                ctx.strokeStyle = '#1f497d';
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-
-                ctx.font = 'bold 12px "Calibri", "Segoe UI", sans-serif';
-                ctx.fillStyle = '#000000';
-                ctx.textAlign = 'center';
-                if (ob.modo === 'PENDIENTE_dx_dy') {
-                    ctx.fillText(fmtClean(ob.val1), (pA_x + pB_x) / 2, pA_y + 14);
-                    ctx.textAlign = 'left';
-                    ctx.fillText(fmtClean(ob.val2), pB_x + 5, (pA_y + pB_y) / 2 + 4);
-                } else {
-                    ctx.fillText(`${fmtClean(ob.val1)}°`, pB_x + 14, pA_y + 12);
-                }
-                ctx.restore();
-            });
-        }
-
-        // ── CAPA F (PRIORIDAD FRONTAL): VIGA PRINCIPAL (TRAZADA DELANTE DE FONDOS Y CARGAS) ────
-        ctx.save();
-        ctx.strokeStyle = '#090d16';
-        ctx.lineWidth = 5.5;
-        ctx.lineCap = 'round';
-        activeBars.forEach(b => {
-            const p1 = toScreen(b.xi, b.yi);
-            const p2 = toScreen(b.xf, b.yf);
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-        });
-        ctx.restore();
-
-        // ── CAPA G (PRIORIDAD FRONTAL): RECUADROS DE BARRAS [1]..[N] ─────────
+        // =====================================================================
+        // FRANJA 3A: BADGES DE TRAMO [1]..[N] Y FLECHA MORADA DE DIRECCIÓN
+        // Centrados horizontalmente en cada vano, a Y ≈ 224 px
+        // =====================================================================
         activeBars.forEach(b => {
             const p1 = toScreen(b.xi, b.yi);
             const p2 = toScreen(b.xf, b.yf);
             const midX = (p1.x + p2.x) / 2.0;
-            const midY = (p1.y + p2.y) / 2.0;
 
-            const hasQ = Math.abs(b.q) > 1e-9;
-            const boxW = 36;
-            const boxH = 29;
+            const boxW = 26;
+            const boxH = 20;
             const boxX = midX - boxW / 2.0;
-            const boxY = hasQ ? (midY - 96) : (midY - 48);
+            const boxY = 216;
 
             ctx.save();
+            // Cuadro rojo con fondo blanco
             ctx.fillStyle = '#ffffff';
-            ctx.strokeStyle = '#ff0000';
-            ctx.lineWidth = 2.4;
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2.0;
             ctx.fillRect(boxX, boxY, boxW, boxH);
             ctx.strokeRect(boxX, boxY, boxW, boxH);
 
-            ctx.font = 'bold 16px "Calibri", "Segoe UI", sans-serif';
-            ctx.fillStyle = '#ff0000';
+            ctx.font = 'bold 12.5px "Calibri", "Segoe UI", sans-serif';
+            ctx.fillStyle = '#ef4444';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(String(b.barNum), midX, boxY + boxH / 2.0 + 1);
 
-            const arrY = boxY + boxH + 7;
-            drawBlockArrow(ctx, midX - 18, arrY, midX + 20, arrY, 4.5, 10, 8, '#7030a0', '#7030a0');
+            // Flecha morada de dirección local (Xi -> Xf)
+            const arrY = boxY + boxH + 6;
+            drawBlockArrow(ctx, midX - 14, arrY, midX + 16, arrY, 4, 8, 7, '#7e22ce', '#7e22ce');
             ctx.restore();
         });
 
-        // ── CAPA H (PRIORIDAD MÁXIMA): NUDOS (CÍRCULOS VERDES Y COORDENADAS) ─────
-        // Se dibujan AL FINAL de todo para que queden siempre en primer plano sin superposiciones
-        const totalN = activeNodes.length;
-        canvas._nodeHitboxes = []; // Registrar cajas de detección para interacción con clics
+        // =====================================================================
+        // FRANJA 3B: VIGA PRINCIPAL Y NUDOS EN EL EJE (Y = 250 px)
+        // La viga es una barra sólida de acero estructural (#1e293b)
+        // y los nudos son círculos verdes (1)..(N) centrados en el eje
+        // =====================================================================
+        const firstPt = toScreen(nodeCoords[1].x, nodeCoords[1].y);
+        const lastNodeNum = activeNodes[activeNodes.length - 1].nodeNum;
+        const lastPt = toScreen(nodeCoords[lastNodeNum].x, nodeCoords[lastNodeNum].y);
 
+        // Viga principal
+        ctx.save();
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 6.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(firstPt.x, beamY);
+        ctx.lineTo(lastPt.x, beamY);
+        ctx.stroke();
+        ctx.restore();
+
+        // Nudos centrados en el eje de la viga
+        canvas._nodeHitboxes = [];
         activeNodes.forEach((nd, idx) => {
             const nNum = nd.nodeNum;
             const coord = nodeCoords[nNum] || { x: 0, y: 0 };
             const pt = toScreen(coord.x, coord.y);
 
-            const isFirst = idx === 0;
-            const isLast = idx === totalN - 1;
-            const hasSupport = nd.cond && nd.cond !== 'LIBRE';
-            const hasDownLoad = (nd.Py_dir !== undefined && nd.Py_dir < -1e-9);
-            const placeCircleAbove = hasSupport || (!hasDownLoad && (isFirst || isLast || (nNum % 2 === 1)));
-
-            const circleR = 17;
-            let cX = pt.x;
-            let cY = placeCircleAbove ? (pt.y - 25) : (pt.y + 30);
-            if (isFirst) {
-                cX = pt.x - 22;
-                cY = pt.y - 22;
-            } else if (isLast) {
-                cX = pt.x + 12;
-                cY = pt.y - 22;
-            }
-
-            // Guardar hitbox para clic directo en el canvas
+            // Hitbox interactiva para clics
             canvas._nodeHitboxes.push({
                 nodeNum: nNum,
                 nodeIdx: idx,
                 x: pt.x,
-                y: pt.y,
+                y: beamY,
                 cond: nd.cond,
-                radius: 26
+                radius: 22
             });
 
-            // Círculo del nudo con fondo blanco sólido opaco (corta limpiamente cualquier línea detrás)
+            // Círculo verde con fondo blanco opaco (corta limpiamente la viga detrás)
+            const circleR = 15;
             ctx.save();
             ctx.beginPath();
-            ctx.arc(cX, cY, circleR, 0, Math.PI * 2);
+            ctx.arc(pt.x, beamY, circleR, 0, Math.PI * 2);
             ctx.fillStyle = '#ffffff';
             ctx.fill();
-            ctx.strokeStyle = '#008000';
+            ctx.strokeStyle = '#16a34a';
             ctx.lineWidth = 2.4;
             ctx.stroke();
 
-            ctx.font = 'bold 16px "Calibri", "Segoe UI", sans-serif';
-            ctx.fillStyle = '#008000';
+            ctx.font = 'bold 13px "Calibri", "Segoe UI", sans-serif';
+            ctx.fillStyle = '#16a34a';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(String(nNum), cX, cY + 1);
+            ctx.fillText(String(nNum), pt.x, beamY + 1);
             ctx.restore();
+        });
 
-            // Etiqueta de Coordenadas Moradas (x;y)
+        // =====================================================================
+        // FRANJA 3C: SÍMBOLOS DE APOYOS EN NUDOS (Y ≈ 266 a 300 px)
+        // =====================================================================
+        activeNodes.forEach(nd => {
+            const coord = nodeCoords[nd.nodeNum] || { x: 0, y: 0 };
+            const pt = toScreen(coord.x, coord.y);
+            drawSupportSymbol(ctx, pt.x, beamY + 15, nd.cond);
+        });
+
+        // =====================================================================
+        // FRANJA 4: COORDENADAS DE NUDOS EN MORADO (Y = 335 px)
+        // Alineadas en una fila horizontal uniforme sin superposiciones
+        // =====================================================================
+        activeNodes.forEach(nd => {
+            const coord = nodeCoords[nd.nodeNum] || { x: 0, y: 0 };
+            const pt = toScreen(coord.x, coord.y);
             const xDisp = fmtClean(coord.x * scaleUnit, 2);
             const yDisp = fmtClean(coord.y * scaleUnit, 2);
             const coordText = `(${xDisp};${yDisp})`;
 
             ctx.save();
-            ctx.font = 'bold 18px "Calibri", "Segoe UI", sans-serif';
-            ctx.fillStyle = '#7030a0';
+            ctx.font = 'bold 13px "Calibri", "Segoe UI", sans-serif';
+            ctx.fillStyle = '#7e22ce';
             ctx.textAlign = 'center';
-
-            let coordX = cX;
-            let coordY = placeCircleAbove ? (cY - 24) : (cY + 36);
-            if (isFirst) {
-                coordX = cX - 12;
-                coordY = cY - 24;
-            } else if (isLast) {
-                coordX = cX + 16;
-                coordY = cY - 24;
-            }
-            ctx.fillText(coordText, coordX, coordY);
+            ctx.textBaseline = 'middle';
+            ctx.fillText(coordText, pt.x, 335);
             ctx.restore();
         });
 
-// 7. Línea de Cotas Inferior con las longitudes de cada tramo (ej. 2 m | 2 m | 4 m | 4 m | 2.5 m | 2.5 m)
+        // =====================================================================
+        // FRANJA 5: LÍNEAS DE COTAS ARQUITECTÓNICAS (Y ≈ 390 a 440 px)
+        // 5A: Longitudes de cada tramo individual
+        // 5B: Longitud total acumulada
+        // =====================================================================
         if (options.showDimensions !== false) {
-            const dimY = logicalH - 46;
-            const tickTop = dimY - 26;
-            const tickBot = dimY + 12;
+            const dimY = 390;
+            const tickTop = dimY - 14;
+            const tickBot = dimY + 14;
 
             ctx.save();
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 2.2;
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 1.8;
 
-            // Línea horizontal continua
-            const firstPt = toScreen(nodeCoords[1].x, nodeCoords[1].y);
-            const lastNodeNum = activeNodes[activeNodes.length - 1].nodeNum;
-            const lastPt = toScreen(nodeCoords[lastNodeNum].x, nodeCoords[lastNodeNum].y);
-
+            // Línea horizontal de cotas
             ctx.beginPath();
-            ctx.moveTo(firstPt.x - 45, dimY);
-            ctx.lineTo(lastPt.x + 65, dimY);
+            ctx.moveTo(firstPt.x, dimY);
+            ctx.lineTo(lastPt.x, dimY);
             ctx.stroke();
 
-            // Marcas verticales en cada nudo
+            // Marcas verticales y ticks oblicuos en cada nudo
             activeNodes.forEach(nd => {
                 const c = nodeCoords[nd.nodeNum];
                 if (!c) return;
                 const p = toScreen(c.x, c.y);
+
+                // Línea de extensión (testigo) desde la zona de coordenadas
+                ctx.save();
+                ctx.strokeStyle = '#94a3b8';
+                ctx.lineWidth = 1.0;
+                ctx.setLineDash([3, 3]);
                 ctx.beginPath();
-                ctx.moveTo(p.x, tickTop);
-                ctx.lineTo(p.x, tickBot);
+                ctx.moveTo(p.x, 348);
+                ctx.lineTo(p.x, tickTop);
+                ctx.stroke();
+                ctx.restore();
+
+                // Marca de cota con tick oblicuo a 45°
+                ctx.beginPath();
+                ctx.moveTo(p.x - 5, dimY + 5);
+                ctx.lineTo(p.x + 5, dimY - 5);
                 ctx.stroke();
             });
 
-            // Texto de longitud de cada barra
-            ctx.font = 'bold 16.5px "Calibri", "Segoe UI", sans-serif';
-            ctx.fillStyle = '#000000';
+            // Texto de longitud de cada tramo
+            ctx.font = 'bold 13.5px "Calibri", "Segoe UI", sans-serif';
+            ctx.fillStyle = '#0f172a';
             ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
             activeBars.forEach(b => {
                 const p1 = toScreen(b.xi, b.yi);
                 const p2 = toScreen(b.xf, b.yf);
                 const midX = (p1.x + p2.x) / 2.0;
                 const lenVal = fmtClean(b.L * scaleUnit, 2);
-                ctx.fillText(`${lenVal} ${unitSuffix}`, midX, dimY - 8);
+                ctx.fillText(`${lenVal} ${unitSuffix}`, midX, dimY - 4);
             });
+
+            // 5B: Cota Total Acumulada (Y = 435 px)
+            if (activeBars.length > 1) {
+                const totDimY = 435;
+                const totTickTop = totDimY - 10;
+                const totTickBot = totDimY + 10;
+
+                ctx.save();
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 1.5;
+
+                // Línea horizontal
+                ctx.beginPath();
+                ctx.moveTo(firstPt.x, totDimY);
+                ctx.lineTo(lastPt.x, totDimY);
+                ctx.stroke();
+
+                // Ticks en los extremos
+                [firstPt.x, lastPt.x].forEach(xEnd => {
+                    ctx.beginPath();
+                    ctx.moveTo(xEnd - 5, totDimY + 5);
+                    ctx.lineTo(xEnd + 5, totDimY - 5);
+                    ctx.stroke();
+                });
+
+                const totalL = activeBars.reduce((sum, b) => sum + b.L, 0);
+                const totVal = fmtClean(totalL * scaleUnit, 2);
+                const midTotX = (firstPt.x + lastPt.x) / 2.0;
+
+                ctx.font = 'bold 12.5px "Calibri", "Segoe UI", sans-serif';
+                ctx.fillStyle = '#475569';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(`L total = ${totVal} ${unitSuffix}`, midTotX, totDimY - 3);
+                ctx.restore();
+            }
 
             ctx.restore();
         }
 
-        ctx.fillText = baseFillText;
         ctx.restore();
     }
 
@@ -769,7 +760,7 @@
             dataUrl = target.toDataURL('image/png');
         } else {
             const offCanvas = document.createElement('canvas');
-            renderGraficaFinal(offCanvas, target, Object.assign({}, options, { width: 1320, height: 600 }));
+            renderGraficaFinal(offCanvas, target, Object.assign({}, options, { width: 1400, height: 520 }));
             dataUrl = offCanvas.toDataURL('image/png');
         }
         const a = document.createElement('a');

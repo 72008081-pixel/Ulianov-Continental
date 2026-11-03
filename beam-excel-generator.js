@@ -133,6 +133,13 @@
         }
     }
 
+    function setFormula(cell, formulaNoEq, resultVal) {
+        cell.value = {
+            formula: formulaNoEq,
+            result: (resultVal === undefined || resultVal === null) ? '' : resultVal
+        };
+    }
+
     function setFormulaWithResult(ws, row, col, formulaNoEq, resultVal) {
         ws.getCell(row, col).value = {
             formula: formulaNoEq,
@@ -140,8 +147,529 @@
         };
     }
 
+    // =========================================================================
+    // GENERADOR DINÁMICO DE LA PESTAÑA '3.1 CUBA VALENCIA - MIXTAS' (M TRAMOS / N NODOS)
+    // =========================================================================
+    function buildDynamicMixtasWorksheet(wb, solver) {
+    const activeBars = solver.barsTable.filter(b => b.active);
+    const activeNodes = solver.nodesTable.filter(n => n.active);
+    const numBars = activeBars.length;
+    const numNodes = numBars + 1;
+    const totalDofs = numNodes * 3;
+    const sp = solver.secProps;
+
+    const ws = wb.addWorksheet('3.1 CUBA VALENCIA - MIXTAS', {
+        views: [{ showGridLines: true, zoomScale: 85 }]
+    });
+
+    ws.getColumn(1).width = 10;
+    ws.getColumn(2).width = 12;
+    for (let c = 3; c <= 40; c++) {
+        ws.getColumn(c).width = 12;
+    }
+
+    // 1. PROPIEDADES DEL MATERIAL Y SECCIÓN
+    ws.getCell(1, 2).value = `PROPIEDADES DEL MATERIAL Y SECCIÓN (${numBars} TRAMOS)`;
+    ws.getCell(1, 2).font = FONTS.TITLE;
+
+    ws.getCell(2, 2).value = 'E (Elasticidad) =';
+    ws.getCell(2, 3).value = sp.E || 200000;
+    ws.getCell(2, 4).value = 'kgf/cm²';
+
+    ws.getCell(3, 2).value = 'b (Base) =';
+    ws.getCell(3, 3).value = sp.b || 25.4;
+    ws.getCell(3, 4).value = 'cm';
+    ws.getCell(3, 6).value = 'Tramos Utilizados =';
+    setFormula(ws.getCell(3, 7), `COUNT(I9:I${8 + numBars})`, numBars);
+
+    ws.getCell(4, 2).value = 'h (Altura) =';
+    ws.getCell(4, 3).value = sp.h || 25.4;
+    ws.getCell(4, 4).value = 'cm';
+    ws.getCell(4, 6).value = 'Nodos Utilizados =';
+    setFormula(ws.getCell(4, 7), 'IF(G3>0, G3+1, 0)', numNodes);
+
+    ws.getCell(5, 2).value = 'Área =';
+    setFormula(ws.getCell(5, 3), 'C3*C4', (sp.b || 25.4) * (sp.h || 25.4));
+    ws.getCell(5, 4).value = 'cm2';
+    ws.getCell(5, 5).value = 'Inercia =';
+    setFormula(ws.getCell(5, 6), '(C3*(C4^3))/12', ((sp.b || 25.4) * Math.pow(sp.h || 25.4, 3)) / 12);
+    ws.getCell(5, 7).value = 'cm4';
+
+    for (let r = 2; r <= 5; r++) {
+        for (let c = 2; c <= 7; c++) {
+            const cell = ws.getCell(r, c);
+            if (cell.value) {
+                cell.font = (c === 2 || c === 6) ? FONTS.BOLD : FONTS.REG;
+            }
+        }
+    }
+
+    // 2. TABLA DE BARRAS
+    const headersR7 = [
+        [2, "Barra"], [3, "INICIO"], [5, "FIN"], [7, "ΔX"], [8, "ΔY"],
+        [9, "L (cm)"], [10, "Cosx"], [11, "Cosy"], [12, "E"], [13, "A"],
+        [14, "I"], [15, "EA/L"], [16, "12EI/L³"], [17, "6EI/L²"],
+        [18, "4EI/L"], [19, "2EI/L"]
+    ];
+    headersR7.forEach(([c, t]) => { ws.getCell(7, c).value = t; });
+    const subR8 = [[3, "Xi"], [4, "Yi"], [5, "Xf"], [6, "Yf"]];
+    subR8.forEach(([c, t]) => { ws.getCell(8, c).value = t; });
+
+    ws.mergeCells("C7:D7");
+    ws.mergeCells("E7:F7");
+
+    for (let c = 2; c <= 19; c++) {
+        for (let r of [7, 8]) {
+            styleCell(ws.getCell(r, c), PALETTE.HEADER_ORANGE, FONTS.BOLD, BORDERS.THIN, ALIGNS.CENTER);
+        }
+    }
+
+    activeBars.forEach((b, idx) => {
+        const row = 9 + idx;
+        ws.getCell(row, 2).value = b.barNum;
+        ws.getCell(row, 3).value = b.xi;
+        ws.getCell(row, 4).value = b.yi;
+        ws.getCell(row, 5).value = b.xf;
+        ws.getCell(row, 6).value = b.yf;
+
+        setFormula(ws.getCell(row, 7), `IF(OR(C${row}="",E${row}=""),"", E${row}-C${row})`, b.xf - b.xi);
+        setFormula(ws.getCell(row, 8), `IF(OR(D${row}="",F${row}=""),"", F${row}-D${row})`, b.yf - b.yi);
+        setFormula(ws.getCell(row, 9), `IF(OR(G${row}="",H${row}=""),"", SQRT(G${row}*G${row}+H${row}*H${row}))`, b.L);
+        setFormula(ws.getCell(row, 10), `IF(OR(I${row}="",I${row}=0),"", G${row}/I${row})`, b.cosx);
+        setFormula(ws.getCell(row, 11), `IF(OR(I${row}="",I${row}=0),"", H${row}/I${row})`, b.cosy);
+        setFormula(ws.getCell(row, 12), `IF(I${row}="","", $C$2)`, sp.E);
+        setFormula(ws.getCell(row, 13), `IF(I${row}="","", $C$5)`, sp.A);
+        setFormula(ws.getCell(row, 14), `IF(I${row}="","", $F$5)`, sp.I);
+        setFormula(ws.getCell(row, 15), `IF(OR(I${row}="",I${row}=0),"", L${row}*M${row}/I${row})`, b.EA_L);
+        setFormula(ws.getCell(row, 16), `IF(OR(I${row}="",I${row}=0),"", 12*L${row}*N${row}/(I${row}^3))`, b.coeff_12EI_L3);
+        setFormula(ws.getCell(row, 17), `IF(OR(I${row}="",I${row}=0),"", 6*L${row}*N${row}/(I${row}^2))`, b.coeff_6EI_L2);
+        setFormula(ws.getCell(row, 18), `IF(OR(I${row}="",I${row}=0),"", 4*L${row}*N${row}/I${row})`, b.coeff_4EI_L);
+        setFormula(ws.getCell(row, 19), `IF(OR(I${row}="",I${row}=0),"", 2*L${row}*N${row}/I${row})`, b.coeff_2EI_L);
+
+        for (let c = 2; c <= 19; c++) {
+            styleCell(ws.getCell(row, c), c >= 15 ? PALETTE.HEADER_YELLOW : null, FONTS.REG, BORDERS.THIN, ALIGNS.CENTER);
+        }
+    });
+
+    // 3. TABLA DE GRADOS DE LIBERTAD (DOFs)
+    const dofHdrRow = 9 + numBars + 2;
+    ws.getCell(dofHdrRow, 2).value = "Barra";
+    ws.getCell(dofHdrRow, 3).value = "INICIO";
+    ws.getCell(dofHdrRow, 6).value = "FIN";
+    ws.mergeCells(dofHdrRow, 3, dofHdrRow, 5);
+    ws.mergeCells(dofHdrRow, 6, dofHdrRow, 8);
+
+    const dofSubRow = dofHdrRow + 1;
+    const dofSyms = [[3, 'X'], [4, 'Y'], [5, 'θ'], [6, 'X'], [7, 'Y'], [8, 'θ']];
+    dofSyms.forEach(([c, s]) => { ws.getCell(dofSubRow, c).value = s; });
+
+    for (let c = 2; c <= 8; c++) {
+        for (let r of [dofHdrRow, dofSubRow]) {
+            styleCell(ws.getCell(r, c), PALETTE.HEADER_ORANGE, FONTS.BOLD, BORDERS.THIN, ALIGNS.CENTER);
+        }
+    }
+
+    const dofStartRow = dofSubRow + 1;
+    activeBars.forEach((b, idx) => {
+        const r = dofStartRow + idx;
+        const bRow = 9 + idx;
+        ws.getCell(r, 2).value = idx + 1;
+        const nIni = idx + 1;
+        const nFin = idx + 2;
+        setFormula(ws.getCell(r, 3), `IF(I${bRow}="","", ${nIni})`, nIni);
+        setFormula(ws.getCell(r, 4), `IF(I${bRow}="","", ${nIni})`, nIni);
+        setFormula(ws.getCell(r, 5), `IF(I${bRow}="","", ${nIni})`, nIni);
+        setFormula(ws.getCell(r, 6), `IF(I${bRow}="","", ${nFin})`, nFin);
+        setFormula(ws.getCell(r, 7), `IF(I${bRow}="","", ${nFin})`, nFin);
+        setFormula(ws.getCell(r, 8), `IF(I${bRow}="","", ${nFin})`, nFin);
+
+        for (let c = 2; c <= 8; c++) {
+            styleCell(ws.getCell(r, c), null, FONTS.REG, BORDERS.THIN, ALIGNS.CENTER);
+        }
+    });
+
+    // 4. MATRICES DE RIGIDEZ LOCALES (km) Y DE COLOCACIÓN GLOBAL (Km,global)
+    let currentRow = dofStartRow + numBars + 2;
+    const localKRanges = [];
+    const globalKRanges = [];
+
+    for (let m = 1; m <= numBars; m++) {
+        const barIdx = m - 1;
+        const bRow = 9 + barIdx;
+        const dRow = dofStartRow + barIdx;
+        const subDofRow = dofSubRow;
+
+        const hdrKRow = currentRow;
+        const dofCols = ['C', 'D', 'E', 'F', 'G', 'H'];
+        dofCols.forEach((dofC, iCol) => {
+            const colTarget = 2 + iCol;
+            setFormula(ws.getCell(hdrKRow, colTarget), `IF(${dofC}${dRow}="","", CONCATENATE("U",${dofC}${dRow},${dofC}$${subDofRow}))`);
+            styleCell(ws.getCell(hdrKRow, colTarget), PALETTE.LOCAL_K_HDR, FONTS.SMALL_B, BORDERS.THIN, ALIGNS.CENTER);
+        });
+
+        const r1 = hdrKRow + 1;
+        setFormula(ws.getCell(r1, 2), `IF(I${bRow}="", 0, O${bRow}*J${bRow}*J${bRow}+P${bRow}*K${bRow}*K${bRow})`);
+        setFormula(ws.getCell(r1, 3), `IF(I${bRow}="", 0, (O${bRow}-P${bRow})*(J${bRow}*K${bRow}))`);
+        setFormula(ws.getCell(r1, 4), `IF(I${bRow}="", 0, -Q${bRow}*K${bRow})`);
+        setFormula(ws.getCell(r1, 5), `-B${r1}`);
+        setFormula(ws.getCell(r1, 6), `-C${r1}`);
+        setFormula(ws.getCell(r1, 7), `D${r1}`);
+        setFormula(ws.getCell(r1, 8), `B${hdrKRow}`);
+
+        const r2 = r1 + 1;
+        setFormula(ws.getCell(r2, 2), `C${r1}`);
+        setFormula(ws.getCell(r2, 3), `IF(I${bRow}="", 0, O${bRow}*K${bRow}*K${bRow}+P${bRow}*J${bRow}*J${bRow})`);
+        setFormula(ws.getCell(r2, 4), `IF(I${bRow}="", 0, Q${bRow}*J${bRow})`);
+        setFormula(ws.getCell(r2, 5), `-B${r2}`);
+        setFormula(ws.getCell(r2, 6), `-C${r2}`);
+        setFormula(ws.getCell(r2, 7), `D${r2}`);
+        setFormula(ws.getCell(r2, 8), `C${hdrKRow}`);
+
+        const r3 = r2 + 1;
+        ws.getCell(r3, 1).value = `K${m} =`;
+        ws.getCell(r3, 1).font = FONTS.BOLD;
+        setFormula(ws.getCell(r3, 2), `D${r1}`);
+        setFormula(ws.getCell(r3, 3), `D${r2}`);
+        setFormula(ws.getCell(r3, 4), `IF(I${bRow}="", 0, R${bRow})`);
+        setFormula(ws.getCell(r3, 5), `-B${r3}`);
+        setFormula(ws.getCell(r3, 6), `-C${r3}`);
+        setFormula(ws.getCell(r3, 7), `IF(I${bRow}="", 0, S${bRow})`);
+        setFormula(ws.getCell(r3, 8), `D${hdrKRow}`);
+
+        const r4 = r3 + 1;
+        setFormula(ws.getCell(r4, 2), `E${r1}`);
+        setFormula(ws.getCell(r4, 3), `E${r2}`);
+        setFormula(ws.getCell(r4, 4), `E${r3}`);
+        setFormula(ws.getCell(r4, 5), `B${r1}`);
+        setFormula(ws.getCell(r4, 6), `C${r1}`);
+        setFormula(ws.getCell(r4, 7), `-D${r1}`);
+        setFormula(ws.getCell(r4, 8), `E${hdrKRow}`);
+
+        const r5 = r4 + 1;
+        setFormula(ws.getCell(r5, 2), `F${r1}`);
+        setFormula(ws.getCell(r5, 3), `F${r2}`);
+        setFormula(ws.getCell(r5, 4), `F${r3}`);
+        setFormula(ws.getCell(r5, 5), `F${r4}`);
+        setFormula(ws.getCell(r5, 6), `C${r2}`);
+        setFormula(ws.getCell(r5, 7), `-D${r2}`);
+        setFormula(ws.getCell(r5, 8), `F${hdrKRow}`);
+
+        const r6 = r5 + 1;
+        setFormula(ws.getCell(r6, 2), `G${r1}`);
+        setFormula(ws.getCell(r6, 3), `G${r2}`);
+        setFormula(ws.getCell(r6, 4), `G${r3}`);
+        setFormula(ws.getCell(r6, 5), `G${r4}`);
+        setFormula(ws.getCell(r6, 6), `G${r5}`);
+        setFormula(ws.getCell(r6, 7), `D${r3}`);
+        setFormula(ws.getCell(r6, 8), `G${hdrKRow}`);
+
+        localKRanges.push([r1, r6]);
+
+        for (let r = r1; r <= r6; r++) {
+            for (let c = 2; c <= 8; c++) {
+                const isDiag = (c === 2 + (r - r1));
+                styleCell(ws.getCell(r, c), isDiag ? PALETTE.MATRIX_DIAG : null, FONTS.SMALL, BORDERS.THIN, ALIGNS.RIGHT);
+            }
+        }
+
+        // Matriz de Colocación Global Km,global (3N x 3N)
+        const kGlobHdrRow = r6 + 2;
+        for (let n = 1; n <= numNodes; n++) {
+            const baseCol = 2 + (n - 1) * 3;
+            ws.getCell(kGlobHdrRow, baseCol).value = `U${n}X`;
+            ws.getCell(kGlobHdrRow, baseCol + 1).value = `U${n}Y`;
+            ws.getCell(kGlobHdrRow, baseCol + 2).value = `U${n}θ`;
+            for (let bc = baseCol; bc < baseCol + 3; bc++) {
+                styleCell(ws.getCell(kGlobHdrRow, bc), PALETTE.GLOBAL_K_HDR, FONTS.SMALL_B, BORDERS.THIN, ALIGNS.CENTER);
+            }
+        }
+
+        const kGlobStart = kGlobHdrRow + 1;
+        const nodeI = m;
+        const nodeJ = m + 1;
+        const dofIndices = [
+            (nodeI - 1) * 3 + 1,
+            (nodeI - 1) * 3 + 2,
+            (nodeI - 1) * 3 + 3,
+            (nodeJ - 1) * 3 + 1,
+            (nodeJ - 1) * 3 + 2,
+            (nodeJ - 1) * 3 + 3
+        ];
+
+        const midR = kGlobStart + Math.floor(totalDofs / 2);
+        ws.getCell(midR, 1).value = `K${m} =`;
+        ws.getCell(midR, 1).font = FONTS.BOLD;
+
+        for (let rIdx = 1; rIdx <= totalDofs; rIdx++) {
+            const rowNum = kGlobStart + rIdx - 1;
+            const nLbl = Math.floor((rIdx - 1) / 3) + 1;
+            const axisLbl = ['X', 'Y', 'θ'][(rIdx - 1) % 3];
+            const endCol = 2 + totalDofs;
+            ws.getCell(rowNum, endCol).value = `U${nLbl}${axisLbl}`;
+            ws.getCell(rowNum, endCol).font = FONTS.SMALL_B;
+
+            for (let cIdx = 1; cIdx <= totalDofs; cIdx++) {
+                const colNum = 1 + cIdx;
+                const cell = ws.getCell(rowNum, colNum);
+
+                if (dofIndices.includes(rIdx) && dofIndices.includes(cIdx)) {
+                    const locRIdx = dofIndices.indexOf(rIdx);
+                    const locCIdx = dofIndices.indexOf(cIdx);
+                    const locRowCell = r1 + locRIdx;
+                    const locColLet = getColLetter(2 + locCIdx);
+                    cell.value = { formula: `${locColLet}${locRowCell}` };
+                    const isDiag = (rIdx === cIdx);
+                    styleCell(cell, isDiag ? PALETTE.MATRIX_DIAG : null, FONTS.SMALL, BORDERS.THIN, ALIGNS.RIGHT);
+                } else {
+                    styleCell(cell, null, FONTS.SMALL, BORDERS.THIN, ALIGNS.RIGHT);
+                }
+            }
+        }
+
+        globalKRanges.push([kGlobStart, kGlobStart + totalDofs - 1]);
+        currentRow = kGlobStart + totalDofs + 2;
+    }
+
+    // 5. MATRIZ DE RIGIDEZ GLOBAL DE LA VIGA [Kviga] (ENSAMBLE COMPLETO)
+    const kVigaBanner = currentRow;
+    ws.getCell(kVigaBanner, 2).value = `MATRIZ DE RIGIDEZ GLOBAL DE LA VIGA [Kviga] (ENSAMBLE COMPLETO ${numBars} TRAMOS / ${numNodes} NODOS / ${totalDofs} GDL)`;
+    ws.getCell(kVigaBanner, 2).font = FONTS.TITLE;
+
+    const kVigaHdr = kVigaBanner + 1;
+    for (let n = 1; n <= numNodes; n++) {
+        const baseCol = 2 + (n - 1) * 3;
+        ws.getCell(kVigaHdr, baseCol).value = `U${n}X`;
+        ws.getCell(kVigaHdr, baseCol + 1).value = `U${n}Y`;
+        ws.getCell(kVigaHdr, baseCol + 2).value = `U${n}θ`;
+        for (let bc = baseCol; bc < baseCol + 3; bc++) {
+            styleCell(ws.getCell(kVigaHdr, bc), PALETTE.SUM_ROW, FONTS.SMALL_B, BORDERS.THIN, ALIGNS.CENTER);
+        }
+    }
+
+    const kVigaStart = kVigaHdr + 1;
+    const midKviga = kVigaStart + Math.floor(totalDofs / 2);
+    ws.getCell(midKviga, 1).value = "Kviga =";
+    ws.getCell(midKviga, 1).font = FONTS.TITLE;
+
+    for (let rIdx = 1; rIdx <= totalDofs; rIdx++) {
+        const rowNum = kVigaStart + rIdx - 1;
+        const nLbl = Math.floor((rIdx - 1) / 3) + 1;
+        const axisLbl = ['X', 'Y', 'θ'][(rIdx - 1) % 3];
+        const endCol = 2 + totalDofs;
+        ws.getCell(rowNum, endCol).value = `U${nLbl}${axisLbl}`;
+        ws.getCell(rowNum, endCol).font = FONTS.SMALL_B;
+
+        for (let cIdx = 1; cIdx <= totalDofs; cIdx++) {
+            const colNum = 1 + cIdx;
+            const colLet = getColLetter(colNum);
+
+            const sumTerms = globalKRanges.map(([gStart]) => `${colLet}${gStart + rIdx - 1}`);
+            const cell = ws.getCell(rowNum, colNum);
+            cell.value = { formula: sumTerms.join('+') };
+            const isDiag = (rIdx === cIdx);
+            styleCell(cell, isDiag ? PALETTE.MATRIX_DIAG : null, FONTS.SMALL, BORDERS.THIN, ALIGNS.RIGHT);
+        }
+    }
+
+    currentRow = kVigaStart + totalDofs + 2;
+
+    // 6. VECTORES DE CARGAS {C} Y CONDICIONES DE FRONTERA / DESPLAZAMIENTOS {D}
+    const vecBanner = currentRow;
+    ws.getCell(vecBanner, 2).value = "VECTORES DE CARGAS GLOBALES {C} Y CONDICIONES DE FRONTERA / DESPLAZAMIENTOS {D}";
+    ws.getCell(vecBanner, 2).font = FONTS.TITLE;
+
+    const hdrVecR = vecBanner + 1;
+    const vecHeaders = [[2, "Símbolo"], [3, "G.D.L."], [4, "Nodo"], [5, "Carga {C}"], [6, "Unidad"], [8, "Condición"], [9, "Desplazamiento {D}"]];
+    vecHeaders.forEach(([c, t]) => {
+        ws.getCell(hdrVecR, c).value = t;
+        styleCell(ws.getCell(hdrVecR, c), PALETTE.HEADER_ORANGE, FONTS.SMALL_B, BORDERS.THIN, ALIGNS.CENTER);
+    });
+
+    const vecStartRow = hdrVecR + 1;
+    for (let rIdx = 1; rIdx <= totalDofs; rIdx++) {
+        const rowNum = vecStartRow + rIdx - 1;
+        const nLbl = Math.floor((rIdx - 1) / 3) + 1;
+        const axisIdx = (rIdx - 1) % 3;
+        const axisLbl = ['X', 'Y', 'θ'][axisIdx];
+        const unitLbl = ['kgf', 'kgf', 'kgf·cm'][axisIdx];
+
+        const nodeInfo = activeNodes[nLbl - 1] || {};
+        const cond = nodeInfo.cond || 'LIBRE';
+
+        let valLoad = 0;
+        if (axisIdx === 0) valLoad = nodeInfo.Px_dir || 0;
+        else if (axisIdx === 1) valLoad = nodeInfo.Py_dir || 0;
+        else if (axisIdx === 2) valLoad = nodeInfo.Mz_dir || 0;
+
+        let isRestricted = false;
+        if (cond === 'EMPOTRADO') isRestricted = true;
+        else if (cond === 'FIJO') isRestricted = (axisIdx === 0 || axisIdx === 1);
+        else if (cond === 'RODILLO') isRestricted = (axisIdx === 1);
+
+        ws.getCell(rowNum, 2).value = `C${nLbl}${axisLbl}`;
+        ws.getCell(rowNum, 3).value = `U${nLbl}${axisLbl}`;
+        ws.getCell(rowNum, 4).value = nLbl;
+        ws.getCell(rowNum, 5).value = valLoad;
+        ws.getCell(rowNum, 6).value = unitLbl;
+        ws.getCell(rowNum, 8).value = isRestricted ? "RESTRINGIDO" : "LIBRE";
+        setFormula(ws.getCell(rowNum, 9), `IF(H${rowNum}="RESTRINGIDO",0,"CALC")`, isRestricted ? 0 : 'CALC');
+
+        [2, 3, 4, 5, 6, 8, 9].forEach(c => {
+            const fill = (c === 8 && isRestricted) ? 'FFFFC7CE' : null;
+            styleCell(ws.getCell(rowNum, c), fill, FONTS.SMALL, BORDERS.THIN, ALIGNS.CENTER);
+        });
+    }
+
+    currentRow = vecStartRow + totalDofs + 2;
+
+    // 7. ECUACIÓN MATRICIAL DEL SISTEMA: {C} = [Kviga] * {D}
+    const eqBanner = currentRow;
+    ws.getCell(eqBanner, 2).value = "ECUACIÓN MATRICIAL DEL SISTEMA: {C} = [Kviga] * {D}";
+    ws.getCell(eqBanner, 2).font = FONTS.TITLE;
+
+    const eqStart = eqBanner + 2;
+    for (let rIdx = 1; rIdx <= totalDofs; rIdx++) {
+        const rowNum = eqStart + rIdx - 1;
+        const cSrcRow = vecStartRow + rIdx - 1;
+        const kSrcRow = kVigaStart + rIdx - 1;
+
+        ws.getCell(rowNum, 1).value = { formula: `E${cSrcRow}` };
+        ws.getCell(rowNum, 1).font = FONTS.SMALL_B;
+        ws.getCell(rowNum, 1).alignment = ALIGNS.RIGHT;
+
+        ws.getCell(rowNum, 2).value = "=";
+        ws.getCell(rowNum, 2).alignment = ALIGNS.CENTER;
+
+        for (let cIdx = 1; cIdx <= totalDofs; cIdx++) {
+            const colNum = 2 + cIdx;
+            const colLet = getColLetter(colNum);
+            const cell = ws.getCell(rowNum, colNum);
+            cell.value = { formula: `${colLet}${kSrcRow}` };
+            const isDiag = (rIdx === cIdx);
+            styleCell(cell, isDiag ? PALETTE.MATRIX_DIAG : null, FONTS.SMALL, BORDERS.THIN, ALIGNS.RIGHT);
+        }
+
+        const multCol = 3 + totalDofs;
+        ws.getCell(rowNum, multCol).value = "*";
+        ws.getCell(rowNum, multCol).alignment = ALIGNS.CENTER;
+
+        const dCol = multCol + 1;
+        ws.getCell(rowNum, dCol).value = { formula: `I${cSrcRow}` };
+        ws.getCell(rowNum, dCol).font = FONTS.SMALL_B;
+        ws.getCell(rowNum, dCol).border = BORDERS.THIN;
+    }
+
+    currentRow = eqStart + totalDofs + 2;
+
+    // 8. BLOQUE TÉCNICO DE RESOLUCIÓN AUTOMÁTICA [K_SOLVER]
+    const solvBanner = currentRow;
+    ws.getCell(solvBanner, 2).value = "BLOQUE TÉCNICO DE RESOLUCIÓN AUTOMÁTICA [K_SOLVER] (INVERSIÓN POR PENALIZACIÓN/IDENTIDAD)";
+    ws.getCell(solvBanner, 2).font = FONTS.TITLE;
+
+    const solvStart = solvBanner + 2;
+    for (let rIdx = 1; rIdx <= totalDofs; rIdx++) {
+        const rowNum = solvStart + rIdx - 1;
+        const condRowR = vecStartRow + rIdx - 1;
+        const kSrcRow = kVigaStart + rIdx - 1;
+
+        for (let cIdx = 1; cIdx <= totalDofs; cIdx++) {
+            const colNum = 1 + cIdx;
+            const colLet = getColLetter(colNum);
+            const condRowC = vecStartRow + cIdx - 1;
+            const cell = ws.getCell(rowNum, colNum);
+
+            if (rIdx === cIdx) {
+                cell.value = { formula: `IF(H${condRowR}="RESTRINGIDO", 1, ${colLet}${kSrcRow})` };
+                styleCell(cell, PALETTE.SOLVER_HDR, FONTS.SMALL, BORDERS.THIN, ALIGNS.RIGHT);
+            } else {
+                cell.value = { formula: `IF(OR(H${condRowR}="RESTRINGIDO", H${condRowC}="RESTRINGIDO"), 0, ${colLet}${kSrcRow})` };
+                styleCell(cell, null, FONTS.SMALL, BORDERS.THIN, ALIGNS.RIGHT);
+            }
+        }
+    }
+
+    currentRow = solvStart + totalDofs + 2;
+
+    // 9. RESUMEN DE DESPLAZAMIENTOS Y GIROS CALCULADOS {D}
+    const resBanner = currentRow;
+    ws.getCell(resBanner, 2).value = "RESUMEN DE DESPLAZAMIENTOS Y GIROS CALCULADOS {D}";
+    ws.getCell(resBanner, 2).font = FONTS.TITLE;
+
+    const resHdr = resBanner + 1;
+    const resHeaders = [[2, "Símbolo"], [3, "G.D.L."], [4, "Desplazamiento"], [5, "Unidad"]];
+    resHeaders.forEach(([c, t]) => {
+        ws.getCell(resHdr, c).value = t;
+        styleCell(ws.getCell(resHdr, c), PALETTE.SUM_ROW, FONTS.SMALL_B, BORDERS.THIN, ALIGNS.CENTER);
+    });
+
+    const resStart = resHdr + 1;
+    const endColLet = getColLetter(1 + totalDofs);
+    const solvEndRow = solvStart + totalDofs - 1;
+    const kInvRange = `MINVERSE(B${solvStart}:${endColLet}${solvEndRow})`;
+    const cVecRange = `E${vecStartRow}:E${vecStartRow + totalDofs - 1}`;
+
+    for (let rIdx = 1; rIdx <= totalDofs; rIdx++) {
+        const rowNum = resStart + rIdx - 1;
+        const nLbl = Math.floor((rIdx - 1) / 3) + 1;
+        const axisIdx = (rIdx - 1) % 3;
+        const axisLbl = ['X', 'Y', 'θ'][axisIdx];
+        const unitLbl = ['cm', 'cm', 'rad'][axisIdx];
+        const condRow = vecStartRow + rIdx - 1;
+
+        ws.getCell(rowNum, 2).value = `D${nLbl}${axisLbl}`;
+        ws.getCell(rowNum, 3).value = `U${nLbl}${axisLbl}`;
+        setFormula(ws.getCell(rowNum, 4), `IF(H${condRow}="RESTRINGIDO", 0, INDEX(MMULT(${kInvRange}, ${cVecRange}), ${rIdx}, 1))`);
+        ws.getCell(rowNum, 5).value = unitLbl;
+
+        [2, 3, 4, 5].forEach(c => {
+            const fill = (c === 4) ? PALETTE.HEADER_YELLOW : null;
+            styleCell(ws.getCell(rowNum, c), fill, FONTS.SMALL, BORDERS.THIN, ALIGNS.CENTER);
+        });
+    }
+
+    currentRow = resStart + totalDofs + 2;
+
+    // 10. RESUMEN DE REACCIONES EN LOS APOYOS {R}
+    const reacBanner = currentRow;
+    ws.getCell(reacBanner, 2).value = "RESUMEN DE REACCIONES EN LOS APOYOS {R}";
+    ws.getCell(reacBanner, 2).font = FONTS.TITLE;
+
+    const reacHdr = reacBanner + 1;
+    const reacHeaders = [[2, "Símbolo"], [3, "G.D.L."], [4, "Reacción {R}"], [5, "Unidad"]];
+    reacHeaders.forEach(([c, t]) => {
+        ws.getCell(reacHdr, c).value = t;
+        styleCell(ws.getCell(reacHdr, c), PALETTE.HEADER_ORANGE, FONTS.SMALL_B, BORDERS.THIN, ALIGNS.CENTER);
+    });
+
+    const reacStart = reacHdr + 1;
+    const dVecRange = `D${resStart}:D${resStart + totalDofs - 1}`;
+    const kVigaRange = `B${kVigaStart}:${endColLet}${kVigaStart + totalDofs - 1}`;
+
+    for (let rIdx = 1; rIdx <= totalDofs; rIdx++) {
+        const rowNum = reacStart + rIdx - 1;
+        const nLbl = Math.floor((rIdx - 1) / 3) + 1;
+        const axisIdx = (rIdx - 1) % 3;
+        const axisLbl = ['X', 'Y', 'θ'][axisIdx];
+        const unitLbl = ['kgf', 'kgf', 'kgf·cm'][axisIdx];
+        const condRow = vecStartRow + rIdx - 1;
+        const cRow = vecStartRow + rIdx - 1;
+
+        ws.getCell(rowNum, 2).value = `R${nLbl}${axisLbl}`;
+        ws.getCell(rowNum, 3).value = `U${nLbl}${axisLbl}`;
+        setFormula(ws.getCell(rowNum, 4), `IF(H${condRow}="RESTRINGIDO", INDEX(MMULT(${kVigaRange}, ${dVecRange}), ${rIdx}, 1) - E${cRow}, 0)`);
+        ws.getCell(rowNum, 5).value = unitLbl;
+
+        [2, 3, 4, 5].forEach(c => {
+            const fill = (c === 4) ? 'FFC6EFCE' : null;
+            styleCell(ws.getCell(rowNum, c), fill, FONTS.SMALL, BORDERS.THIN, ALIGNS.CENTER);
+        });
+    }
+
+    return ws;
+}
+
     /**
-     * Construye el libro Excel con la ÚNICA pestaña "PLANTILLA ULIANOV"
+     * Construye el libro Excel con la pestaña principal '3.1 CUBA VALENCIA - MIXTAS' y 'PLANTILLA ULIANOV'
      */
     async function generateBeamWorkbook(config) {
         if (!ExcelJS) throw new Error('ExcelJS no está disponible.');
@@ -155,6 +683,9 @@
         wb.modified = new Date();
         wb.calcProperties.fullCalcOnLoad = true;
         wb.calcProperties.forceFullCalculation = true;
+
+        // Pestaña Principal Oficial: '3.1 CUBA VALENCIA - MIXTAS' generada dinámicamente según tramos activos
+        const wsMixtas = buildDynamicMixtasWorksheet(wb, solver);
 
         const ws = wb.addWorksheet('PLANTILLA ULIANOV', {
             views: [{ showGridLines: true, zoomScale: 85 }]
