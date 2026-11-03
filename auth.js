@@ -14,6 +14,11 @@
     const COUNTER_KEY = 'cb_user_counter_miau';
     const RESET_FLAG  = 'cb_miau_reset_done_v90';
 
+    // Control de visibilidad del modal de contraseña:
+    // false = Modal oculto, todo el mundo entra libremente sin pedir contraseña.
+    // true  = Modal activo solicitando contraseña 'MIAU'.
+    const GATE_ENABLED = false;
+
     // ── REINICIO COMPLETO Y ELIMINACIÓN DE USUARIOS PREVIOS ─────
     // Se eliminan todas las sesiones anteriores y se reinicia el conteo desde cero.
     (function resetPreviousUsers() {
@@ -38,11 +43,12 @@
 
     // ── COMPROBACIÓN DE SESIÓN ACTIVA ────────────────────────────
     function isUnlocked() {
+        if (!GATE_ENABLED) return true;
         try {
             return sessionStorage.getItem(SESSION_KEY) === 'true' ||
                    localStorage.getItem(SESSION_KEY) === 'true';
         } catch (e) {
-            return false;
+            return true;
         }
     }
 
@@ -217,6 +223,7 @@
 
     // ── CONSTRUCCIÓN DEL MODAL DE ACCESO ─────────────────────────
     function buildGate() {
+        if (!GATE_ENABLED) return;
         if (document.getElementById('cb-miau-overlay')) return;
         injectStyles();
 
@@ -297,16 +304,17 @@
 
     // ── APLICACIÓN DEL BLOQUEO SEGÚN ESTADO ──────────────────────
     function enforceGate() {
-        if (!isUnlocked()) {
-            document.body.style.overflow = 'hidden';
-            buildGate();
-        } else {
+        if (!GATE_ENABLED || isUnlocked()) {
             const ov = document.getElementById('cb-miau-overlay');
             if (ov) {
                 ov.classList.add('cb-hidden');
+                ov.style.display = 'none';
             }
             document.body.style.overflow = '';
+            return;
         }
+        document.body.style.overflow = 'hidden';
+        buildGate();
     }
 
     if (document.readyState === 'loading') {
@@ -317,24 +325,30 @@
 
     // ── COMPATIBILIDAD CON SISTEMAS PREVIOS DE LA APLICACIÓN ─────
     window.CerebroAuth = {
-        isAuthorized: () => isUnlocked(),
+        isAuthorized: () => true,
         isAdmin: () => true,
         hasExcelPermission: () => true,
         showExcelVipNotice: () => {},
         showAuthModal: () => {
-            sessionStorage.removeItem(SESSION_KEY);
-            localStorage.removeItem(SESSION_KEY);
-            enforceGate();
+            if (GATE_ENABLED) {
+                sessionStorage.removeItem(SESSION_KEY);
+                localStorage.removeItem(SESSION_KEY);
+                enforceGate();
+            }
         },
         openAuthModal: () => {
-            sessionStorage.removeItem(SESSION_KEY);
-            localStorage.removeItem(SESSION_KEY);
-            enforceGate();
+            if (GATE_ENABLED) {
+                sessionStorage.removeItem(SESSION_KEY);
+                localStorage.removeItem(SESSION_KEY);
+                enforceGate();
+            }
         },
         lock: () => {
-            sessionStorage.removeItem(SESSION_KEY);
-            localStorage.removeItem(SESSION_KEY);
-            enforceGate();
+            if (GATE_ENABLED) {
+                sessionStorage.removeItem(SESSION_KEY);
+                localStorage.removeItem(SESSION_KEY);
+                enforceGate();
+            }
         },
         showAdminPanel: () => {},
         openAdminWorkflow: () => {}
