@@ -1653,11 +1653,29 @@
                             <option value="cm">cm</option>
                         </select>
                     </div>
-                    <button type="button" id="btnApplyQuickSpans" class="tool-btn" style="background: var(--pastel-mint); color: #000; font-weight: 700;">
-                        ✓ Aplicar Tramos
+                    <button type="button" id="btnAddSpanRow" class="tool-btn" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; font-weight: 800; padding: 6px 14px; border-radius: 6px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35); cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                        <span>➕</span> Añadir Tramo
+                    </button>
+                    <button type="button" id="btnRemoveSpanRow" class="tool-btn" style="background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); color: #fda4af; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer;">
+                        <span>➖</span> Quitar Tramo
+                    </button>
+                    <button type="button" id="btnApplyQuickSpans" class="tool-btn" style="background: var(--pastel-mint); color: #000; font-weight: 800; padding: 6px 14px; border-radius: 6px; cursor: pointer;">
+                        ✓ Aplicar Cotas
                     </button>
                 </div>
-                <div id="quickSpanInputsContainer" class="form-row" style="padding-top: 4px; padding-bottom: 4px;"></div>
+
+                <!-- Asistente Inteligente por Cotas Directas -->
+                <div class="form-row" style="background: rgba(30, 41, 59, 0.35); border-bottom: 1px solid var(--border-subtle); padding: 6px 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                    <span style="font-size: 11px; font-weight: 700; color: #fbbf24; display: flex; align-items: center; gap: 4px;">
+                        <span>⚡</span> Asistente Rápido por Cotas:
+                    </span>
+                    <input type="text" id="inpSmartSpans" placeholder="Ej: 2, 4, 3, 2  ó  1.5 3 2.5" class="cell-input" style="flex: 1; min-width: 200px; max-width: 320px; font-family: monospace; font-size: 12px; padding: 4px 8px;">
+                    <button type="button" id="btnSmartSpansApply" class="tool-btn" style="background: #fbbf24; color: #000; font-weight: 800; padding: 5px 14px; border-radius: 6px; font-size: 11px; cursor: pointer;">
+                        Crear Viga por Cotas
+                    </button>
+                </div>
+
+                <div id="quickSpanInputsContainer" class="form-row" style="padding: 6px 12px; gap: 6px; flex-wrap: wrap;"></div>
 
                 <div class="table-wrap">
                     <table class="data-table">

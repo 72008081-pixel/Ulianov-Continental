@@ -84,39 +84,210 @@
         }
     }
 
-    // Sincronizador de UI de Asistente Rápido de Tramos
-    function refreshQuickSpansUI() {
+    // ── ASISTENTE Y MOTOR INTELIGENTE DE TRAMOS (L1, L2, L3...) ──
+    function refreshQuickSpansUI(syncFromState = false) {
         const numSel = document.getElementById('quickNumBars');
         const unitSel = document.getElementById('quickDistUnit');
         const container = document.getElementById('quickSpanInputsContainer');
         if (!container || !numSel) return;
 
         const activeSpans = (currentState.bars || []).filter(b => (b.xf || 0) > (b.xi || 0));
-        if (activeSpans.length > 0) {
-            numSel.value = Math.min(12, Math.max(1, activeSpans.length));
+        if (syncFromState) {
+            numSel.value = Math.min(11, Math.max(1, activeSpans.length || 1));
         }
 
-        const n = parseInt(numSel.value, 10) || 3;
+        const n = Math.min(11, Math.max(1, parseInt(numSel.value, 10) || 3));
         const unit = unitSel ? unitSel.value : 'm';
         const scale = unit === 'm' ? 0.01 : 1.0;
 
         let html = '';
         for (let i = 0; i < n; i++) {
             const b = currentState.bars && currentState.bars[i];
-            let defaultVal = 2;
+            let defaultVal = 2.0;
             if (b && (b.xf > b.xi)) {
                 defaultVal = Math.round(((b.xf - b.xi) * scale) * 100) / 100;
+            } else if (i > 0) {
+                const prevB = currentState.bars && currentState.bars[i - 1];
+                if (prevB && prevB.xf > prevB.xi) {
+                    defaultVal = Math.round(((prevB.xf - prevB.xi) * scale) * 100) / 100;
+                }
             }
             html += `
-                <div class="span-pill">
-                    <span>L${i + 1}:</span>
-                    <input type="number" step="any" class="quick-span-val" data-idx="${i}" value="${defaultVal}">
-                    <span>${unit}</span>
+                <div class="span-pill" style="display:inline-flex; align-items:center; background:#1e293b; border:1px solid #475569; border-radius:6px; padding:3px 8px; margin:2px; font-size:12px;">
+                    <span style="font-weight:700; color:#38bdf8; margin-right:4px;">L${i + 1}:</span>
+                    <input type="number" step="any" min="0.1" class="quick-span-val" data-idx="${i}" value="${defaultVal}" style="width:55px; background:#0f172a; border:1px solid #64748b; color:#fff; border-radius:4px; text-align:center; padding:2px 4px; font-weight:700;">
+                    <span style="margin-left:4px; color:#94a3b8; font-size:11px;">${unit}</span>
                 </div>
             `;
         }
         container.innerHTML = html;
     }
+
+    // Método 1: Añadir un tramo de forma directa e inteligente al final
+    function addSingleSpan(lenDefault = null) {
+        const unitSel = document.getElementById('quickDistUnit');
+        const unit = unitSel ? unitSel.value : 'm';
+        const mult = unit === 'm' ? 100.0 : 1.0;
+
+        let len = 2.0;
+        if (lenDefault !== null && !isNaN(parseFloat(lenDefault)) && parseFloat(lenDefault) > 0) {
+            len = parseFloat(lenDefault);
+        } else {
+            const activeBars = (currentState.bars || []).filter(b => (b.xf || 0) > (b.xi || 0));
+            if (activeBars.length > 0) {
+                const last = activeBars[activeBars.length - 1];
+                len = ((last.xf - last.xi) / mult) || 2.0;
+            }
+        }
+
+        const activeBars = (currentState.bars || []).filter(b => (b.xf || 0) > (b.xi || 0));
+        if (activeBars.length >= 11) {
+            alert('Límite alcanzado: La viga admite hasta 11 tramos (12 nudos).');
+            return;
+        }
+
+        let startX = 0.0;
+        if (activeBars.length > 0) {
+            startX = activeBars[activeBars.length - 1].xf || 0.0;
+        }
+
+        const newBar = {
+            xi: startX,
+            yi: 0.0,
+            xf: startX + (len * mult),
+            yf: 0.0,
+            q: 0.0,
+            q_unit: 'kgf/m',
+            q_input: 0.0,
+            P_tramo: 0.0,
+            a_dist: 0.0
+        };
+
+        if (!currentState.bars) currentState.bars = [];
+        currentState.bars.push(newBar);
+
+        if (!currentState.nodes) currentState.nodes = [];
+        const reqNodes = currentState.bars.length + 1;
+        while (currentState.nodes.length < reqNodes) {
+            const idx = currentState.nodes.length;
+            const isFirst = (idx === 0);
+            const isLast = (idx === reqNodes - 1);
+            currentState.nodes.push({
+                cond: isFirst ? 'FIJO' : (isLast ? 'RODILLO' : 'LIBRE'),
+                Px: 0.0,
+                Py: 0.0,
+                Mz: 0.0
+            });
+        }
+
+        const numSel = document.getElementById('quickNumBars');
+        if (numSel) numSel.value = currentState.bars.length;
+
+        renderBarsTable();
+        renderNodesTable();
+        renderSpansLoadsTable();
+        refreshQuickSpansUI(true);
+        recomputeAll();
+    }
+
+    // Método 2: Eliminar el último tramo
+    function removeLastSpan() {
+        const activeBars = (currentState.bars || []).filter(b => (b.xf || 0) > (b.xi || 0));
+        if (activeBars.length <= 1) {
+            alert('La viga debe tener al menos 1 tramo.');
+            return;
+        }
+
+        currentState.bars.pop();
+        const reqNodes = currentState.bars.length + 1;
+        if (currentState.nodes.length > reqNodes) {
+            currentState.nodes = currentState.nodes.slice(0, reqNodes);
+        }
+
+        const numSel = document.getElementById('quickNumBars');
+        if (numSel) numSel.value = currentState.bars.length;
+
+        renderBarsTable();
+        renderNodesTable();
+        renderSpansLoadsTable();
+        refreshQuickSpansUI(true);
+        recomputeAll();
+    }
+
+    // Método 3: Asistente inteligente por cotas (ej: "2, 4, 3, 2")
+    function setSpansFromCotas(text) {
+        if (!text || typeof text !== 'string') return;
+        const matches = text.match(/[-+]?[0-9]*\.?[0-9]+/g);
+        if (!matches || matches.length === 0) {
+            alert('Ingrese las cotas separadas por comas o espacios. Ejemplo: 2, 4, 3, 2');
+            return;
+        }
+        let lengths = matches.map(p => parseFloat(p)).filter(v => !isNaN(v) && v > 0);
+        if (lengths.length === 0) {
+            alert('No se encontraron longitudes válidas.');
+            return;
+        }
+        if (lengths.length > 11) {
+            alert('Máximo 11 tramos. Se usarán los primeros 11.');
+            lengths = lengths.slice(0, 11);
+        }
+
+        const unitSel = document.getElementById('quickDistUnit');
+        const unit = unitSel ? unitSel.value : 'm';
+        const mult = unit === 'm' ? 100.0 : 1.0;
+
+        let currentX = 0.0;
+        const newBars = [];
+        lengths.forEach((L, i) => {
+            const lenCm = L * mult;
+            const oldBar = currentState.bars && currentState.bars[i];
+            newBars.push({
+                xi: currentX,
+                yi: 0.0,
+                xf: currentX + lenCm,
+                yf: 0.0,
+                q: oldBar ? (oldBar.q || 0.0) : 0.0,
+                q_unit: oldBar ? (oldBar.q_unit || 'kgf/m') : 'kgf/m',
+                q_input: oldBar ? (oldBar.q_input || 0.0) : 0.0,
+                P_tramo: 0.0,
+                a_dist: 0.0
+            });
+            currentX += lenCm;
+        });
+
+        currentState.bars = newBars;
+
+        const reqNodes = newBars.length + 1;
+        if (!currentState.nodes) currentState.nodes = [];
+        while (currentState.nodes.length < reqNodes) {
+            const idx = currentState.nodes.length;
+            const isFirst = (idx === 0);
+            const isLast = (idx === reqNodes - 1);
+            currentState.nodes.push({
+                cond: isFirst ? 'FIJO' : (isLast ? 'RODILLO' : 'LIBRE'),
+                Px: 0.0,
+                Py: 0.0,
+                Mz: 0.0
+            });
+        }
+        if (currentState.nodes.length > reqNodes) {
+            currentState.nodes = currentState.nodes.slice(0, reqNodes);
+        }
+
+        const numSel = document.getElementById('quickNumBars');
+        if (numSel) numSel.value = newBars.length;
+
+        renderBarsTable();
+        renderNodesTable();
+        renderSpansLoadsTable();
+        refreshQuickSpansUI(true);
+        recomputeAll();
+    }
+
+    // Exponer globalmente para acceso directo
+    window.addSingleSpan = addSingleSpan;
+    window.removeLastSpan = removeLastSpan;
+    window.setSpansFromCotas = setSpansFromCotas;
 
     // Inicialización del DOM
     function init() {
@@ -244,20 +415,57 @@
         recomputeAll();
     }
 
-    // ── ASISTENTE RÁPIDO DE LONGITUDES DE TRAMOS (L1, L2, L3...) ──
+    // ── ASISTENTE RÁPIDO Y CONTROL INTELIGENTE DE TRAMOS ──
     function setupQuickSpans() {
         const numSel = document.getElementById('quickNumBars');
         const unitSel = document.getElementById('quickDistUnit');
         const container = document.getElementById('quickSpanInputsContainer');
         const btnApply = document.getElementById('btnApplyQuickSpans');
+        const btnAddSpan = document.getElementById('btnAddSpanRow');
+        const btnRemoveSpan = document.getElementById('btnRemoveSpanRow');
+        const btnSmartApply = document.getElementById('btnSmartSpansApply');
+        const inpSmart = document.getElementById('inpSmartSpans');
 
-        if (numSel) numSel.addEventListener('change', refreshQuickSpansUI);
-        if (unitSel) unitSel.addEventListener('change', refreshQuickSpansUI);
-        refreshQuickSpansUI();
+        if (numSel) {
+            numSel.addEventListener('change', () => refreshQuickSpansUI(false));
+            numSel.addEventListener('input', () => refreshQuickSpansUI(false));
+        }
+        if (unitSel) {
+            unitSel.addEventListener('change', () => refreshQuickSpansUI(false));
+        }
+        refreshQuickSpansUI(true);
+
+        if (btnAddSpan) {
+            btnAddSpan.addEventListener('click', (e) => {
+                e.preventDefault();
+                addSingleSpan();
+            });
+        }
+
+        if (btnRemoveSpan) {
+            btnRemoveSpan.addEventListener('click', (e) => {
+                e.preventDefault();
+                removeLastSpan();
+            });
+        }
+
+        if (btnSmartApply && inpSmart) {
+            btnSmartApply.addEventListener('click', (e) => {
+                e.preventDefault();
+                setSpansFromCotas(inpSmart.value);
+            });
+            inpSmart.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setSpansFromCotas(inpSmart.value);
+                }
+            });
+        }
 
         if (btnApply) {
-            btnApply.addEventListener('click', () => {
-                const n = parseInt(numSel.value, 10) || 3;
+            btnApply.addEventListener('click', (e) => {
+                e.preventDefault();
+                const n = Math.min(11, Math.max(1, parseInt(numSel.value, 10) || 3));
                 const unit = unitSel ? unitSel.value : 'm';
                 const mult = unit === 'm' ? 100.0 : 1.0;
 
@@ -285,14 +493,19 @@
                 });
 
                 currentState.bars = newBars;
-                // Asegurar nodos correspondientes
                 const reqNodes = n + 1;
                 while (currentState.nodes.length < reqNodes) {
-                    currentState.nodes.push({ cond: 'LIBRE', Px: 0.0, Py: 0.0, Mz: 0.0 });
+                    const isLast = (currentState.nodes.length === reqNodes - 1);
+                    currentState.nodes.push({ cond: isLast ? 'RODILLO' : 'LIBRE', Px: 0.0, Py: 0.0, Mz: 0.0 });
+                }
+                if (currentState.nodes.length > reqNodes) {
+                    currentState.nodes = currentState.nodes.slice(0, reqNodes);
                 }
 
                 renderBarsTable();
                 renderNodesTable();
+                renderSpansLoadsTable();
+                refreshQuickSpansUI(true);
                 recomputeAll();
             });
         }
