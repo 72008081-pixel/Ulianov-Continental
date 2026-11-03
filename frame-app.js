@@ -34,7 +34,7 @@
                 { from: 7, to: 6, q0: 2.3, q1: 2.3, dir: 'globalX' },
                 { from: 5, to: 6, q0: 6.0, q1: 6.0, dir: 'globalDown' }
             ]
-        },,
+        },
         master: {
             E: 2100000,
             section: { shape: 'rect', b: 5, h: 5 },
@@ -1430,8 +1430,7 @@ I_z &= ${p.I.toFixed(4)} \\text{ cm}^4
                 const cycle = { free: 'fixed', fixed: 'pin', pin: 'rollerY', rollerY: 'rollerX', rollerX: 'free' };
                 clickedNode.support = cycle[clickedNode.support || 'free'] || 'free';
                 showToast(`Nudo (${clickedNode.id}): Apoyo cambiado a ${getSupportSpanish(clickedNode.support)}`);
-                $('presetSelect').value = (PRESETS[initialPresetKey] ? initialPresetKey : 'examen');
-        populateTablesFromModel(activeModel);
+                populateTablesFromModel(activeModel);
                 recompute();
                 return;
             }
@@ -1735,6 +1734,7 @@ I_z &= ${p.I.toFixed(4)} \\text{ cm}^4
         $('btnResetDiagramZoom').addEventListener('click', () => FrameDiagrams.resetDiagramView(drawDiagrams));
 
         // Selector de Presets
+        $('presetSelect').value = (PRESETS[initialPresetKey] ? initialPresetKey : 'examen');
         $('presetSelect').addEventListener('change', e => {
             const pKey = e.target.value;
             if(PRESETS[pKey]){
