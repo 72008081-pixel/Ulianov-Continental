@@ -65,6 +65,7 @@
       .card-print { border: 1px solid #ccc !important; box-shadow: none !important; background: white !important; color: black !important; }
     }
   </style>
+  <script src="auth.js"></script>
 </head>
 <body class="flex flex-col">
 
@@ -123,6 +124,9 @@
       <span class="text-xs font-bold text-sky-400 uppercase tracking-wider whitespace-nowrap flex items-center gap-1 mr-1">
         ⚡ Presets de Examen:
       </span>
+      <button onclick="loadPreset('viga_600_1500')" class="px-2.5 py-1 text-xs font-bold rounded bg-gradient-to-r from-emerald-900 to-teal-900 hover:from-emerald-800 hover:to-teal-800 text-emerald-200 border border-emerald-500/70 whitespace-nowrap transition flex items-center gap-1 shadow-md">
+        🔥 Viga Actual (600 kgf/m + 1500 kgf, L=10m)
+      </button>
       <button onclick="loadPreset('oficial')" class="px-2.5 py-1 text-xs font-medium rounded bg-teal-950/80 hover:bg-teal-900 text-teal-300 border border-teal-700/50 whitespace-nowrap transition flex items-center gap-1 shadow-sm">
         🎯 01. Examen Oficial (4 Tramos)
       </button>
@@ -555,13 +559,13 @@
   <script>
     // ESTADO GLOBAL DE LA VIGA
     const state = {
-      numSpans: 4,
-      spans: [1.0, 4.0, 3.0, 2.0],
-      supports: { 0: 'pin', 3: 'roller' }, // 'pin', 'roller', 'fixed', 'free'
-      distLoads: { 0: 15.0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 },
-      pointLoads: { 0: 0, 1: 20.0, 2: 0, 3: 0, 4: 8.0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 },
-      appliedMoments: { 0: 0, 1: 0, 2: 10.0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 },
-      reactions: { VA: 48.06, VD: 34.94, sum_fy_ok: true },
+      numSpans: 3,
+      spans: [7.0, 1.5, 1.5],
+      supports: { 0: 'roller', 3: 'pin' }, // 'pin', 'roller', 'fixed', 'free'
+      distLoads: { 0: 600.0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 },
+      pointLoads: { 0: 0, 1: 0, 2: 1500.0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 },
+      appliedMoments: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 },
+      reactions: { VA: 2955.0, VD: 2745.0, sum_fy_ok: true },
       currentTab: 'tramos'
     };
 
@@ -570,6 +574,14 @@
 
     // PRESETS PREDEFINIDOS
     const PRESETS = {
+      viga_600_1500: {
+        numSpans: 3,
+        spans: [7.0, 1.5, 1.5],
+        supports: { 0: 'roller', 3: 'pin' },
+        distLoads: { 0: 600.0, 1: 0, 2: 0 },
+        pointLoads: { 2: 1500.0 },
+        appliedMoments: {}
+      },
       oficial: {
         numSpans: 4,
         spans: [1.0, 4.0, 3.0, 2.0],
