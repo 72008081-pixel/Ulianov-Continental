@@ -18,21 +18,21 @@
                 { id: 1, x: 0, y: 0, support: 'fixed' },
                 { id: 2, x: 0, y: 200, support: 'free' },
                 { id: 3, x: 350, y: 200, support: 'free' },
-                { id: 4, x: 350, y: 0, support: 'fixed' },
-                { id: 5, x: 350, y: 500, support: 'free' },
-                { id: 6, x: 800, y: 500, support: 'free' },
-                { id: 7, x: 800, y: 200, support: 'free' },
+                { id: 4, x: 350, y: 500, support: 'free' },
+                { id: 5, x: 800, y: 500, support: 'free' },
+                { id: 6, x: 800, y: 200, support: 'free' },
+                { id: 7, x: 350, y: 0, support: 'fixed' },
                 { id: 8, x: 800, y: 0, support: 'fixed' }
             ],
             bars: [
                 { from: 1, to: 2, q0: 2.0, q1: 2.0, dir: 'globalX' },
                 { from: 2, to: 3, q0: 4.0, q1: 4.0, dir: 'globalDown' },
-                { from: 4, to: 3, q0: 2.5, q1: 2.5, dir: 'globalX' },
-                { from: 3, to: 5, q0: 2.5, q1: 2.5, dir: 'globalX' },
-                { from: 3, to: 7, q0: 8.0, q1: 8.0, dir: 'globalDown' },
-                { from: 8, to: 7, q0: 2.3, q1: 2.3, dir: 'globalX' },
-                { from: 7, to: 6, q0: 2.3, q1: 2.3, dir: 'globalX' },
-                { from: 5, to: 6, q0: 6.0, q1: 6.0, dir: 'globalDown' }
+                { from: 7, to: 3, q0: 2.5, q1: 2.5, dir: 'globalX' },
+                { from: 3, to: 4, q0: 2.5, q1: 2.5, dir: 'globalX' },
+                { from: 3, to: 6, q0: 8.0, q1: 8.0, dir: 'globalDown' },
+                { from: 8, to: 6, q0: 2.3, q1: 2.3, dir: 'globalX' },
+                { from: 6, to: 5, q0: 2.3, q1: 2.3, dir: 'globalX' },
+                { from: 4, to: 5, q0: 6.0, q1: 6.0, dir: 'globalDown' }
             ]
         },
         master: {
